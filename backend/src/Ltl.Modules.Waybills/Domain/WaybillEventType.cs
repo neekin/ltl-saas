@@ -14,4 +14,10 @@ public enum WaybillEventType
 
     /// <summary>取消（→ Cancelled，终态）。</summary>
     Cancelled = 3,
+
+    /// <summary>收货登记（货物/仓储状态：待收货 → 已收货，RECEIVE-001）。</summary>
+    Received = 4,
+
+    /// <summary>分拣完成（货物/仓储状态：已收货 → 已分拣，WAREHOUSE-001）。</summary>
+    Sorted = 5,
 }

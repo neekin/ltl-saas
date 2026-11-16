@@ -20,6 +20,7 @@
     <ProjectReference Include="..\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Pricing\Ltl.Modules.Pricing.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Waybills\Ltl.Modules.Waybills.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Warehouse\Ltl.Modules.Warehouse.csproj" />
   </ItemGroup>
 
 </Project>

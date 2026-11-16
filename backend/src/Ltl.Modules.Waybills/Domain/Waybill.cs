@@ -261,6 +261,42 @@ public sealed class Waybill : TenantScopedEntity
     /// <summary>汇总体积（Σ，m³）。</summary>
     public decimal TotalVolumeM3 => _packages.Sum(p => p.VolumeM3);
 
+    /// <summary>
+    /// 货物/仓储状态流转：收货登记（RECEIVE-001）。仅已确认运单、待收货状态可收货；
+    /// 分批收货后续登记不再改变状态（调用方校验）。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">未确认或已收货（非待收货）时抛出。</exception>
+    public void MarkCargoReceived(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (Status != WaybillStatus.Confirmed)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 状态为 {Status}，仅已确认运单可收货。");
+        }
+
+        if (CargoStatus != WaybillCargoStatus.PendingReceive)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 货物状态为 {CargoStatus}，无需重复收货登记。");
+        }
+
+        CargoStatus = WaybillCargoStatus.Received;
+        Touch(nowUtc, operatorUserId);
+    }
+
+    /// <summary>
+    /// 货物/仓储状态流转：分拣完成（WAREHOUSE-001）。仅已收货可分拣。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">未收货或已分拣时抛出。</exception>
+    public void MarkCargoSorted(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (CargoStatus != WaybillCargoStatus.Received)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 货物状态为 {CargoStatus}，仅已收货运单可分拣。");
+        }
+
+        CargoStatus = WaybillCargoStatus.Sorted;
+        Touch(nowUtc, operatorUserId);
+    }
+
     private void RequireDraft(string operation)
     {
         if (Status != WaybillStatus.Draft)

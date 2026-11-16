@@ -15,6 +15,8 @@ using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
+using Ltl.Modules.Warehouse.Application;
+using Ltl.Modules.Warehouse.Infrastructure;
 using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.SharedKernel.Application;
@@ -41,6 +43,8 @@ builder.Services.AddExceptionHandler<PermissionDeniedExceptionHandler>();
 builder.Services.AddExceptionHandler<EntityNotFoundExceptionHandler>();
 builder.Services.AddExceptionHandler<ConflictExceptionHandler>();
 builder.Services.AddExceptionHandler<ArgumentValidationExceptionHandler>();
+builder.Services.AddExceptionHandler<WaybillDomainViolationHandler>();
+builder.Services.AddExceptionHandler<PricingRuleViolationHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // JWT 认证（AUTH-001；契约 ADR-0005）：tenant_id 只来自已验证 token 的 claim（AGENTS §5.1）
@@ -115,6 +119,13 @@ builder.Services.AddDbContext<WaybillsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IWaybillService, WaybillService>();
+builder.Services.AddScoped<IWaybillCargoService, WaybillCargoService>();
+
+// Warehouse 模块（RECEIVE-001：收货登记、称重、体积复核）
+builder.Services.AddDbContext<WarehouseDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+builder.Services.AddScoped<ICargoReceiptService, CargoReceiptService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
@@ -198,6 +209,7 @@ app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService)
 
 app.MapOrganizationEndpoints();
 app.MapFileEndpoints();
+app.MapWarehouseEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
@@ -218,6 +230,7 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<PlatformDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<PricingDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<WaybillsDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<WarehouseDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露

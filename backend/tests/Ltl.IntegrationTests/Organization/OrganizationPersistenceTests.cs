@@ -1,4 +1,5 @@
 using Ltl.Modules.Organization.Domain;
+using Ltl.Modules.Warehouse.Domain;
 using Ltl.Modules.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -33,9 +34,10 @@ public sealed class OrganizationPersistenceTests(PostgreSqlFixture fixture) : IC
         await using var context = fixture.CreateOrganizationContext();
 
         Assert.Empty(await context.Database.GetPendingMigrationsAsync());
-        // 平台预置权限点已 seed
+        // 平台预置权限点已 seed（组织域 + 各业务模块追加：仓储域 RECEIVE-001）
         var permissionCount = await context.Permissions.CountAsync();
-        Assert.Equal(PermissionCodes.All.Count, permissionCount);
+        Assert.Equal(
+            PermissionCodes.All.Count + WarehousePermissionCodes.All.Count, permissionCount);
     }
 
     [Fact]

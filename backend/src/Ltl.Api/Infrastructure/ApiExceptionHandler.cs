@@ -1,4 +1,6 @@
 using Ltl.Modules.Organization.Application.Authorization;
+using Ltl.Modules.Pricing.Domain;
+using Ltl.Modules.Waybills.Domain;
 using Ltl.SharedKernel.Application;
 using Microsoft.AspNetCore.Diagnostics;
 
@@ -70,4 +72,16 @@ public sealed class ConflictExceptionHandler : ApiExceptionHandler<ConflictExcep
 public sealed class ArgumentValidationExceptionHandler : ApiExceptionHandler<ArgumentException>
 {
     protected override int StatusCode => StatusCodes.Status400BadRequest;
+}
+
+/// <summary>运单状态机违规（收货/分拣/确认/取消守卫）→ 409。</summary>
+public sealed class WaybillDomainViolationHandler : ApiExceptionHandler<WaybillDomainException>
+{
+    protected override int StatusCode => StatusCodes.Status409Conflict;
+}
+
+/// <summary>计价规则违规（无发布版本/停用/校验失败）→ 409。</summary>
+public sealed class PricingRuleViolationHandler : ApiExceptionHandler<PricingRuleViolationException>
+{
+    protected override int StatusCode => StatusCodes.Status409Conflict;
 }

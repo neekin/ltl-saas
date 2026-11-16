@@ -3,6 +3,7 @@ using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
+using Ltl.Modules.Warehouse.Infrastructure;
 using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.SharedKernel.Application;
@@ -62,6 +63,11 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await using (var waybills = CreateWaybillsContext())
         {
             await waybills.Database.MigrateAsync();
+        }
+
+        await using (var warehouse = CreateWarehouseContext())
+        {
+            await warehouse.Database.MigrateAsync();
         }
     }
 
@@ -149,6 +155,21 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             .UseSnakeCaseNamingConvention()
             .Options;
         return new WaybillsDbContext(options, tenantContext);
+    }
+
+    public WarehouseDbContext CreateWarehouseContext(Guid? tenantId = null)
+    {
+        var tenantContext = new TenantContext();
+        if (tenantId is { } id)
+        {
+            tenantContext.SetTenant(id);
+        }
+
+        var options = new DbContextOptionsBuilder<WarehouseDbContext>()
+            .UseNpgsql(ConnectionStringWithDetailedErrors)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        return new WarehouseDbContext(options, tenantContext);
     }
 
     public PricingDbContext CreatePricingContext(Guid? tenantId = null)
