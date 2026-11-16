@@ -22,6 +22,9 @@ public sealed class PlatformDbContext(
 
     public DbSet<BranchSequence> Sequences => Set<BranchSequence>();
 
+    /// <summary>审计日志（追加式；调用方经环境事务与业务保存同事务，ORG-003）。</summary>
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);

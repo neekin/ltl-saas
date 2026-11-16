@@ -21,6 +21,9 @@ public sealed class OrganizationDbContext(
     /// <summary>当前租户 Id；查询过滤器引用本属性，每次查询按当前上下文求值。</summary>
     private Guid? TenantId => tenantContext.TenantId;
 
+    /// <summary>模块内服务获取当前租户 Id（同 PlatformDbContext.CurrentTenantId 约定）。</summary>
+    internal Guid? CurrentTenantId => tenantContext.TenantId;
+
     public DbSet<Branch> Branches => Set<Branch>();
 
     public DbSet<User> Users => Set<User>();

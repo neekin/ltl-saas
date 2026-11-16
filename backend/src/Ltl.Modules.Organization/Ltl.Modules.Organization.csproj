@@ -25,6 +25,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ltl.SharedKernel\Ltl.SharedKernel.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
   </ItemGroup>
 
 </Project>

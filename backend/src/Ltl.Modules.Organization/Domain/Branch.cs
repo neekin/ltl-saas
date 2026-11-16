@@ -29,6 +29,14 @@ public sealed class Branch : TenantScopedEntity
         };
     }
 
+    /// <summary>重命名网点（编码不可变）。</summary>
+    /// <exception cref="ArgumentException">name 非法时抛出。</exception>
+    public void Rename(string name, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        Name = RequireNonBlank(name, "网点名称", 200);
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>停用网点（幂等）。</summary>
     public void Disable(DateTime nowUtc, Guid? updatedBy = null)
     {

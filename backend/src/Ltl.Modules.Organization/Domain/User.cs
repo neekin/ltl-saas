@@ -79,6 +79,14 @@ public sealed class User : TenantScopedEntity
         Touch(nowUtc, updatedBy);
     }
 
+    /// <summary>修改显示名。</summary>
+    /// <exception cref="ArgumentException">displayName 非法时抛出。</exception>
+    public void Rename(string displayName, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        DisplayName = RequireNonBlank(displayName, "姓名", 200);
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>禁用用户（幂等）。</summary>
     public void Disable(DateTime nowUtc, Guid? updatedBy = null)
     {

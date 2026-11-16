@@ -3,11 +3,13 @@ using System.Text;
 using Ltl.Api.Infrastructure;
 using Ltl.Modules.Customers.Application;
 using Ltl.Modules.Customers.Infrastructure;
+using Ltl.Modules.Organization.Application.Admin;
 using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Pricing.Application;
 using Ltl.Modules.Pricing.Infrastructure;
+using Ltl.Api.Endpoints;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
@@ -34,6 +36,10 @@ builder.Services.AddProblemDetails();
 // 特定异常处理器必须注册在兜底 GlobalExceptionHandler 之前（IExceptionHandler 按注册顺序匹配）
 builder.Services.AddExceptionHandler<TenantContextMissingExceptionHandler>();
 builder.Services.AddExceptionHandler<AuthenticationFailedExceptionHandler>();
+builder.Services.AddExceptionHandler<PermissionDeniedExceptionHandler>();
+builder.Services.AddExceptionHandler<EntityNotFoundExceptionHandler>();
+builder.Services.AddExceptionHandler<ConflictExceptionHandler>();
+builder.Services.AddExceptionHandler<ArgumentValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // JWT 认证（AUTH-001；契约 ADR-0005）：tenant_id 只来自已验证 token 的 claim（AGENTS §5.1）
@@ -89,6 +95,7 @@ builder.Services.AddDbContext<PlatformDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IBranchSequenceService, BranchSequenceService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
 
 // Pricing 模块（PRICE-001/002：计价规则模型、版本管理、执行器与试算）
 builder.Services.AddDbContext<PricingDbContext>(options =>
@@ -108,6 +115,9 @@ builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddScoped<IJwtTokenIssuer, JwtTokenIssuer>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IBranchAdminService, BranchAdminService>();
+builder.Services.AddScoped<IUserAdminService, UserAdminService>();
+builder.Services.AddScoped<IRoleAdminService, RoleAdminService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
@@ -180,6 +190,8 @@ app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService)
             permissions,
         });
     });
+
+app.MapOrganizationEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）

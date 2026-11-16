@@ -29,6 +29,14 @@ public sealed class Role : TenantScopedEntity
         };
     }
 
+    /// <summary>重命名角色（编码不可变）。</summary>
+    /// <exception cref="ArgumentException">name 非法时抛出。</exception>
+    public void Rename(string name, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        Name = RequireNonBlank(name, "角色名称", 200);
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>停用角色（幂等）。</summary>
     public void Disable(DateTime nowUtc, Guid? updatedBy = null)
     {
