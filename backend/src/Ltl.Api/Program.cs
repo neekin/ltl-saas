@@ -55,11 +55,12 @@ builder.Services.AddDbContext<PlatformDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IBranchSequenceService, BranchSequenceService>();
 
-// Pricing 模块（PRICE-001：计价规则模型和版本管理）
+// Pricing 模块（PRICE-001/002：计价规则模型、版本管理、执行器与试算）
 builder.Services.AddDbContext<PricingDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IPricingRuleSetService, PricingRuleSetService>();
+builder.Services.AddScoped<IPricingTrialService, PricingTrialService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
