@@ -55,6 +55,13 @@ public sealed class Route : TenantScopedEntity
         };
     }
 
+    /// <summary>重命名线路（编码不可变）。</summary>
+    public void Rename(string name, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        Name = RequireNonBlank(name, "线路名称", 200);
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>停用线路（幂等）。</summary>
     public void Disable(DateTime nowUtc, Guid? updatedBy = null)
     {

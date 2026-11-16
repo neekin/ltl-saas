@@ -13,6 +13,7 @@ using Ltl.Api.Endpoints;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
+using Ltl.Modules.Routing.Application;
 using Ltl.Modules.Routing.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.Modules.Warehouse.Application;
@@ -98,6 +99,7 @@ builder.Services.AddDbContext<CustomersDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<ICustomerRelationshipService, CustomerRelationshipService>();
 builder.Services.AddScoped<ICustomerAdminService, CustomerAdminService>();
+builder.Services.AddScoped<IRouteAdminService, RouteAdminService>();
 
 // Routing 模块（ROUTE-001）
 builder.Services.AddDbContext<RoutingDbContext>(options =>
@@ -230,6 +232,9 @@ app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService)
 app.MapOrganizationEndpoints();
 app.MapFileEndpoints();
 app.MapCustomerEndpoints();
+app.MapRouteEndpoints();
+app.MapPricingEndpoints();
+app.MapPricingTrialEndpoint();
 app.MapWarehouseEndpoints();
 app.MapWaybillEndpoints();
 app.MapTransportEndpoints();
