@@ -1,0 +1,9 @@
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+/* 全局样式保持最小化，视觉基础统一交给 Ant Design（AGENTS.md §9.3） */

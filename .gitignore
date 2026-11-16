@@ -1,0 +1,39 @@
+# ===== .NET =====
+bin/
+obj/
+*.user
+*.suo
+artifacts/
+TestResults/
+*.binlog
+*.trx
+launchSettings.json.bak
+
+# ===== Node / 前端 =====
+node_modules/
+dist/
+coverage/
+*.local
+.eslintcache
+
+# ===== 环境与密钥（禁止提交真实密码/Token/连接字符串）=====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ===== IDE =====
+.vs/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+.DS_Store
+
+# ===== Docker 本地数据 =====
+.docker-data/
+
+# ===== Playwright =====
+playwright-report/
+test-results/

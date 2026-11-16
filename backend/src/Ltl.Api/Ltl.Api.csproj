@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>Ltl.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 模块按任务逐步接入组合根；BASE-001 仅建立骨架。 -->
+  </ItemGroup>
+
+</Project>

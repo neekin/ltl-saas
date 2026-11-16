@@ -1,0 +1,24 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Ltl.Api/Ltl.Api.csproj" />
+    <Project Path="src/Ltl.Modules.Arrival/Ltl.Modules.Arrival.csproj" />
+    <Project Path="src/Ltl.Modules.Cod/Ltl.Modules.Cod.csproj" />
+    <Project Path="src/Ltl.Modules.Customers/Ltl.Modules.Customers.csproj" />
+    <Project Path="src/Ltl.Modules.Delivery/Ltl.Modules.Delivery.csproj" />
+    <Project Path="src/Ltl.Modules.Finance/Ltl.Modules.Finance.csproj" />
+    <Project Path="src/Ltl.Modules.Organization/Ltl.Modules.Organization.csproj" />
+    <Project Path="src/Ltl.Modules.Platform/Ltl.Modules.Platform.csproj" />
+    <Project Path="src/Ltl.Modules.Pricing/Ltl.Modules.Pricing.csproj" />
+    <Project Path="src/Ltl.Modules.Reporting/Ltl.Modules.Reporting.csproj" />
+    <Project Path="src/Ltl.Modules.Routing/Ltl.Modules.Routing.csproj" />
+    <Project Path="src/Ltl.Modules.Tenancy/Ltl.Modules.Tenancy.csproj" />
+    <Project Path="src/Ltl.Modules.Transport/Ltl.Modules.Transport.csproj" />
+    <Project Path="src/Ltl.Modules.Warehouse/Ltl.Modules.Warehouse.csproj" />
+    <Project Path="src/Ltl.Modules.Waybills/Ltl.Modules.Waybills.csproj" />
+    <Project Path="src/Ltl.SharedKernel/Ltl.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Ltl.IntegrationTests/Ltl.IntegrationTests.csproj" />
+    <Project Path="tests/Ltl.UnitTests/Ltl.UnitTests.csproj" />
+  </Folder>
+</Solution>
