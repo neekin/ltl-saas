@@ -97,6 +97,7 @@ builder.Services.AddDbContext<CustomersDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<ICustomerRelationshipService, CustomerRelationshipService>();
+builder.Services.AddScoped<ICustomerAdminService, CustomerAdminService>();
 
 // Routing 模块（ROUTE-001）
 builder.Services.AddDbContext<RoutingDbContext>(options =>
@@ -228,6 +229,7 @@ app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService)
 
 app.MapOrganizationEndpoints();
 app.MapFileEndpoints();
+app.MapCustomerEndpoints();
 app.MapWarehouseEndpoints();
 app.MapWaybillEndpoints();
 app.MapTransportEndpoints();
