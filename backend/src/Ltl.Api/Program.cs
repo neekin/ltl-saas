@@ -8,6 +8,7 @@ using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
+using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
@@ -62,6 +63,11 @@ builder.Services.AddDbContext<PricingDbContext>(options =>
 builder.Services.AddScoped<IPricingRuleSetService, PricingRuleSetService>();
 builder.Services.AddScoped<IPricingTrialService, PricingTrialService>();
 
+// Waybills 模块（WB-001：运单和货物件模型）
+builder.Services.AddDbContext<WaybillsDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddHttpContextAccessor();
@@ -92,6 +98,7 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<RoutingDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<PlatformDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<PricingDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<WaybillsDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露
