@@ -25,6 +25,17 @@ public static class WarehouseEndpoints
         receipts.MapGet("/", async (
             Guid waybillId, ClaimsPrincipal user, ICargoReceiptService service) =>
             Results.Ok(await service.ListByWaybillAsync(RequireUserId(user), waybillId)));
+
+        var sorting = app.MapGroup("/api/warehouse/sorting-tasks");
+        sorting.MapPost("/", async (
+            CreateSortingTaskRequest request, ClaimsPrincipal user, ICargoSortingService service) =>
+            Results.Ok(await service.CreateAsync(
+                RequireUserId(user), request.WaybillId, request.BranchId, request.Note)));
+        sorting.MapPost("/{id:guid}/complete", async (Guid id, ClaimsPrincipal user, ICargoSortingService service) =>
+            Results.Ok(await service.CompleteAsync(RequireUserId(user), id)));
+        sorting.MapGet("/", async (
+            Guid waybillId, ClaimsPrincipal user, ICargoSortingService service) =>
+            Results.Ok(await service.ListByWaybillAsync(RequireUserId(user), waybillId)));
     }
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
@@ -36,3 +47,5 @@ public static class WarehouseEndpoints
 public sealed record RecordCargoReceiptRequest(
     Guid WaybillId, Guid BranchId, int ReceivedPieces,
     decimal ReceivedWeightKg, decimal ReceivedVolumeM3, string? Note);
+
+public sealed record CreateSortingTaskRequest(Guid WaybillId, Guid BranchId, string? Note);

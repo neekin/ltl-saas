@@ -21,6 +21,9 @@ public sealed class WarehouseDbContext(
 
     public DbSet<CargoReceipt> Receipts => Set<CargoReceipt>();
 
+    /// <summary>仓储作业任务（WAREHOUSE-001）。</summary>
+    public DbSet<CargoHandlingTask> HandlingTasks => Set<CargoHandlingTask>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(WarehouseDbContext).Assembly);

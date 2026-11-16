@@ -22,6 +22,85 @@ namespace Ltl.Modules.Warehouse.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.CargoHandlingTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("completed_at");
+
+                    b.Property<Guid?>("CompletedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("completed_by");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid?>("OperatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operator_user_id");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<short>("TaskType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("task_type");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<Guid>("WaybillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waybill_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cargo_handling_tasks");
+
+                    b.HasIndex("TenantId", "WaybillId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cargo_handling_tasks_active")
+                        .HasFilter("status = 1");
+
+                    b.HasIndex("TenantId", "WaybillId", "CreatedAt")
+                        .HasDatabaseName("ix_cargo_handling_tasks_waybill");
+
+                    b.ToTable("cargo_handling_tasks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cargo_handling_tasks_status", "status IN (1, 2)");
+
+                            t.HasCheckConstraint("ck_cargo_handling_tasks_type", "task_type IN (1)");
+                        });
+                });
+
             modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.CargoReceipt", b =>
                 {
                     b.Property<Guid>("Id")

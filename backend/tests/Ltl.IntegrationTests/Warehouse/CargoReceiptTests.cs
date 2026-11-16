@@ -46,7 +46,7 @@ public class CargoReceiptTests : IClassFixture<PostgreSqlFixture>
     }
 
     /// <summary>seed：租户 + 双网点 + 客户 + 已发布价卡 + 已确认运单 + 收货员（权限 + 网点范围）。</summary>
-    private async Task<(Guid TenantId, Guid BranchId, Guid WaybillId, Guid KeeperUserId, string TenantCode)>
+    public async Task<(Guid TenantId, Guid BranchId, Guid WaybillId, Guid KeeperUserId, string TenantCode)>
         SeedConfirmedWaybillAsync(bool confirm = true)
     {
         var tenantCode = $"rcpt-{Guid.NewGuid():N}";
@@ -77,6 +77,7 @@ public class CargoReceiptTests : IClassFixture<PostgreSqlFixture>
         var authorization = new AuthorizationService(org);
         await authorization.GrantPermissionAsync(keeperRole.Id, WarehousePermissionCodes.CargoReceive);
         await authorization.GrantPermissionAsync(keeperRole.Id, WarehousePermissionCodes.CargoRead);
+        await authorization.GrantPermissionAsync(keeperRole.Id, WarehousePermissionCodes.CargoSort);
         await authorization.AssignRoleAsync(keeper.Id, keeperRole.Id);
         await authorization.GrantBranchScopeAsync(keeper.Id, origin.Id);
         foreach (var permission in new[]
@@ -146,6 +147,38 @@ public class CargoReceiptTests : IClassFixture<PostgreSqlFixture>
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
             "Bearer", body.RootElement.GetProperty("access_token").GetString());
         return client;
+    }
+
+    /// <summary>同租户内追加一个已确认未收货运单（WAREHOUSE-001 复用种子）。</summary>
+    public async Task<Guid> SeedAdditionalConfirmedWaybillAsync(
+        Guid tenantId, Guid originBranchId, Guid adminOperatorId)
+    {
+        await using var org = _fixture.CreateOrganizationContext(tenantId);
+        var dest = await org.Branches.SingleAsync(b => b.Code == "WH02");
+        var admin = await org.Users.SingleAsync(u => u.Username == "admin");
+
+        Guid customerId;
+        await using (var customers = _fixture.CreateCustomersContext(tenantId))
+        {
+            customerId = (await customers.Customers.SingleAsync(c => c.Code == "KH001")).Id;
+        }
+
+        await using var pricingDb = _fixture.CreatePricingContext(tenantId);
+        var ruleSetId = (await pricingDb.RuleSets.SingleAsync(s => s.Code == "std")).Id;
+
+        var waybills = new WaybillService(
+            _fixture.CreateWaybillsContext(tenantId),
+            new BranchSequenceService(_fixture.CreatePlatformContext(tenantId)),
+            new PricingTrialService(_fixture.CreatePricingContext(tenantId)),
+            new PricingSnapshotSerializer());
+        var waybill = await waybills.CreateWaybillAsync(new CreateWaybillCommand(
+            originBranchId, dest.Id, customerId, WaybillPaymentType.Cash,
+            "张三", "13800000000", "广州市白云区XX街1号",
+            "李四", "13900000000", "武汉市汉阳区YY路2号",
+            [new WaybillPackageDraft("木架", 1, 50m, 0.3m)],
+            ruleSetId, DateOnly.FromDateTime(DateTime.UtcNow), OperatorId: adminOperatorId));
+        await waybills.ConfirmWaybillAsync(waybill.WaybillId, originBranchId, adminOperatorId);
+        return waybill.WaybillId;
     }
 
     private async Task<HttpResponseMessage> PostReceiptAsync(

@@ -45,6 +45,7 @@ builder.Services.AddExceptionHandler<ConflictExceptionHandler>();
 builder.Services.AddExceptionHandler<ArgumentValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<WaybillDomainViolationHandler>();
 builder.Services.AddExceptionHandler<PricingRuleViolationHandler>();
+builder.Services.AddExceptionHandler<WarehouseDomainViolationHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // JWT 认证（AUTH-001；契约 ADR-0005）：tenant_id 只来自已验证 token 的 claim（AGENTS §5.1）
@@ -126,6 +127,7 @@ builder.Services.AddDbContext<WarehouseDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<ICargoReceiptService, CargoReceiptService>();
+builder.Services.AddScoped<ICargoSortingService, CargoSortingService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
