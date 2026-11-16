@@ -47,6 +47,8 @@ public class TripLoadTests : IClassFixture<PostgreSqlFixture>
     }
 
     /// <summary>seed：租户（GZ01→WH02）+ 车辆（10t/50m³）+ 3 张已确认运单 + 管理员（trip/receive/sort 权限 + 起点范围）。</summary>
+    public async Task<TripSeed> SeedAsyncPublic() => await SeedAsync();
+
     private async Task<TripSeed> SeedAsync()
     {
         var tenantCode = $"trip-{Guid.NewGuid():N}";
@@ -136,7 +138,7 @@ public class TripLoadTests : IClassFixture<PostgreSqlFixture>
         return new TripSeed(tenant.Id, origin.Id, dest.Id, vehicle.Id, waybillIds, tenantCode, admin.Id);
     }
 
-    private sealed record TripSeed(
+    public sealed record TripSeed(
         Guid TenantId, Guid OriginBranchId, Guid DestBranchId, Guid VehicleId,
         List<Guid> WaybillIds, string TenantCode, Guid AdminId);
 
@@ -151,6 +153,8 @@ public class TripLoadTests : IClassFixture<PostgreSqlFixture>
             "Bearer", body.RootElement.GetProperty("access_token").GetString());
         return client;
     }
+
+    public async Task ReceivePublicAsync(TripSeed seed, Guid waybillId) => await ReceiveAsync(seed, waybillId);
 
     private async Task ReceiveAsync(TripSeed seed, Guid waybillId)
     {

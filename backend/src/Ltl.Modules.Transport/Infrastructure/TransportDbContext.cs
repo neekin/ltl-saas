@@ -26,6 +26,10 @@ public sealed class TransportDbContext(
 
     public DbSet<TransportTripWaybill> TripWaybills => Set<TransportTripWaybill>();
 
+    public DbSet<TransportTripFee> TripFees => Set<TransportTripFee>();
+
+    public DbSet<TransportTripEvent> TripEvents => Set<TransportTripEvent>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TransportDbContext).Assembly);

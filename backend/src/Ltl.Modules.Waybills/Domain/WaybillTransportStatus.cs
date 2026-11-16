@@ -8,4 +8,7 @@ public enum WaybillTransportStatus
 {
     /// <summary>未发运（初始）。</summary>
     NotShipped = 1,
+
+    /// <summary>已发运（批次发车后；TRIP-002）。解锁"已发运不可取消"守卫（WB-001 §3）。</summary>
+    Shipped = 2,
 }

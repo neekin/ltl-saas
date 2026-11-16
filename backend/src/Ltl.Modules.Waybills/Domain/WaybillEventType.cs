@@ -20,4 +20,10 @@ public enum WaybillEventType
 
     /// <summary>分拣完成（货物/仓储状态：已收货 → 已分拣，WAREHOUSE-001）。</summary>
     Sorted = 5,
+
+    /// <summary>批次发车（运输状态：未发运 → 已发运，TRIP-002）。</summary>
+    Departed = 6,
+
+    /// <summary>批次到达（TRIP-002；不改交付状态）。</summary>
+    Arrived = 7,
 }

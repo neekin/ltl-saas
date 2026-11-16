@@ -180,7 +180,107 @@ namespace Ltl.Modules.Transport.Migrations
 
                     b.ToTable("transport_trips", null, t =>
                         {
-                            t.HasCheckConstraint("ck_transport_trips_status", "status IN (1)");
+                            t.HasCheckConstraint("ck_transport_trips_status", "status IN (1, 2, 3)");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Transport.Domain.TransportTripEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Detail")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("detail");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("event_type");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid?>("OperatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operator_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_transport_trip_events");
+
+                    b.HasIndex("TenantId", "TripId", "OccurredAt")
+                        .HasDatabaseName("ix_transport_trip_events_trip");
+
+                    b.ToTable("transport_trip_events", (string)null);
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Transport.Domain.TransportTripFee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FeeType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("fee_type");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid?>("OperatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operator_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_transport_trip_fees");
+
+                    b.HasIndex("TenantId", "TripId")
+                        .HasDatabaseName("ix_transport_trip_fees_trip");
+
+                    b.ToTable("transport_trip_fees", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transport_trip_fees_amount", "amount >= 0");
                         });
                 });
 

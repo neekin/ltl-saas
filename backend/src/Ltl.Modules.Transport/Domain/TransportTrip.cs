@@ -7,6 +7,12 @@ public enum TransportTripStatus
 {
     /// <summary>已计划（可配载）。</summary>
     Planned = 1,
+
+    /// <summary>已发车（TRIP-002；不可配载/撤销配载）。</summary>
+    Departed = 2,
+
+    /// <summary>已到达（TRIP-002；配载行转非活跃，运单可装下一段批次）。</summary>
+    Arrived = 3,
 }
 
 /// <summary>
@@ -70,5 +76,31 @@ public sealed class TransportTrip : TenantScopedEntity
             CreatedAt = EnsureUtc(nowUtc),
             CreatedBy = createdBy,
         };
+    }
+
+    /// <summary>发车（Planned → Departed；调用方校验非空批次，TRIP-002 §2）。</summary>
+    /// <exception cref="TransportDomainException">非 Planned 状态时抛出。</exception>
+    public void Depart(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (Status != TransportTripStatus.Planned)
+        {
+            throw new TransportDomainException($"批次 {TripNo} 状态为 {Status}，仅已计划批次可发车。");
+        }
+
+        Status = TransportTripStatus.Departed;
+        Touch(nowUtc, operatorUserId);
+    }
+
+    /// <summary>到达（Departed → Arrived；配载行由服务转非活跃）。</summary>
+    /// <exception cref="TransportDomainException">非 Departed 状态时抛出。</exception>
+    public void Arrive(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (Status != TransportTripStatus.Departed)
+        {
+            throw new TransportDomainException($"批次 {TripNo} 状态为 {Status}，仅已发车批次可到达。");
+        }
+
+        Status = TransportTripStatus.Arrived;
+        Touch(nowUtc, operatorUserId);
     }
 }

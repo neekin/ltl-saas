@@ -34,7 +34,22 @@ public interface ITripService
     Task<TripWaybillDto> LoadWaybillAsync(Guid operatorUserId, Guid tripId, Guid waybillId);
     Task RemoveWaybillAsync(Guid operatorUserId, Guid tripId, Guid assignmentId);
     Task<IReadOnlyList<TripWaybillDto>> ListWaybillTripsAsync(Guid operatorUserId, Guid waybillId);
+
+    /// <summary>发车（TRIP-002）：批次 → Departed；全部 active 配载运单运输状态 → Shipped + 事件。</summary>
+    Task<TransportTripDto> DepartTripAsync(Guid operatorUserId, Guid tripId);
+
+    /// <summary>到达（TRIP-002）：批次 → Arrived；配载行转非活跃（可装下一段）+ 运单事件 Arrived。</summary>
+    Task<TransportTripDto> ArriveTripAsync(Guid operatorUserId, Guid tripId);
+
+    /// <summary>登记运输费用（追加式；类型白名单）。</summary>
+    Task<TripFeeDto> RecordFeeAsync(Guid operatorUserId, Guid tripId, string feeType, decimal amount, string? note);
+
+    /// <summary>批次费用列表。</summary>
+    Task<IReadOnlyList<TripFeeDto>> ListFeesAsync(Guid operatorUserId, Guid tripId);
 }
+
+public sealed record TripFeeDto(
+    Guid Id, Guid TripId, string FeeType, decimal Amount, string? Note, Guid? OperatorUserId, DateTime OccurredAt);
 
 /// <summary>
 /// 运输批次实现（TRIP-001）。批次号 SEQ-001；配载校验货物状态（已收货/已分拣）与车辆容量；
@@ -237,6 +252,116 @@ public sealed class TripService(
     }
 
     // ---------- 辅助 ----------
+
+    public async Task<TransportTripDto> DepartTripAsync(Guid operatorUserId, Guid tripId)
+    {
+        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tripId);
+
+        var activeAssignments = await db.TripWaybills
+            .Where(w => w.TripId == tripId && w.Active)
+            .ToListAsync();
+        if (activeAssignments.Count == 0)
+        {
+            throw new TransportDomainException($"批次 {trip.TripNo} 没有配载运单，空车不可发车。");
+        }
+
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        trip.Depart(DateTime.UtcNow, operatorUserId);
+        await db.SaveChangesAsync();
+
+        foreach (var assignment in activeAssignments)
+        {
+            await waybillCargoService.MarkTransportShippedAsync(
+                assignment.WaybillId, operatorUserId,
+                $"批次 {trip.TripNo} 发车（起点 {trip.OriginBranchId} → 终点 {trip.DestBranchId}）");
+        }
+
+        db.TripEvents.Add(TransportTripEvent.Create(
+            trip.TenantId, trip.Id, TransportEventTypes.Departed,
+            new { loadedCount = activeAssignments.Count, originBranchId = trip.OriginBranchId, destBranchId = trip.DestBranchId },
+            operatorUserId, DateTime.UtcNow));
+        await db.SaveChangesAsync();
+
+        await audit.RecordAsync(
+            "transport.trip.depart", "transport_trip", trip.Id, operatorUserId,
+            new { tripNo = trip.TripNo, loadedCount = activeAssignments.Count });
+        scope.Complete();
+
+        return ToDto(trip, activeAssignments);
+    }
+
+    public async Task<TransportTripDto> ArriveTripAsync(Guid operatorUserId, Guid tripId)
+    {
+        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tripId);
+
+        var activeAssignments = await db.TripWaybills
+            .Where(w => w.TripId == tripId && w.Active)
+            .ToListAsync();
+
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        trip.Arrive(DateTime.UtcNow, operatorUserId);
+        await db.SaveChangesAsync();
+
+        // 配载行转非活跃（多段运输可继续装车）+ 运单事件 Arrived（不改交付状态）
+        foreach (var assignment in activeAssignments)
+        {
+            assignment.MarkInactive();
+            await waybillCargoService.MarkTransportArrivedAsync(
+                assignment.WaybillId, operatorUserId,
+                $"批次 {trip.TripNo} 到达（终点 {trip.DestBranchId}）");
+        }
+
+        await db.SaveChangesAsync();
+        db.TripEvents.Add(TransportTripEvent.Create(
+            trip.TenantId, trip.Id, TransportEventTypes.Arrived,
+            new { arrivedCount = activeAssignments.Count, branchId = trip.DestBranchId },
+            operatorUserId, DateTime.UtcNow));
+        await db.SaveChangesAsync();
+
+        await audit.RecordAsync(
+            "transport.trip.arrive", "transport_trip", trip.Id, operatorUserId,
+            new { tripNo = trip.TripNo, arrivedCount = activeAssignments.Count });
+        scope.Complete();
+
+        return ToDto(trip, activeAssignments);
+    }
+
+    public async Task<TripFeeDto> RecordFeeAsync(
+        Guid operatorUserId, Guid tripId, string feeType, decimal amount, string? note)
+    {
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tripId);
+
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        var fee = TransportTripFee.Create(
+            tenantId, tripId, feeType, amount, operatorUserId, note, DateTime.UtcNow);
+        db.TripFees.Add(fee);
+        await db.SaveChangesAsync();
+
+        await audit.RecordAsync(
+            "transport.trip.record_fee", "transport_trip_fee", fee.Id, operatorUserId,
+            new { tripNo = trip.TripNo, feeType, amount });
+        scope.Complete();
+
+        return new TripFeeDto(
+            fee.Id, fee.TripId, fee.FeeType, fee.Amount, fee.Note, fee.OperatorUserId, fee.OccurredAt);
+    }
+
+    public async Task<IReadOnlyList<TripFeeDto>> ListFeesAsync(Guid operatorUserId, Guid tripId)
+    {
+        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
+        await RequireTripAsync(tripId);
+
+        return (await db.TripFees
+                .Where(f => f.TripId == tripId)
+                .OrderBy(f => f.OccurredAt)
+                .ToListAsync())
+            .Select(f => new TripFeeDto(
+                f.Id, f.TripId, f.FeeType, f.Amount, f.Note, f.OperatorUserId, f.OccurredAt))
+            .ToList();
+    }
 
     private async Task<Guid> RequireTenantIdAsync(Guid operatorUserId, string permissionCode)
     {

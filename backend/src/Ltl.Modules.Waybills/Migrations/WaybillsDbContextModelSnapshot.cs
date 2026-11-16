@@ -195,7 +195,7 @@ namespace Ltl.Modules.Waybills.Migrations
 
                             t.HasCheckConstraint("ck_waybills_total_amount", "total_amount IS NULL OR total_amount >= 0");
 
-                            t.HasCheckConstraint("ck_waybills_transport_status", "transport_status IN (1)");
+                            t.HasCheckConstraint("ck_waybills_transport_status", "transport_status IN (1, 2)");
                         });
                 });
 
@@ -263,7 +263,7 @@ namespace Ltl.Modules.Waybills.Migrations
 
                             t.HasCheckConstraint("ck_waybill_events_to_status", "to_status IN (1, 2, 3)");
 
-                            t.HasCheckConstraint("ck_waybill_events_type", "event_type IN (1, 2, 3, 4, 5)");
+                            t.HasCheckConstraint("ck_waybill_events_type", "event_type IN (1, 2, 3, 4, 5, 6, 7)");
                         });
                 });
 

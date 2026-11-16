@@ -31,6 +31,12 @@ public interface IWaybillCargoService
 
     /// <summary>运单申报口径快照（不改变状态；分批收货场景核对用）。</summary>
     Task<WaybillCargoSnapshot> GetSnapshotAsync(Guid waybillId);
+
+    /// <summary>运输状态流转：发车标记（TRIP-002，未发运 → 已发运）+ 运单事件 Departed。</summary>
+    Task MarkTransportShippedAsync(Guid waybillId, Guid? operatorUserId, string detail);
+
+    /// <summary>运单事件 Arrived（TRIP-002；不改运输/交付状态）。</summary>
+    Task MarkTransportArrivedAsync(Guid waybillId, Guid? operatorUserId, string detail);
 }
 
 public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoService
@@ -57,6 +63,21 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
 
     public async Task<WaybillCargoSnapshot> GetSnapshotAsync(Guid waybillId) =>
         Snapshot(await RequireWaybillAsync(waybillId));
+
+    public async Task MarkTransportShippedAsync(Guid waybillId, Guid? operatorUserId, string detail)
+    {
+        var waybill = await RequireWaybillAsync(waybillId);
+        waybill.MarkTransportShipped(DateTime.UtcNow, operatorUserId);
+        AppendEvent(waybill, WaybillEventType.Departed, operatorUserId, detail);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task MarkTransportArrivedAsync(Guid waybillId, Guid? operatorUserId, string detail)
+    {
+        var waybill = await RequireWaybillAsync(waybillId);
+        AppendEvent(waybill, WaybillEventType.Arrived, operatorUserId, detail);
+        await db.SaveChangesAsync();
+    }
 
     private async Task<Waybill> RequireWaybillAsync(Guid waybillId)
     {

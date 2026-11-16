@@ -56,7 +56,21 @@ public static class TransportEndpoints
         app.MapGet("/api/waybills/{id:guid}/trips", async (
             Guid id, ClaimsPrincipal user, ITripService service) =>
             Results.Ok(await service.ListWaybillTripsAsync(RequireUserId(user), id)));
+
+        // TRIP-002：发车/到达/运输费用
+        trips.MapPost("/{id:guid}/depart", async (Guid id, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.DepartTripAsync(RequireUserId(user), id)));
+        trips.MapPost("/{id:guid}/arrive", async (Guid id, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.ArriveTripAsync(RequireUserId(user), id)));
+        trips.MapPost("/{id:guid}/fees", async (
+            Guid id, RecordTripFeeRequest request, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.RecordFeeAsync(
+                RequireUserId(user), id, request.FeeType, request.Amount, request.Note)));
+        trips.MapGet("/{id:guid}/fees", async (Guid id, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.ListFeesAsync(RequireUserId(user), id)));
     }
+
+    public sealed record RecordTripFeeRequest(string FeeType, decimal Amount, string? Note);
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
         Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) && userId != Guid.Empty

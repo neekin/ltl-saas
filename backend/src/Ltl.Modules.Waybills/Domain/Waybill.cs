@@ -252,6 +252,21 @@ public sealed class Waybill : TenantScopedEntity
         Touch(nowUtc, updatedBy);
     }
 
+    /// <summary>
+    /// 运输状态流转：发车（TRIP-002）。仅未发运 → 已发运；配合 Cancel 的"已发运不可取消"守卫。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">已发运时抛出。</exception>
+    public void MarkTransportShipped(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (TransportStatus != WaybillTransportStatus.NotShipped)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 运输状态为 {TransportStatus}，无需重复发运标记。");
+        }
+
+        TransportStatus = WaybillTransportStatus.Shipped;
+        Touch(nowUtc, operatorUserId);
+    }
+
     /// <summary>汇总件数（Σ货物件件数）。</summary>
     public int TotalPieces => _packages.Sum(p => p.Quantity);
 
