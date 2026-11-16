@@ -55,6 +55,30 @@ public sealed class User : TenantScopedEntity
         Touch(nowUtc, updatedBy);
     }
 
+    /// <summary>授予租户级数据范围（服务端显式授权动作，幂等）。</summary>
+    public void GrantTenantWideScope(DateTime nowUtc, Guid? updatedBy = null)
+    {
+        if (TenantWideScope)
+        {
+            return;
+        }
+
+        TenantWideScope = true;
+        Touch(nowUtc, updatedBy);
+    }
+
+    /// <summary>收回租户级数据范围（幂等）。</summary>
+    public void RevokeTenantWideScope(DateTime nowUtc, Guid? updatedBy = null)
+    {
+        if (!TenantWideScope)
+        {
+            return;
+        }
+
+        TenantWideScope = false;
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>禁用用户（幂等）。</summary>
     public void Disable(DateTime nowUtc, Guid? updatedBy = null)
     {
