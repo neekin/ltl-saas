@@ -1,5 +1,6 @@
 using Ltl.Modules.Organization.Domain;
 using Ltl.Modules.Warehouse.Domain;
+using Ltl.Modules.Transport.Domain;
 using Ltl.Modules.Waybills.Domain;
 using Ltl.Modules.Tenancy.Domain;
 using Microsoft.EntityFrameworkCore;
@@ -38,7 +39,10 @@ public sealed class OrganizationPersistenceTests(PostgreSqlFixture fixture) : IC
         // 平台预置权限点已 seed（组织域 + 各业务模块追加：仓储域 RECEIVE-001）
         var permissionCount = await context.Permissions.CountAsync();
         Assert.Equal(
-            PermissionCodes.All.Count + WarehousePermissionCodes.All.Count + WaybillPermissionCodes.All.Count,
+            PermissionCodes.All.Count
+            + WarehousePermissionCodes.All.Count
+            + WaybillPermissionCodes.All.Count
+            + TransportPermissionCodes.All.Count,
             permissionCount);
     }
 
