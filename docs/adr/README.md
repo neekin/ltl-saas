@@ -15,3 +15,4 @@
 | [ADR-0002](ADR-0002-modular-monolith.md) | 模块化单体与模块边界 | 已接受 |
 | [ADR-0003](ADR-0003-transaction-and-outbox.md) | 事务、Outbox 与幂等策略 | 已接受 |
 | [ADR-0004](ADR-0004-declarative-pricing-rules.md) | 声明式计价规则格式 | 已接受 |
+| [ADR-0005](ADR-0005-authentication-and-tenant-resolution.md) | 认证机制（JWT）与租户上下文解析 | 已接受 |

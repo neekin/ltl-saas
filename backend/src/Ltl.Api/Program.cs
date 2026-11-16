@@ -1,4 +1,7 @@
 using Ltl.Api.Infrastructure;
+using Ltl.Modules.Tenancy.Application;
+using Ltl.Modules.Tenancy.Infrastructure;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,19 +15,40 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
+// 特定异常处理器必须注册在兜底 GlobalExceptionHandler 之前（IExceptionHandler 按注册顺序匹配）
+builder.Services.AddExceptionHandler<TenantContextMissingExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// Tenancy 模块（TEN-001）
+builder.Services.AddDbContext<TenancyDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+builder.Services.AddScoped<ITenantContext, TenantContext>();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
+app.UseMiddleware<TenantResolutionMiddleware>();
 
 app.MapGet("/", () => Results.Ok(new { name = "LTL SaaS API", status = "ok" }));
 app.MapHealthChecks("/health");
 
+// 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）
+app.MapGet("/api/tenancy/current", (ITenantContext tenantContext) =>
+    Results.Ok(new { tenantId = tenantContext.RequireTenant() }));
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+
+    // 开发环境启动时应用迁移（生产由部署流程执行迁移，P9）
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<TenancyDbContext>();
+        db.Database.Migrate();
+    }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露
     app.MapGet("/dev/throw", () =>

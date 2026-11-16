@@ -8,6 +8,7 @@
 | --- | --- | --- | --- |
 | GET | `/health` | 健康检查，返回纯文本 `Healthy` | 无（基础设施端点） |
 | GET | `/openapi/v1.json` | OpenAPI 3.0 文档（仅开发环境） | 无（基础设施端点） |
+| GET | `/api/tenancy/current` | 返回服务端解析的租户 `{ tenantId }`；无租户上下文 → 401 ProblemDetails | 要求租户上下文（TEN-001） |
 | GET | `/dev/throw` | 演示异常端点，仅开发环境，用于验证统一错误格式 | 无（仅本地调试） |
 | GET | `/` | API 元信息 `{ name, status }` | 无（基础设施端点） |
 

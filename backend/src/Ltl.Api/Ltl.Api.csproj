@@ -7,7 +7,12 @@
   <ItemGroup>
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
-    <!-- 模块按任务逐步接入组合根。 -->
+    <!-- 显式钉版本，避免传递依赖把 Relational 解析为 10.0.4 造成运行时程序集不匹配 -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ltl.Modules.Tenancy\Ltl.Modules.Tenancy.csproj" />
   </ItemGroup>
 
 </Project>
