@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Ltl.Modules.Pricing\Ltl.Modules.Pricing.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Organization\Ltl.Modules.Organization.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
     <ProjectReference Include="..\Ltl.SharedKernel\Ltl.SharedKernel.csproj" />
   </ItemGroup>

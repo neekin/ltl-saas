@@ -128,6 +128,7 @@ builder.Services.AddDbContext<WarehouseDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<ICargoReceiptService, CargoReceiptService>();
 builder.Services.AddScoped<ICargoSortingService, CargoSortingService>();
+builder.Services.AddScoped<IWaybillPrintService, WaybillPrintService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
@@ -212,6 +213,7 @@ app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService)
 app.MapOrganizationEndpoints();
 app.MapFileEndpoints();
 app.MapWarehouseEndpoints();
+app.MapWaybillEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
