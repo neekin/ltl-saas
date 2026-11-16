@@ -1,8 +1,9 @@
-namespace Ltl.Modules.Tenancy.Application;
+namespace Ltl.SharedKernel.Application;
 
 /// <summary>
-/// 租户上下文：请求内由 TenantResolutionMiddleware 从已认证 claim 解析；
-/// 后台任务必须显式 <see cref="SetTenant"/> 建立上下文（AGENTS.md §4.3）。
+/// 租户上下文：跨模块通用契约（AGENTS.md §4.3、§5.1）。
+/// 请求内由 TenantResolutionMiddleware（Tenancy 模块）从已认证 claim 解析；
+/// 后台任务必须显式 <see cref="SetTenant"/> 建立上下文，不依赖线程隐式状态。
 /// </summary>
 public interface ITenantContext
 {

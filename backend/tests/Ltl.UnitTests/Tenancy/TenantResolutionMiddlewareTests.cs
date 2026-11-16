@@ -1,5 +1,5 @@
 using System.Security.Claims;
-using Ltl.Modules.Tenancy.Application;
+using Ltl.SharedKernel.Application;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Microsoft.AspNetCore.Http;
 using Xunit;

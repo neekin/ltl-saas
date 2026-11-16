@@ -1,4 +1,4 @@
-using Ltl.Modules.Tenancy.Application;
+using Ltl.SharedKernel.Application;
 using Xunit;
 
 namespace Ltl.UnitTests.Tenancy;

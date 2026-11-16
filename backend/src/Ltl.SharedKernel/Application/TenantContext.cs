@@ -1,4 +1,4 @@
-namespace Ltl.Modules.Tenancy.Application;
+namespace Ltl.SharedKernel.Application;
 
 /// <summary>
 /// 租户上下文的默认实现（scoped）：

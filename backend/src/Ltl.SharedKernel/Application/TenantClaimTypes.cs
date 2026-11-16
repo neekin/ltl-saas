@@ -1,4 +1,4 @@
-namespace Ltl.Modules.Tenancy.Application;
+namespace Ltl.SharedKernel.Application;
 
 /// <summary>
 /// JWT claim 契约（ADR-0005）：P1 登录任务签发 token 时必须遵守。

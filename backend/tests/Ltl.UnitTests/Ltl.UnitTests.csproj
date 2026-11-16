@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Ltl.Modules.Tenancy\Ltl.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\..\src\Ltl.Modules.Organization\Ltl.Modules.Organization.csproj" />
   </ItemGroup>
 
 </Project>

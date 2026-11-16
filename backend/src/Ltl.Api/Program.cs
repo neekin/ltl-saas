@@ -1,6 +1,7 @@
 using Ltl.Api.Infrastructure;
-using Ltl.Modules.Tenancy.Application;
+using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
+using Ltl.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -23,6 +24,12 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddDbContext<TenancyDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
+
+// Organization 模块（ORG-001）
+builder.Services.AddDbContext<OrganizationDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddHttpContextAccessor();
 
@@ -46,8 +53,8 @@ if (app.Environment.IsDevelopment())
     // 开发环境启动时应用迁移（生产由部署流程执行迁移，P9）
     using (var scope = app.Services.CreateScope())
     {
-        var db = scope.ServiceProvider.GetRequiredService<TenancyDbContext>();
-        db.Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<TenancyDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<OrganizationDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露
