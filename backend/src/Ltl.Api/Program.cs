@@ -11,6 +11,7 @@ using Ltl.Modules.Pricing.Application;
 using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Api.Endpoints;
 using Ltl.Modules.Platform.Application;
+using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
@@ -96,6 +97,10 @@ builder.Services.AddDbContext<PlatformDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IBranchSequenceService, BranchSequenceService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+// 文件存储（FILE-001）：抽象接口 + 本地开发实现；生产 S3 适配器随 P9 接入
+builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection(FileStorageOptions.SectionName));
+builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
+builder.Services.AddScoped<IFileObjectService, FileObjectService>();
 
 // Pricing 模块（PRICE-001/002：计价规则模型、版本管理、执行器与试算）
 builder.Services.AddDbContext<PricingDbContext>(options =>
@@ -192,6 +197,7 @@ app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService)
     });
 
 app.MapOrganizationEndpoints();
+app.MapFileEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
