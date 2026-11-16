@@ -24,6 +24,11 @@ public sealed class WarehouseDbContext(
     /// <summary>仓储作业任务（WAREHOUSE-001）。</summary>
     public DbSet<CargoHandlingTask> HandlingTasks => Set<CargoHandlingTask>();
 
+    /// <summary>网点调拨（TRANSFER-001）。</summary>
+    public DbSet<BranchTransfer> Transfers => Set<BranchTransfer>();
+
+    public DbSet<BranchTransferItem> TransferItems => Set<BranchTransferItem>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(WarehouseDbContext).Assembly);

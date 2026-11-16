@@ -22,6 +22,175 @@ namespace Ltl.Modules.Warehouse.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.BranchTransfer", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DispatchedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("dispatched_at");
+
+                    b.Property<Guid?>("DispatchedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("dispatched_by");
+
+                    b.Property<Guid>("FromBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_branch_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("received_at");
+
+                    b.Property<Guid?>("ReceivedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("received_by");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<Guid?>("SubmittedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("ToBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_branch_id");
+
+                    b.Property<string>("TransferNo")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("transfer_no");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_branch_transfers");
+
+                    b.HasIndex("TenantId", "Id")
+                        .IsUnique()
+                        .HasDatabaseName("ux_branch_transfers_tenant_id");
+
+                    b.HasIndex("TenantId", "TransferNo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_branch_transfers_tenant_no");
+
+                    b.ToTable("branch_transfers", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_branch_transfers_status", "status IN (1, 2, 3, 4, 5)");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.BranchTransferItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchTransferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_transfer_id");
+
+                    b.Property<int?>("BrokenQuantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("broken_quantity");
+
+                    b.Property<string>("CargoName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("cargo_name");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("DeclaredQuantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("declared_quantity");
+
+                    b.Property<int?>("ReceivedQuantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("received_quantity");
+
+                    b.Property<string>("Remark")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("remark");
+
+                    b.Property<int>("Seq")
+                        .HasColumnType("integer")
+                        .HasColumnName("seq");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TransferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("transfer_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_branch_transfer_items");
+
+                    b.HasIndex("BranchTransferId")
+                        .HasDatabaseName("ix_branch_transfer_items_branch_transfer_id");
+
+                    b.HasIndex("TenantId", "TransferId", "Seq")
+                        .IsUnique()
+                        .HasDatabaseName("ux_branch_transfer_items_transfer_seq");
+
+                    b.ToTable("branch_transfer_items", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_branch_transfer_items_broken", "broken_quantity IS NULL OR broken_quantity >= 0");
+
+                            t.HasCheckConstraint("ck_branch_transfer_items_declared", "declared_quantity >= 1");
+
+                            t.HasCheckConstraint("ck_branch_transfer_items_received", "received_quantity IS NULL OR received_quantity >= 0");
+
+                            t.HasCheckConstraint("ck_branch_transfer_items_seq", "seq >= 1");
+                        });
+                });
+
             modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.CargoHandlingTask", b =>
                 {
                     b.Property<Guid>("Id")
@@ -175,6 +344,19 @@ namespace Ltl.Modules.Warehouse.Migrations
 
                             t.HasCheckConstraint("ck_cargo_receipts_weight", "received_weight_kg >= 0");
                         });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.BranchTransferItem", b =>
+                {
+                    b.HasOne("Ltl.Modules.Warehouse.Domain.BranchTransfer", null)
+                        .WithMany("Items")
+                        .HasForeignKey("BranchTransferId")
+                        .HasConstraintName("fk_branch_transfer_items_branch_transfers_branch_transfer_id");
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Warehouse.Domain.BranchTransfer", b =>
+                {
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

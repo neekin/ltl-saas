@@ -131,6 +131,7 @@ builder.Services.AddDbContext<WarehouseDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<ICargoReceiptService, CargoReceiptService>();
 builder.Services.AddScoped<ICargoSortingService, CargoSortingService>();
+builder.Services.AddScoped<IBranchTransferService, BranchTransferService>();
 
 // Transport 模块（VEHICLE-001：车辆/司机档案）
 builder.Services.AddDbContext<TransportDbContext>(options =>

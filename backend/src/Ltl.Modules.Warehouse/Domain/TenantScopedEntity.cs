@@ -44,6 +44,12 @@ public abstract class TenantScopedEntity : ITenantScopedEntity
         throw new ArgumentException("时间必须携带 UTC 或本地时区信息，禁止 Unspecified。", nameof(value));
     }
 
+    protected void Touch(DateTime nowUtc, Guid? updatedBy)
+    {
+        UpdatedAt = EnsureUtc(nowUtc);
+        UpdatedBy = updatedBy;
+    }
+
     protected static string RequireNonBlank(string value, string paramName, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))

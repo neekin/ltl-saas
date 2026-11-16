@@ -1,6 +1,8 @@
 using System.Security.Claims;
 using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Warehouse.Application;
+using Ltl.Modules.Warehouse.Application;
+using Ltl.Modules.Platform.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -36,6 +38,20 @@ public static class WarehouseEndpoints
         sorting.MapGet("/", async (
             Guid waybillId, ClaimsPrincipal user, ICargoSortingService service) =>
             Results.Ok(await service.ListByWaybillAsync(RequireUserId(user), waybillId)));
+
+        var transfers = app.MapGroup("/api/warehouse/transfers");
+        transfers.MapPost("/", async (CreateTransferRequest request, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.CreateAsync(RequireUserId(user), request)));
+        transfers.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.GetAsync(RequireUserId(user), id)));
+        transfers.MapPost("/{id:guid}/submit", async (Guid id, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.SubmitAsync(RequireUserId(user), id)));
+        transfers.MapPost("/{id:guid}/dispatch", async (Guid id, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.DispatchAsync(RequireUserId(user), id)));
+        transfers.MapPost("/{id:guid}/receive", async (Guid id, ReceiveTransferRequest request, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.ReceiveAsync(RequireUserId(user), id, request)));
+        transfers.MapPost("/{id:guid}/cancel", async (Guid id, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.CancelAsync(RequireUserId(user), id)));
     }
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
@@ -49,3 +65,5 @@ public sealed record RecordCargoReceiptRequest(
     decimal ReceivedWeightKg, decimal ReceivedVolumeM3, string? Note);
 
 public sealed record CreateSortingTaskRequest(Guid WaybillId, Guid BranchId, string? Note);
+
+

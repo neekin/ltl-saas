@@ -13,10 +13,15 @@ public static class WarehousePermissionCodes
     public const string CargoRead = "warehouse.cargo.read";
     public const string CargoSort = "warehouse.cargo.sort";
 
+    public const string TransferRead = "warehouse.transfer.read";
+    public const string TransferManage = "warehouse.transfer.manage";
+
     public static readonly IReadOnlyList<Permission> All = new List<Permission>
     {
         Permission.Create(CargoReceive, "收货登记（称重、体积复核）", Module, new Guid("00000000-0000-0000-0000-000000000201")),
         Permission.Create(CargoRead, "查看收货记录与仓储状态", Module, new Guid("00000000-0000-0000-0000-000000000202")),
         Permission.Create(CargoSort, "分拣任务操作", Module, new Guid("00000000-0000-0000-0000-000000000203")),
+        Permission.Create(TransferRead, "查看网点调拨", Module, new Guid("00000000-0000-0000-0000-000000000204")),
+        Permission.Create(TransferManage, "管理网点调拨（创建/提交/发出/验收）", Module, new Guid("00000000-0000-0000-0000-000000000205")),
     };
 }
