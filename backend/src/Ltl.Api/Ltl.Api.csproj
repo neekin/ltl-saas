@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Ltl.Modules.Customers\Ltl.Modules.Customers.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Routing\Ltl.Modules.Routing.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Pricing\Ltl.Modules.Pricing.csproj" />
   </ItemGroup>
 
 </Project>

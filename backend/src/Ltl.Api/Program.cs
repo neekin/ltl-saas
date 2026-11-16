@@ -3,6 +3,8 @@ using Ltl.Modules.Customers.Application;
 using Ltl.Modules.Customers.Infrastructure;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
+using Ltl.Modules.Pricing.Application;
+using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
@@ -53,6 +55,12 @@ builder.Services.AddDbContext<PlatformDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IBranchSequenceService, BranchSequenceService>();
 
+// Pricing 模块（PRICE-001：计价规则模型和版本管理）
+builder.Services.AddDbContext<PricingDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+builder.Services.AddScoped<IPricingRuleSetService, PricingRuleSetService>();
+
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddHttpContextAccessor();
@@ -82,6 +90,7 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<CustomersDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<RoutingDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<PlatformDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<PricingDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露

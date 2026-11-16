@@ -16,6 +16,7 @@
     <ProjectReference Include="..\..\src\Ltl.Modules.Customers\Ltl.Modules.Customers.csproj" />
     <ProjectReference Include="..\..\src\Ltl.Modules.Routing\Ltl.Modules.Routing.csproj" />
     <ProjectReference Include="..\..\src\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
+    <ProjectReference Include="..\..\src\Ltl.Modules.Pricing\Ltl.Modules.Pricing.csproj" />
   </ItemGroup>
 
 </Project>
