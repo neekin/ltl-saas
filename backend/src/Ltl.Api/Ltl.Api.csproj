@@ -5,7 +5,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- 模块按任务逐步接入组合根；BASE-001 仅建立骨架。 -->
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="11.0.0" />
+    <!-- 模块按任务逐步接入组合根。 -->
   </ItemGroup>
 
 </Project>
