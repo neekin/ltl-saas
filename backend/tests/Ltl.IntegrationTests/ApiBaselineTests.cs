@@ -73,18 +73,17 @@ public class ApiBaselineTests : IClassFixture<PostgreSqlFixture>
         Assert.True(document.RootElement.TryGetProperty("paths", out _));
     }
 
+    /// <summary>
+    /// AUTH-001 后契约：未认证请求在认证层（FallbackPolicy）即被拒绝 → 裸 401；
+    /// ProblemDetails 语义移至 /api/auth/login 失败路径（AuthEndpointsTests 覆盖）。
+    /// </summary>
     [Fact]
-    public async Task TenancyCurrent_WithoutTenantContext_ShouldReturn401ProblemDetails()
+    public async Task TenancyCurrent_WithoutAuthentication_ShouldReturn401()
     {
         using var client = CreateClient();
 
         var response = await client.GetAsync("/api/tenancy/current");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-
-        var body = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        Assert.NotNull(body);
-        Assert.Equal("未提供有效的租户上下文", body!.Title);
     }
 }

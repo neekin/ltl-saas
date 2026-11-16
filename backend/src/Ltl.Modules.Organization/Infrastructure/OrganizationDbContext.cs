@@ -35,6 +35,12 @@ public sealed class OrganizationDbContext(
 
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
 
+    /// <summary>
+    /// 刷新令牌（AUTH-001）。非租户范围实体（登录前按令牌哈希查找，无租户上下文可用）；
+    /// 令牌仅存哈希，租户归属为审计字段。
+    /// </summary>
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(OrganizationDbContext).Assembly);

@@ -123,6 +123,45 @@ namespace Ltl.Modules.Organization.Migrations
                     b.ToTable("permissions", (string)null);
                 });
 
+            modelBuilder.Entity("Ltl.Modules.Organization.Domain.RefreshToken", b =>
+                {
+                    b.Property<string>("TokenHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("TokenHash")
+                        .HasName("pk_refresh_tokens");
+
+                    b.HasIndex("TenantId", "UserId")
+                        .HasDatabaseName("ix_refresh_tokens_user");
+
+                    b.ToTable("refresh_tokens", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_refresh_tokens_expiry", "expires_at > created_at");
+                        });
+                });
+
             modelBuilder.Entity("Ltl.Modules.Organization.Domain.Role", b =>
                 {
                     b.Property<Guid>("Id")
@@ -271,6 +310,9 @@ namespace Ltl.Modules.Organization.Migrations
                     b.HasKey("Id")
                         .HasName("pk_users");
 
+                    b.HasAlternateKey("TenantId", "Id")
+                        .HasName("ak_users_tenant_id_id");
+
                     b.HasIndex("TenantId", "Id")
                         .IsUnique()
                         .HasDatabaseName("ux_users_tenant_id");
@@ -323,6 +365,17 @@ namespace Ltl.Modules.Organization.Migrations
                         .HasName("pk_user_roles");
 
                     b.ToTable("user_roles", (string)null);
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Organization.Domain.RefreshToken", b =>
+                {
+                    b.HasOne("Ltl.Modules.Organization.Domain.User", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "UserId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_refresh_tokens_users_tenant_id_user_id");
                 });
 #pragma warning restore 612, 618
         }

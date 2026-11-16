@@ -152,6 +152,32 @@ public sealed class AuthorizationService(OrganizationDbContext db) : IAuthorizat
             && db.Permissions.Any(p => p.Id == rp.PermissionId && p.Code == permissionCode));
     }
 
+    public async Task<IReadOnlyCollection<string>> GetPermissionCodesAsync(Guid userId)
+    {
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId);
+        if (user is null || user.Status == UserStatus.Disabled)
+        {
+            return Array.Empty<string>();
+        }
+
+        var roleIds = await db.UserRoles
+            .Where(x => x.UserId == userId)
+            .Select(x => x.RoleId)
+            .ToListAsync();
+
+        var permissionIds = await db.RolePermissions
+            .Where(rp => roleIds.Contains(rp.RoleId)
+                && db.Roles.Any(r => r.Id == rp.RoleId && r.Status == RoleStatus.Active))
+            .Select(rp => rp.PermissionId)
+            .ToListAsync();
+
+        return await db.Permissions
+            .Where(p => permissionIds.Contains(p.Id))
+            .Select(p => p.Code)
+            .OrderBy(code => code)
+            .ToListAsync();
+    }
+
     public async Task<IReadOnlyCollection<Guid>> GetAuthorizedBranchIdsAsync(Guid userId)
     {
         var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId);

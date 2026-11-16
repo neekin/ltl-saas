@@ -38,6 +38,9 @@ public interface IAuthorizationService
     /// <summary>用户是否拥有指定权限点（仅启用角色的权限；禁用用户一律 false）。</summary>
     Task<bool> HasPermissionAsync(Guid userId, string permissionCode);
 
+    /// <summary>用户的有效权限点编码集合（实时查询；登录/me 响应用，AUTH-001）。</summary>
+    Task<IReadOnlyCollection<string>> GetPermissionCodesAsync(Guid userId);
+
     /// <summary>用户的有效网点 Id 集合（禁用用户/停用网点被排除）。</summary>
     Task<IReadOnlyCollection<Guid>> GetAuthorizedBranchIdsAsync(Guid userId);
 

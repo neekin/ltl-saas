@@ -1,6 +1,9 @@
+using System.Security.Claims;
+using System.Text;
 using Ltl.Api.Infrastructure;
 using Ltl.Modules.Customers.Application;
 using Ltl.Modules.Customers.Infrastructure;
+using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Pricing.Application;
@@ -8,11 +11,13 @@ using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
+using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Infrastructure;
-using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.SharedKernel.Application;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,14 +33,42 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 // 特定异常处理器必须注册在兜底 GlobalExceptionHandler 之前（IExceptionHandler 按注册顺序匹配）
 builder.Services.AddExceptionHandler<TenantContextMissingExceptionHandler>();
+builder.Services.AddExceptionHandler<AuthenticationFailedExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// JWT 认证（AUTH-001；契约 ADR-0005）：tenant_id 只来自已验证 token 的 claim（AGENTS §5.1）
+var jwtSection = builder.Configuration.GetSection(JwtOptions.SectionName);
+builder.Services.Configure<JwtOptions>(jwtSection);
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        var jwt = jwtSection.Get<JwtOptions>() ?? throw new InvalidOperationException("缺少 Jwt 配置节。");
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwt.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwt.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwt.Secret)),
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+// 业务 API 默认要求认证；匿名端点显式 AllowAnonymous（AUTH-001 设计 §3）。
+// AuthorizationPolicyBuilder 全限定：避免与 Organization 模块的 IAuthorizationService 命名冲突
+builder.Services.AddAuthorization(options =>
+    options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build());
 
 // Tenancy 模块（TEN-001）
 builder.Services.AddDbContext<TenancyDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 
-// Organization 模块（ORG-001）
+// Organization 模块（ORG-001/002；AUTH-001 登录与刷新令牌）
 builder.Services.AddDbContext<OrganizationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
@@ -65,7 +98,7 @@ builder.Services.AddScoped<IPricingRuleSetService, PricingRuleSetService>();
 builder.Services.AddScoped<IPricingTrialService, PricingTrialService>();
 builder.Services.AddScoped<IPricingSnapshotSerializer, PricingSnapshotSerializer>();
 
-// Waybills 模块（WB-001：运单和货物件模型）
+// Waybills 模块（WB-001/002：运单模型、开单、快照与事件）
 builder.Services.AddDbContext<WaybillsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
@@ -73,24 +106,89 @@ builder.Services.AddScoped<IWaybillService, WaybillService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
+builder.Services.AddScoped<IJwtTokenIssuer, JwtTokenIssuer>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 app.UseExceptionHandler();
+// ADR-0005 顺序：UseAuthentication → TenantResolutionMiddleware（从认证身份解析租户）
+app.UseAuthentication();
 app.UseMiddleware<TenantResolutionMiddleware>();
+app.UseAuthorization();
 
-app.MapGet("/", () => Results.Ok(new { name = "LTL SaaS API", status = "ok" }));
-app.MapHealthChecks("/health");
+app.MapGet("/", () => Results.Ok(new { name = "LTL SaaS API", status = "ok" }))
+    .AllowAnonymous();
+app.MapHealthChecks("/health")
+    .AllowAnonymous();
 
-// 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）
+// ===== 认证端点（AUTH-001，匿名）=====
+app.MapPost("/api/auth/login", async (LoginRequest request, IAuthService authService) =>
+    {
+        var result = await authService.LoginAsync(request.TenantCode, request.Username, request.Password);
+        return Results.Ok(new
+        {
+            access_token = result.AccessToken,
+            expires_in = result.ExpiresInSeconds,
+            refresh_token = result.RefreshToken,
+            user = new
+            {
+                id = result.UserId,
+                username = result.Username,
+                displayName = result.DisplayName,
+                tenantId = result.TenantId,
+                permissions = result.Permissions,
+            },
+        });
+    })
+    .AllowAnonymous();
+
+app.MapPost("/api/auth/refresh", async (RefreshRequest request, IAuthService authService) =>
+    {
+        var result = await authService.RefreshAsync(request.RefreshToken);
+        return Results.Ok(new
+        {
+            access_token = result.AccessToken,
+            expires_in = result.ExpiresInSeconds,
+            refresh_token = result.RefreshToken,
+        });
+    })
+    .AllowAnonymous();
+
+app.MapPost("/api/auth/logout", async (RefreshRequest request, IAuthService authService) =>
+    {
+        await authService.LogoutAsync(request.RefreshToken);
+        return Results.Ok(new { revoked = true });
+    })
+    .AllowAnonymous();
+
+// 当前用户（认证）：实时权限点，供前端菜单/按钮展示；后端授权始终实时查库
+app.MapGet("/api/auth/me", async (HttpContext context, IAuthService authService) =>
+    {
+        var userIdText = context.User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? throw new AuthenticationFailedException("无效的认证凭据");
+        var (userId, username, displayName, tenantId, permissions) =
+            await authService.GetCurrentUserAsync(Guid.Parse(userIdText));
+        return Results.Ok(new
+        {
+            userId,
+            username,
+            displayName,
+            tenantId,
+            permissions,
+        });
+    });
+
+// 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
+// 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
 app.MapGet("/api/tenancy/current", (ITenantContext tenantContext) =>
     Results.Ok(new { tenantId = tenantContext.RequireTenant() }));
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapOpenApi().AllowAnonymous();
 
     // 开发环境启动时应用迁移（生产由部署流程执行迁移，P9）
     using (var scope = app.Services.CreateScope())
@@ -108,10 +206,21 @@ if (app.Environment.IsDevelopment())
     app.MapGet("/dev/throw", () =>
     {
         throw new InvalidOperationException("演示异常：验证统一 ProblemDetails 错误格式");
-    });
+    }).AllowAnonymous();
 }
 
 app.Run();
 
 // 供 WebApplicationFactory 集成测试作为入口类型
 public partial class Program;
+
+/// <summary>
+/// 认证请求契约采用 OAuth 惯例 snake_case（显式 JsonPropertyName，避免 camelCase 匹配歧义）。
+/// </summary>
+public sealed record LoginRequest(
+    [property: System.Text.Json.Serialization.JsonPropertyName("tenant_code")] string TenantCode,
+    [property: System.Text.Json.Serialization.JsonPropertyName("username")] string Username,
+    [property: System.Text.Json.Serialization.JsonPropertyName("password")] string Password);
+
+public sealed record RefreshRequest(
+    [property: System.Text.Json.Serialization.JsonPropertyName("refresh_token")] string RefreshToken);
