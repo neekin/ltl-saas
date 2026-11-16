@@ -58,6 +58,8 @@ public static class TransportEndpoints
             Results.Ok(await service.ListWaybillTripsAsync(RequireUserId(user), id)));
 
         // TRIP-002：发车/到达/运输费用
+        trips.MapGet("/", async (int? page, int? pageSize, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.ListTripsAsync(RequireUserId(user), page ?? 1, pageSize ?? 20)));
         trips.MapPost("/{id:guid}/depart", async (Guid id, ClaimsPrincipal user, ITripService service) =>
             Results.Ok(await service.DepartTripAsync(RequireUserId(user), id)));
         trips.MapPost("/{id:guid}/arrive", async (Guid id, ClaimsPrincipal user, ITripService service) =>

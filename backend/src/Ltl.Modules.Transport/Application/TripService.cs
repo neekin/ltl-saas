@@ -35,6 +35,9 @@ public interface ITripService
     Task RemoveWaybillAsync(Guid operatorUserId, Guid tripId, Guid assignmentId);
     Task<IReadOnlyList<TripWaybillDto>> ListWaybillTripsAsync(Guid operatorUserId, Guid waybillId);
 
+    /// <summary>批次列表（分页；TRIP-002 前端配载工作台）。</summary>
+    Task<PageResultTrips> ListTripsAsync(Guid operatorUserId, int page, int pageSize);
+
     /// <summary>发车（TRIP-002）：批次 → Departed；全部 active 配载运单运输状态 → Shipped + 事件。</summary>
     Task<TransportTripDto> DepartTripAsync(Guid operatorUserId, Guid tripId);
 
@@ -47,6 +50,9 @@ public interface ITripService
     /// <summary>批次费用列表。</summary>
     Task<IReadOnlyList<TripFeeDto>> ListFeesAsync(Guid operatorUserId, Guid tripId);
 }
+
+public sealed record PageResultTrips(
+    IReadOnlyList<TransportTripDto> Items, int Total, int Page, int PageSize);
 
 public sealed record TripFeeDto(
     Guid Id, Guid TripId, string FeeType, decimal Amount, string? Note, Guid? OperatorUserId, DateTime OccurredAt);
@@ -249,6 +255,28 @@ public sealed class TripService(
                 .ToListAsync())
             .Select(w => new TripWaybillDto(w.Id, w.WaybillId, w.Active, w.LoadedAt, w.LoadedBy))
             .ToList();
+    }
+
+    public async Task<PageResultTrips> ListTripsAsync(Guid operatorUserId, int page, int pageSize)
+    {
+        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        var total = await db.Trips.CountAsync();
+        var trips = await db.Trips
+            .OrderByDescending(t => t.CreatedAt)
+            .Skip((page - 1) * pageSize).Take(pageSize)
+            .ToListAsync();
+
+        var tripIds = trips.Select(t => t.Id).ToList();
+        var assignments = await db.TripWaybills
+            .Where(w => tripIds.Contains(w.TripId))
+            .ToListAsync();
+
+        return new PageResultTrips(
+            trips.Select(t => ToDto(t, assignments.Where(a => a.TripId == t.Id).ToList())).ToList(),
+            total, page, pageSize);
     }
 
     // ---------- 辅助 ----------

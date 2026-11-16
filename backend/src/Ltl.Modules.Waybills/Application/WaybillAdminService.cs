@@ -44,7 +44,13 @@ public interface IWaybillAdminService
     Task<WaybillDetailDto> UpdateDraftAsync(Guid operatorUserId, Guid waybillId, UpdateWaybillDraftRequest request);
     Task<WaybillDetailDto> ConfirmAsync(Guid operatorUserId, Guid waybillId);
     Task<WaybillDetailDto> CancelAsync(Guid operatorUserId, Guid waybillId, string? reason);
+
+    /// <summary>运单事件时间线（WB-002；WB-003 查询端点）。</summary>
+    Task<IReadOnlyList<WaybillEventDto>> ListEventsAsync(Guid operatorUserId, Guid waybillId);
 }
+
+public sealed record WaybillEventDto(
+    Guid Id, string EventType, string? Detail, Guid? OperatorId, DateTime OccurredAt);
 
 public sealed record PageResultWaybills(
     IReadOnlyList<WaybillListItemDto> Items, int Total, int Page, int PageSize);
@@ -166,6 +172,21 @@ public sealed class WaybillAdminService(
             string.IsNullOrWhiteSpace(reason) ? null : $"取消原因：{reason.Trim()}", createdBy: operatorUserId));
         await db.SaveChangesAsync();
         return MapDetail(waybill);
+    }
+
+    public async Task<IReadOnlyList<WaybillEventDto>> ListEventsAsync(Guid operatorUserId, Guid waybillId)
+    {
+        await RequireReadAsync(operatorUserId);
+        await RequireVisibleWaybillAsync(operatorUserId, waybillId);
+
+        return (await db.Events
+                .AsNoTracking()
+                .Where(e => e.WaybillId == waybillId)
+                .OrderBy(e => e.OccurredAt)
+                .ToListAsync())
+            .Select(e => new WaybillEventDto(
+                e.Id, e.EventType.ToString(), e.Detail, e.CreatedBy, e.OccurredAt))
+            .ToList();
     }
 
     // ---------- 辅助 ----------

@@ -27,6 +27,8 @@ public static class WaybillEndpoints
         waybills.MapPut("/{id:guid}/draft", async (
             Guid id, UpdateWaybillDraftRequest request, ClaimsPrincipal user, IWaybillAdminService service) =>
             Results.Ok(await service.UpdateDraftAsync(RequireUserId(user), id, request)));
+        waybills.MapGet("/{id:guid}/events", async (Guid id, ClaimsPrincipal user, IWaybillAdminService service) =>
+            Results.Ok(await service.ListEventsAsync(RequireUserId(user), id)));
         waybills.MapPost("/{id:guid}/confirm", async (Guid id, ClaimsPrincipal user, IWaybillAdminService service) =>
             Results.Ok(await service.ConfirmAsync(RequireUserId(user), id)));
         waybills.MapPost("/{id:guid}/cancel", async (

@@ -39,7 +39,13 @@ public interface IBranchTransferService
     Task<BranchTransferDto> DispatchAsync(Guid operatorUserId, Guid transferId);
     Task<BranchTransferDto> ReceiveAsync(Guid operatorUserId, Guid transferId, ReceiveTransferRequest request);
     Task<BranchTransferDto> CancelAsync(Guid operatorUserId, Guid transferId);
+
+    /// <summary>调拨单列表（分页，时间倒序；TRANSFER-001 前端列表页）。</summary>
+    Task<PageResultTransfers> ListAsync(Guid operatorUserId, int page, int pageSize);
 }
+
+public sealed record PageResultTransfers(
+    IReadOnlyList<BranchTransferDto> Items, int Total, int Page, int PageSize);
 
 /// <summary>
 /// 调拨实现（TRANSFER-001）。组合授权：调出侧动作校验调出网点范围、验收校验目的网点范围（AGENTS §5.2）；
@@ -186,6 +192,34 @@ public sealed class BranchTransferService(
         scope.Complete();
 
         return detailcancel;
+    }
+
+    public async Task<PageResultTransfers> ListAsync(Guid operatorUserId, int page, int pageSize)
+    {
+        await RequireTenantIdAsync(operatorUserId, WarehousePermissionCodes.TransferRead);
+        page = page < 1 ? 1 : page;
+        pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
+
+        var total = await db.Transfers.CountAsync();
+        var transfers = await db.Transfers
+            .OrderByDescending(t => t.CreatedAt)
+            .Skip((page - 1) * pageSize).Take(pageSize)
+            .ToListAsync();
+
+        var transferIds = transfers.Select(t => t.Id).ToList();
+        var items = await db.TransferItems
+            .Where(i => transferIds.Contains(i.TransferId))
+            .ToListAsync();
+
+        return new PageResultTransfers(
+            transfers.Select(t => new BranchTransferDto(
+                t.Id, t.TransferNo, t.FromBranchId, t.ToBranchId, t.Status.ToString(),
+                items.Where(i => i.TransferId == t.Id).OrderBy(i => i.Seq).Select(i =>
+                    new BranchTransferItemDto(
+                        i.Id, i.Seq, i.CargoName, i.DeclaredQuantity,
+                        i.ReceivedQuantity, i.BrokenQuantity, i.Remark)).ToList(),
+                t.Note, t.CreatedAt, t.SubmittedAt, t.DispatchedAt, t.ReceivedAt)).ToList(),
+            total, page, pageSize);
     }
 
     // ---------- 辅助 ----------

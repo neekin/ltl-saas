@@ -42,6 +42,8 @@ public static class WarehouseEndpoints
         var transfers = app.MapGroup("/api/warehouse/transfers");
         transfers.MapPost("/", async (CreateTransferRequest request, ClaimsPrincipal user, IBranchTransferService service) =>
             Results.Ok(await service.CreateAsync(RequireUserId(user), request)));
+        transfers.MapGet("/", async (int? page, int? pageSize, ClaimsPrincipal user, IBranchTransferService service) =>
+            Results.Ok(await service.ListAsync(RequireUserId(user), page ?? 1, pageSize ?? 20)));
         transfers.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, IBranchTransferService service) =>
             Results.Ok(await service.GetAsync(RequireUserId(user), id)));
         transfers.MapPost("/{id:guid}/submit", async (Guid id, ClaimsPrincipal user, IBranchTransferService service) =>
