@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Ltl.Modules.Tenancy\Ltl.Modules.Tenancy.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Organization\Ltl.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Customers\Ltl.Modules.Customers.csproj" />
   </ItemGroup>
 
 </Project>

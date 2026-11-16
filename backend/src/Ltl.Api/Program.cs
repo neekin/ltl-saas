@@ -1,4 +1,6 @@
 using Ltl.Api.Infrastructure;
+using Ltl.Modules.Customers.Application;
+using Ltl.Modules.Customers.Infrastructure;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
@@ -31,6 +33,12 @@ builder.Services.AddDbContext<OrganizationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 
+// Customers 模块（CUS-001）
+builder.Services.AddDbContext<CustomersDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+builder.Services.AddScoped<ICustomerRelationshipService, CustomerRelationshipService>();
+
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddHttpContextAccessor();
@@ -57,6 +65,7 @@ if (app.Environment.IsDevelopment())
     {
         scope.ServiceProvider.GetRequiredService<TenancyDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<OrganizationDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<CustomersDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露
