@@ -47,6 +47,8 @@ public class TripLoadTests : IClassFixture<PostgreSqlFixture>
     }
 
     /// <summary>seed：租户（GZ01→WH02）+ 车辆（10t/50m³）+ 3 张已确认运单 + 管理员（trip/receive/sort 权限 + 起点范围）。</summary>
+    public HttpClient CreateClientPublic() => CreateClient();
+
     public async Task<TripSeed> SeedAsyncPublic() => await SeedAsync();
 
     private async Task<TripSeed> SeedAsync()

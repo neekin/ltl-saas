@@ -18,6 +18,7 @@ namespace Ltl.Modules.Waybills.Migrations
                 values: new object[,]
                 {
                     { new Guid("00000000-0000-0000-0000-000000000301"), WaybillPermissionCodes.WaybillRead, "查看运单（含打印数据）", WaybillPermissionCodes.Module },
+                    { new Guid("00000000-0000-0000-0000-000000000302"), WaybillPermissionCodes.WaybillManage, "管理运单（开单/修改/确认/取消）", WaybillPermissionCodes.Module },
                 });
         }
 
@@ -29,6 +30,11 @@ namespace Ltl.Modules.Waybills.Migrations
                 keyColumn: "id",
                 keyColumnType: "uuid",
                 keyValue: new Guid("00000000-0000-0000-0000-000000000301"));
+            migrationBuilder.DeleteData(
+                table: "permissions",
+                keyColumn: "id",
+                keyColumnType: "uuid",
+                keyValue: new Guid("00000000-0000-0000-0000-000000000302"));
         }
     }
 }

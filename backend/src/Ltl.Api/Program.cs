@@ -23,6 +23,7 @@ using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.SharedKernel.Application;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -37,6 +38,9 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
 
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
+// 枚举响应统一字符串（前端可读；请求侧 camelCase 由 Web 默认处理）
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddProblemDetails();
 // 特定异常处理器必须注册在兜底 GlobalExceptionHandler 之前（IExceptionHandler 按注册顺序匹配）
 builder.Services.AddExceptionHandler<TenantContextMissingExceptionHandler>();
@@ -140,6 +144,7 @@ builder.Services.AddDbContext<TransportDbContext>(options =>
 builder.Services.AddScoped<IFleetAdminService, FleetAdminService>();
 builder.Services.AddScoped<ITripService, TripService>();
 builder.Services.AddScoped<IWaybillPrintService, WaybillPrintService>();
+builder.Services.AddScoped<IWaybillAdminService, WaybillAdminService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();

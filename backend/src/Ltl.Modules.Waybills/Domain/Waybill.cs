@@ -189,6 +189,38 @@ public sealed class Waybill : TenantScopedEntity
         Touch(nowUtc, cancelledBy);
     }
 
+    /// <summary>
+    /// 草稿整体修改（WB-003）：收发货人快照 + 备注 + 货物件整体替换（件号重排 1..N）。
+    /// 仅 Draft 可修改（聚合守卫）；已确认运单不可通过普通编辑接口篡改（P4 验收）。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">非 Draft 状态时抛出。</exception>
+    public void UpdateDraft(
+        string senderName, string senderPhone, string senderAddress,
+        string receiverName, string receiverPhone, string receiverAddress,
+        string? remark, IReadOnlyList<WaybillPackageDraft> packages,
+        DateTime nowUtc, Guid? updatedBy = null)
+    {
+        RequireDraft("修改");
+
+        SenderName = RequireNonBlank(senderName, "发货人", 100);
+        SenderPhone = RequireNonBlank(senderPhone, "发货人电话", 50);
+        SenderAddress = RequireNonBlank(senderAddress, "发货地址", 500);
+        ReceiverName = RequireNonBlank(receiverName, "收货人", 100);
+        ReceiverPhone = RequireNonBlank(receiverPhone, "收货人电话", 50);
+        ReceiverAddress = RequireNonBlank(receiverAddress, "收货地址", 500);
+        Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim();
+
+        if (packages.Count == 0)
+        {
+            throw new ArgumentException("运单必须至少包含 1 个货物件。", nameof(packages));
+        }
+
+        _packages.Clear();
+        _packages.AddRange(packages.Select((draft, index) => WaybillPackage.Create(
+            TenantId, Id, index + 1, draft, EnsureUtc(nowUtc), updatedBy)));
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>新增货物件（仅 Draft；件号接续编至尾部）。</summary>
     /// <exception cref="WaybillDomainException">非 Draft 状态时抛出。</exception>
     public void AddPackage(WaybillPackageDraft draft, DateTime nowUtc, Guid? updatedBy)
