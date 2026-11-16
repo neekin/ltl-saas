@@ -3,6 +3,7 @@ using Ltl.Modules.Customers.Application;
 using Ltl.Modules.Customers.Infrastructure;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
+using Ltl.Modules.Routing.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
@@ -39,6 +40,11 @@ builder.Services.AddDbContext<CustomersDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<ICustomerRelationshipService, CustomerRelationshipService>();
 
+// Routing 模块（ROUTE-001）
+builder.Services.AddDbContext<RoutingDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();
 builder.Services.AddHttpContextAccessor();
@@ -66,6 +72,7 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<TenancyDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<OrganizationDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<CustomersDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<RoutingDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露

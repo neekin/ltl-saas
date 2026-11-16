@@ -1,5 +1,6 @@
 using Ltl.Modules.Customers.Infrastructure;
 using Ltl.Modules.Organization.Infrastructure;
+using Ltl.Modules.Routing.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.SharedKernel.Application;
 using Microsoft.EntityFrameworkCore;
@@ -38,6 +39,11 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await using (var customers = CreateCustomersContext())
         {
             await customers.Database.MigrateAsync();
+        }
+
+        await using (var routing = CreateRoutingContext())
+        {
+            await routing.Database.MigrateAsync();
         }
     }
 
@@ -80,6 +86,21 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             .UseSnakeCaseNamingConvention()
             .Options;
         return new CustomersDbContext(options, tenantContext);
+    }
+
+    public RoutingDbContext CreateRoutingContext(Guid? tenantId = null)
+    {
+        var tenantContext = new TenantContext();
+        if (tenantId is { } id)
+        {
+            tenantContext.SetTenant(id);
+        }
+
+        var options = new DbContextOptionsBuilder<RoutingDbContext>()
+            .UseNpgsql(ConnectionStringWithDetailedErrors)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        return new RoutingDbContext(options, tenantContext);
     }
 
     /// <summary>测试期开放 FK 错误详情，便于失败定位。</summary>
