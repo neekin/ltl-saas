@@ -62,6 +62,9 @@ public sealed class Waybill : TenantScopedEntity
 
     public string? Remark { get; private set; }
 
+    /// <summary>开单幂等键（WB-002：重复提交返回同一运单；null = 未携带）。</summary>
+    public Guid? IdempotencyKey { get; private set; }
+
     /// <summary>货物件明细（件号 1..N 连续）。</summary>
     public IReadOnlyList<WaybillPackage> Packages => _packages.AsReadOnly();
 
@@ -89,7 +92,8 @@ public sealed class Waybill : TenantScopedEntity
         decimal? codAmount = null,
         Guid? routeId = null,
         string? remark = null,
-        Guid? createdBy = null)
+        Guid? createdBy = null,
+        Guid? idempotencyKey = null)
     {
         var now = EnsureUtc(nowUtc);
 
@@ -144,6 +148,7 @@ public sealed class Waybill : TenantScopedEntity
             ReceiverPhone = RequireNonBlank(receiverPhone, "收货人电话", 50),
             ReceiverAddress = RequireNonBlank(receiverAddress, "收货地址", 500),
             Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim(),
+            IdempotencyKey = idempotencyKey,
             CreatedAt = now,
             CreatedBy = createdBy,
         };

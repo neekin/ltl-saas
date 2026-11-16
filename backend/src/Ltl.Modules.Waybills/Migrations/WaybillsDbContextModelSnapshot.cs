@@ -65,6 +65,10 @@ namespace Ltl.Modules.Waybills.Migrations
                         .HasColumnType("smallint")
                         .HasColumnName("freight_status");
 
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("uuid")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<Guid>("OriginBranchId")
                         .HasColumnType("uuid")
                         .HasColumnName("origin_branch_id");
@@ -164,6 +168,11 @@ namespace Ltl.Modules.Waybills.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_waybills_tenant_id");
 
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_waybills_tenant_idempotency")
+                        .HasFilter("idempotency_key IS NOT NULL");
+
                     b.HasIndex("TenantId", "WaybillNo")
                         .IsUnique()
                         .HasDatabaseName("ux_waybills_tenant_no");
@@ -187,6 +196,74 @@ namespace Ltl.Modules.Waybills.Migrations
                             t.HasCheckConstraint("ck_waybills_total_amount", "total_amount IS NULL OR total_amount >= 0");
 
                             t.HasCheckConstraint("ck_waybills_transport_status", "transport_status IN (1)");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Waybills.Domain.WaybillEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("branch_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Detail")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("detail");
+
+                    b.Property<short>("EventType")
+                        .HasColumnType("smallint")
+                        .HasColumnName("event_type");
+
+                    b.Property<short?>("FromStatus")
+                        .HasColumnType("smallint")
+                        .HasColumnName("from_status");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid?>("OperatorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operator_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<short>("ToStatus")
+                        .HasColumnType("smallint")
+                        .HasColumnName("to_status");
+
+                    b.Property<Guid>("WaybillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waybill_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_waybill_events");
+
+                    b.HasIndex("TenantId", "WaybillId", "OccurredAt")
+                        .HasDatabaseName("ix_waybill_events_waybill_occurred");
+
+                    b.ToTable("waybill_events", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_waybill_events_from_status", "from_status IS NULL OR from_status IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("ck_waybill_events_to_status", "to_status IN (1, 2, 3)");
+
+                            t.HasCheckConstraint("ck_waybill_events_type", "event_type IN (1, 2, 3)");
                         });
                 });
 
@@ -273,6 +350,77 @@ namespace Ltl.Modules.Waybills.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ltl.Modules.Waybills.Domain.WaybillPricingSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("InputJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("input_json");
+
+                    b.Property<string>("QuoteJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("quote_json");
+
+                    b.Property<string>("RuleSetCode")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("rule_set_code");
+
+                    b.Property<Guid>("RuleSetId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("rule_set_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("VersionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("version_id");
+
+                    b.Property<int>("VersionNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("version_number");
+
+                    b.Property<Guid>("WaybillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waybill_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_waybill_pricing_snapshots");
+
+                    b.HasIndex("TenantId", "WaybillId")
+                        .HasDatabaseName("ix_waybill_pricing_snapshots_waybill");
+
+                    b.ToTable("waybill_pricing_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Waybills.Domain.WaybillEvent", b =>
+                {
+                    b.HasOne("Ltl.Modules.Waybills.Domain.Waybill", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WaybillId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_waybill_events_waybills_tenant_id_waybill_id");
+                });
+
             modelBuilder.Entity("Ltl.Modules.Waybills.Domain.WaybillPackage", b =>
                 {
                     b.HasOne("Ltl.Modules.Waybills.Domain.Waybill", null)
@@ -282,6 +430,17 @@ namespace Ltl.Modules.Waybills.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_waybill_packages_waybills_tenant_id_waybill_id");
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Waybills.Domain.WaybillPricingSnapshot", b =>
+                {
+                    b.HasOne("Ltl.Modules.Waybills.Domain.Waybill", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "WaybillId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_waybill_pricing_snapshots_waybills_tenant_id_waybill_id");
                 });
 
             modelBuilder.Entity("Ltl.Modules.Waybills.Domain.Waybill", b =>

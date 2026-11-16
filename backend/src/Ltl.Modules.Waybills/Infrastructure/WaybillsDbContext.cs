@@ -23,6 +23,10 @@ public sealed class WaybillsDbContext(
 
     public DbSet<WaybillPackage> Packages => Set<WaybillPackage>();
 
+    public DbSet<WaybillEvent> Events => Set<WaybillEvent>();
+
+    public DbSet<WaybillPricingSnapshot> PricingSnapshots => Set<WaybillPricingSnapshot>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(WaybillsDbContext).Assembly);

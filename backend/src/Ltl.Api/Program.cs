@@ -8,6 +8,7 @@ using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
+using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.SharedKernel.Application;
@@ -62,11 +63,13 @@ builder.Services.AddDbContext<PricingDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IPricingRuleSetService, PricingRuleSetService>();
 builder.Services.AddScoped<IPricingTrialService, PricingTrialService>();
+builder.Services.AddScoped<IPricingSnapshotSerializer, PricingSnapshotSerializer>();
 
 // Waybills 模块（WB-001：运单和货物件模型）
 builder.Services.AddDbContext<WaybillsDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
+builder.Services.AddScoped<IWaybillService, WaybillService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();
 builder.Services.AddScoped<IAuthorizationService, AuthorizationService>();

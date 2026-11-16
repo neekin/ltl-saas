@@ -88,6 +88,13 @@ public sealed class WaybillConfiguration : IEntityTypeConfiguration<Waybill>
         builder.Property(x => x.ReceiverAddress).HasMaxLength(500).IsRequired();
         builder.Property(x => x.Remark).HasMaxLength(500);
 
+        // 开单幂等键（WB-002）：同租户唯一，未携带（NULL）不参与唯一性
+        builder.Property(x => x.IdempotencyKey);
+        builder.HasIndex(x => new { x.TenantId, x.IdempotencyKey })
+            .IsUnique()
+            .HasFilter("idempotency_key IS NOT NULL")
+            .HasDatabaseName("ux_waybills_tenant_idempotency");
+
         // 货物件聚合明细：绑定到私有字段 _packages
         builder.HasMany(x => x.Packages)
             .WithOne()
