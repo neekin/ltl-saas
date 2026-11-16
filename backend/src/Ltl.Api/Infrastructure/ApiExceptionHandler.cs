@@ -1,5 +1,6 @@
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Pricing.Domain;
+using Ltl.Modules.Transport.Domain;
 using Ltl.Modules.Warehouse.Domain;
 using Ltl.Modules.Waybills.Domain;
 using Ltl.SharedKernel.Application;
@@ -89,6 +90,12 @@ public sealed class PricingRuleViolationHandler : ApiExceptionHandler<PricingRul
 
 /// <summary>仓储作业违规（未收货分拣、重复完成等）→ 409。</summary>
 public sealed class WarehouseDomainViolationHandler : ApiExceptionHandler<WarehouseDomainException>
+{
+    protected override int StatusCode => StatusCodes.Status409Conflict;
+}
+
+/// <summary>运输域违规（发运后配载/撤销等）→ 409。</summary>
+public sealed class TransportDomainViolationHandler : ApiExceptionHandler<TransportDomainException>
 {
     protected override int StatusCode => StatusCodes.Status409Conflict;
 }

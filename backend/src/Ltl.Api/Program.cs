@@ -48,6 +48,7 @@ builder.Services.AddExceptionHandler<ArgumentValidationExceptionHandler>();
 builder.Services.AddExceptionHandler<WaybillDomainViolationHandler>();
 builder.Services.AddExceptionHandler<PricingRuleViolationHandler>();
 builder.Services.AddExceptionHandler<WarehouseDomainViolationHandler>();
+builder.Services.AddExceptionHandler<TransportDomainViolationHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // JWT 认证（AUTH-001；契约 ADR-0005）：tenant_id 只来自已验证 token 的 claim（AGENTS §5.1）
@@ -136,6 +137,7 @@ builder.Services.AddDbContext<TransportDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IFleetAdminService, FleetAdminService>();
+builder.Services.AddScoped<ITripService, TripService>();
 builder.Services.AddScoped<IWaybillPrintService, WaybillPrintService>();
 
 builder.Services.AddScoped<ITenantContext, TenantContext>();

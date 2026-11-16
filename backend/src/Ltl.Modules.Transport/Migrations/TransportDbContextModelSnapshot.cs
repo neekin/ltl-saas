@@ -99,6 +99,181 @@ namespace Ltl.Modules.Transport.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ltl.Modules.Transport.Domain.TransportTrip", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<Guid>("DestBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("dest_branch_id");
+
+                    b.Property<Guid?>("DriverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("OriginBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("origin_branch_id");
+
+                    b.Property<Guid?>("RouteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("route_id");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TripNo")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("trip_no");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<Guid>("VehicleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("vehicle_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_transport_trips");
+
+                    b.HasIndex("TenantId", "Id")
+                        .IsUnique()
+                        .HasDatabaseName("ux_transport_trips_tenant_id");
+
+                    b.HasIndex("TenantId", "TripNo")
+                        .IsUnique()
+                        .HasDatabaseName("ux_transport_trips_tenant_no");
+
+                    b.ToTable("transport_trips", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transport_trips_status", "status IN (1)");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Transport.Domain.TransportTripSegment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("FromBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("from_branch_id");
+
+                    b.Property<int>("Seq")
+                        .HasColumnType("integer")
+                        .HasColumnName("seq");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("ToBranchId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("to_branch_id");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_transport_trip_segments");
+
+                    b.HasIndex("TenantId", "TripId", "Seq")
+                        .IsUnique()
+                        .HasDatabaseName("ux_transport_trip_segments_trip_seq");
+
+                    b.ToTable("transport_trip_segments", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_transport_trip_segments_seq", "seq >= 1");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Transport.Domain.TransportTripWaybill", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean")
+                        .HasColumnName("active");
+
+                    b.Property<DateTime>("LoadedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("loaded_at");
+
+                    b.Property<Guid?>("LoadedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loaded_by");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<Guid>("WaybillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waybill_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_transport_trip_waybills");
+
+                    b.HasIndex("TenantId", "WaybillId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_transport_trip_waybills_active_waybill")
+                        .HasFilter("active = true");
+
+                    b.HasIndex("TenantId", "TripId", "WaybillId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_transport_trip_waybills_trip_waybill");
+
+                    b.ToTable("transport_trip_waybills", (string)null);
+                });
+
             modelBuilder.Entity("Ltl.Modules.Transport.Domain.Vehicle", b =>
                 {
                     b.Property<Guid>("Id")

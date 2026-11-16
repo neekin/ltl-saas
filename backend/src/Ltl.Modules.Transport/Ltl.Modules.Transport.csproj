@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Ltl.SharedKernel\Ltl.SharedKernel.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Organization\Ltl.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Waybills\Ltl.Modules.Waybills.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
   </ItemGroup>
 

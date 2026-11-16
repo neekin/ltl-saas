@@ -1,13 +1,14 @@
 using System.Security.Claims;
 using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Transport.Application;
+using Ltl.Modules.Waybills.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 
 namespace Ltl.Api.Endpoints;
 
-/// <summary>运输档案端点（VEHICLE-001：车辆/司机）。</summary>
+/// <summary>运输端点（VEHICLE-001 档案 + TRIP-001 批次/配载）。</summary>
 public static class TransportEndpoints
 {
     public static void MapTransportEndpoints(this WebApplication app)
@@ -35,6 +36,26 @@ public static class TransportEndpoints
             Results.Ok(await service.DisableDriverAsync(RequireUserId(user), id)));
         drivers.MapPost("/{id:guid}/enable", async (Guid id, ClaimsPrincipal user, IFleetAdminService service) =>
             Results.Ok(await service.EnableDriverAsync(RequireUserId(user), id)));
+
+        var trips = app.MapGroup("/api/transport/trips");
+        trips.MapPost("/", async (CreateTripRequest request, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.CreateTripAsync(RequireUserId(user), request)));
+        trips.MapGet("/{id:guid}", async (Guid id, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.GetTripAsync(RequireUserId(user), id)));
+        trips.MapPost("/{id:guid}/waybills", async (
+            Guid id, LoadWaybillRequest request, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.LoadWaybillAsync(RequireUserId(user), id, request.WaybillId)));
+        trips.MapDelete("/{id:guid}/waybills/{assignmentId:guid}", async (
+            Guid id, Guid assignmentId, ClaimsPrincipal user, ITripService service) =>
+        {
+            await service.RemoveWaybillAsync(RequireUserId(user), id, assignmentId);
+            return Results.Ok(new { removed = true });
+        });
+
+        // 运单运输批次历史（关联历史）
+        app.MapGet("/api/waybills/{id:guid}/trips", async (
+            Guid id, ClaimsPrincipal user, ITripService service) =>
+            Results.Ok(await service.ListWaybillTripsAsync(RequireUserId(user), id)));
     }
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>

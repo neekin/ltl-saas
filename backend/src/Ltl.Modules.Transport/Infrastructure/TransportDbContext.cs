@@ -20,6 +20,12 @@ public sealed class TransportDbContext(
 
     public DbSet<Driver> Drivers => Set<Driver>();
 
+    public DbSet<TransportTrip> Trips => Set<TransportTrip>();
+
+    public DbSet<TransportTripSegment> TripSegments => Set<TransportTripSegment>();
+
+    public DbSet<TransportTripWaybill> TripWaybills => Set<TransportTripWaybill>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TransportDbContext).Assembly);
