@@ -5,11 +5,10 @@ import {
   ArrowUpOutlined,
   FileTextOutlined,
   DollarOutlined,
-  SwapOutlined,
   ShopOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { getDashboard, type DashboardMetrics } from '../api/reports';
+import { getDashboard } from '../api/reports';
 
 /** 经营看板（P9 前端）：核心运营指标。 */
 export function DashboardPage() {
