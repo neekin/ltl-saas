@@ -1,2 +1,17 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Ltl.Modules.Reporting</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ltl.SharedKernel\Ltl.SharedKernel.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Organization\Ltl.Modules.Organization.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Finance\Ltl.Modules.Finance.csproj" />
+  </ItemGroup>
+
 </Project>

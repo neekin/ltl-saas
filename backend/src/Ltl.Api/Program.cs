@@ -5,6 +5,7 @@ using Ltl.Modules.Customers.Application;
 using Ltl.Modules.Customers.Infrastructure;
 using Ltl.Modules.Organization.Application.Admin;
 using Ltl.Modules.Organization.Application.Auth;
+using Ltl.Modules.Reporting.Application;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Pricing.Application;
@@ -165,6 +166,9 @@ builder.Services.AddDbContext<FinanceDbContext>(options =>
 builder.Services.AddScoped<IFinanceService, FinanceService>();
 builder.Services.AddScoped<ICodService, CodService>();
 
+// Reporting 模块（REPORT-001：经营看板）
+builder.Services.AddScoped<IReportingService, ReportingService>();
+
 // Transport 模块（VEHICLE-001：车辆/司机档案）
 builder.Services.AddDbContext<TransportDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
@@ -267,6 +271,7 @@ app.MapArrivalEndpoints();
 app.MapDeliveryEndpoints();
 app.MapFinanceEndpoints();
 app.MapCodEndpoints();
+app.MapReportingEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
