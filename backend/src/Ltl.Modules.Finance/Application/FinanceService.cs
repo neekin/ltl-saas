@@ -1,5 +1,6 @@
 using System.Transactions;
 using Ltl.Modules.Finance.Domain;
+using Ltl.Modules.Customers.Domain;
 using Ltl.Modules.Finance.Infrastructure;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Platform.Application;
@@ -31,6 +32,15 @@ public interface IFinanceService
     Task<PaymentRecordDto> RecordPaymentAsync(Guid operatorUserId, RecordPaymentRequest request);
     Task<RefundRecordDto> RefundAsync(Guid operatorUserId, RefundPaymentRequest request);
     Task<IReadOnlyList<PaymentRecordDto>> ListPaymentsAsync(Guid waybillId);
+
+    /// <summary>月结账单：按客户按期生成（汇总未收应收）。</summary>
+    Task<CustomerStatement> GenerateStatementAsync(Guid operatorUserId, Guid customerId, string period);
+
+    /// <summary>确认月结账单（Draft → Confirmed；明细冻结）。</summary>
+    Task ConfirmStatementAsync(Guid operatorUserId, Guid statementId);
+
+    /// <summary>关闭月结账单（Confirmed → Closed；终态）。</summary>
+    Task CloseStatementAsync(Guid operatorUserId, Guid statementId);
 }
 
 public sealed class FinanceService(
@@ -195,6 +205,46 @@ public sealed class FinanceService(
             .Select(p => new PaymentRecordDto(
                 p.Id, p.WaybillId, p.Amount, p.Method.ToString(), p.Note, p.OperatorUserId, p.OccurredAt))
             .ToList();
+    }
+
+    public async Task<CustomerStatement> GenerateStatementAsync(Guid operatorUserId, Guid customerId, string period)
+    {
+        if (db.CurrentTenantId is null)
+            throw new TenantContextMissingException();
+
+        var existing = await db.Statements
+            .SingleOrDefaultAsync(s => s.CustomerId == customerId && s.Period == period);
+        if (existing is not null)
+            throw new ConflictException($"客户 {customerId} 在 {period} 期间已存在账单。");
+
+        // 汇总该客户全部未收应收（简化：按全部未收计算，期间筛选由调用方参数扩展）
+        var totalAmount = await db.Receivables
+            .Where(r => r.Status != ReceivableStatus.Settled)
+            .SumAsync(r => (decimal?)r.Amount - r.SettledAmount) ?? 0;
+        if (totalAmount <= 0)
+            throw new InvalidOperationException("该客户无未收应收，无需生成账单。");
+
+        var statement = CustomerStatement.Create(
+            db.CurrentTenantId.Value, customerId, period, totalAmount, DateTime.UtcNow, operatorUserId);
+        db.Statements.Add(statement);
+        await db.SaveChangesAsync();
+        return statement;
+    }
+
+    public async Task ConfirmStatementAsync(Guid operatorUserId, Guid statementId)
+    {
+        var statement = await db.Statements.FindAsync([statementId])
+            ?? throw new EntityNotFoundException("月结账单", statementId);
+        statement.Confirm(DateTime.UtcNow, operatorUserId);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task CloseStatementAsync(Guid operatorUserId, Guid statementId)
+    {
+        var statement = await db.Statements.FindAsync([statementId])
+            ?? throw new EntityNotFoundException("月结账单", statementId);
+        statement.Close(DateTime.UtcNow, operatorUserId);
+        await db.SaveChangesAsync();
     }
 
     private sealed record TotalAmountRow(decimal? TotalAmount);

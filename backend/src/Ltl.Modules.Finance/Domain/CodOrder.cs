@@ -108,6 +108,17 @@ public sealed class CodOrder : TenantScopedEntity
         UpdatedAt = DateTime.UtcNow;
     }
 
+    /// <summary>退款回退已收取金额（COD 退款冲正时调用）。</summary>
+    internal void ReverseCollection(decimal amount)
+    {
+        if (amount <= 0 || amount > CollectedAmount)
+            throw new InvalidOperationException($"COD 退款金额（{amount}）超出已收取金额（{CollectedAmount}）。");
+        CollectedAmount -= amount;
+        if (CollectedAmount <= 0 && Status == CodOrderStatus.Collected)
+            Status = CodOrderStatus.PendingCollection;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
     /// <summary>未收余额。</summary>
     public decimal OutstandingCollection => Amount - CollectedAmount;
     /// <summary>可结算余额（已收 − 已结算）。</summary>

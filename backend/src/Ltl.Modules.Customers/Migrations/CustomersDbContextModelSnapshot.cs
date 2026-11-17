@@ -43,11 +43,19 @@ namespace Ltl.Modules.Customers.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<decimal?>("CreditLimit")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("credit_limit");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
+
+                    b.Property<int?>("PaymentTermsDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("payment_terms_days");
 
                     b.Property<string>("Remark")
                         .HasMaxLength(500)

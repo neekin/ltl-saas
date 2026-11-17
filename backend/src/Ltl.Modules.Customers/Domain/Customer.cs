@@ -13,6 +13,12 @@ public sealed class Customer : TenantScopedEntity
 
     public string? Remark { get; private set; }
 
+    /// <summary>信用额度（月结客户；null = 未设置）。</summary>
+    public decimal? CreditLimit { get; private set; }
+
+    /// <summary>账期天数（月结客户；null = 未设置）。</summary>
+    public int? PaymentTermsDays { get; private set; }
+
     public CustomerStatus Status { get; private set; }
 
     private Customer()

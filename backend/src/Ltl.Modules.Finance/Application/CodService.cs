@@ -32,7 +32,13 @@ public interface ICodService
     Task<CodSettlementDto> CreateSettlementAsync(Guid operatorUserId, CreateCodSettlementRequest request);
     Task<CodSettlementDto> ApproveSettlementAsync(Guid operatorUserId, Guid settlementId);
     Task<CodSettlementDto> PaySettlementAsync(Guid operatorUserId, Guid settlementId);
+
+    /// <summary>COD 收款退款/冲正（追加式：保留原交易 + 反向记录）。</summary>
+    Task<CodRefundRecordDto> RefundCollectionAsync(Guid operatorUserId, Guid collectionId, decimal amount, string reason);
 }
+
+public sealed record CodRefundRecordDto(
+    Guid Id, Guid CollectionId, decimal Amount, string Reason, Guid? OperatorUserId, DateTime OccurredAt);
 
 public sealed class CodService(
     FinanceDbContext db,
@@ -180,6 +186,47 @@ public sealed class CodService(
         scope.Complete();
 
         return ToDto(settlement);
+    }
+
+    public async Task<CodRefundRecordDto> RefundCollectionAsync(
+        Guid operatorUserId, Guid collectionId, decimal amount, string reason)
+    {
+        if (db.CurrentTenantId is null)
+            throw new TenantContextMissingException();
+
+        var collection = await db.CodCollections.FindAsync([collectionId])
+            ?? throw new EntityNotFoundException("COD 收款记录", collectionId);
+        var codOrder = await db.CodOrders.FindAsync([collection.CodOrderId])
+            ?? throw new EntityNotFoundException("COD 订单", collection.CodOrderId);
+
+        // 已退金额 = Σ(refunds for this collection)
+        var alreadyRefunded = await db.CodRefunds
+            .Where(r => r.CollectionId == collectionId)
+            .SumAsync(r => (decimal?)r.Amount) ?? 0;
+        if (amount + alreadyRefunded > collection.Amount)
+        {
+            throw new ConflictException(
+                $"COD 退款金额（{amount}）超出可退余额（{collection.Amount - alreadyRefunded}）。");
+        }
+
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        var refund = CodRefundRecord.Create(
+            db.CurrentTenantId.Value, collectionId, amount, reason,
+            operatorUserId, DateTime.UtcNow);
+        db.CodRefunds.Add(refund);
+
+        // COD 订单 collected_amount 回退（领域方法）
+        codOrder.ReverseCollection(amount);
+        await db.SaveChangesAsync();
+
+        await audit.RecordAsync(
+            "cod.refund", "cod_refund_record", refund.Id, operatorUserId,
+            new { collectionId = collectionId, amount = amount, reason = reason });
+        scope.Complete();
+
+        return new CodRefundRecordDto(
+            refund.Id, refund.CollectionId, refund.Amount, refund.Reason,
+            refund.OperatorUserId, refund.OccurredAt);
     }
 
     private static CodOrderDto ToDto(CodOrder o) => new(

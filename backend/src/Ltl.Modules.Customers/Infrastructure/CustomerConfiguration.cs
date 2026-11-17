@@ -19,6 +19,8 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.Property(x => x.Code).HasMaxLength(64).IsRequired();
         builder.Property(x => x.Name).HasMaxLength(200).IsRequired();
         builder.Property(x => x.Remark).HasMaxLength(500);
+        builder.Property(x => x.CreditLimit).HasColumnType("numeric(18,2)");
+        builder.Property(x => x.PaymentTermsDays);
 
         builder.HasIndex(x => new { x.TenantId, x.Code })
             .IsUnique()

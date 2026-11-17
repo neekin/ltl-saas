@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Ltl.Modules.Finance.Application;
+using Ltl.SharedKernel.Application;
 using Ltl.Modules.Finance.Domain;
 using Ltl.Modules.Organization.Application.Auth;
 using Microsoft.AspNetCore.Builder;
@@ -44,7 +45,16 @@ public static class CodEndpoints
             Require(user, "cod.manage");
             return Results.Ok(await service.PaySettlementAsync(RequireUserId(user), id));
         });
+        cod.MapPost("/collections/{collectionId:guid}/refund", async (
+            Guid collectionId, RefundCodCollectionRequest request, ClaimsPrincipal user, ICodService service) =>
+        {
+            Require(user, "cod.manage");
+            return Results.Ok(await service.RefundCollectionAsync(
+                RequireUserId(user), collectionId, request.Amount, request.Reason));
+        });
     }
+
+    public sealed record RefundCodCollectionRequest(decimal Amount, string Reason);
 
     private static void Require(ClaimsPrincipal user, string permission) { }
 

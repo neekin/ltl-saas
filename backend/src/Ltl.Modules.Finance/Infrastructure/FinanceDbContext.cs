@@ -18,6 +18,8 @@ public sealed class FinanceDbContext(
     public DbSet<PaymentRecord> Payments => Set<PaymentRecord>();
     public DbSet<PaymentAllocation> Allocations => Set<PaymentAllocation>();
     public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
+    public DbSet<CustomerStatement> Statements => Set<CustomerStatement>();
+    public DbSet<CodRefundRecord> CodRefunds => Set<CodRefundRecord>();
 
     // ===== COD（独立资金，AGENTS §6.5：与运费财务完全分离） =====
     public DbSet<CodOrder> CodOrders => Set<CodOrder>();

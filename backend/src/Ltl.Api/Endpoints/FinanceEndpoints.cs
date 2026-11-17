@@ -1,7 +1,9 @@
 using System.Security.Claims;
 using Ltl.Modules.Finance.Application;
 using Ltl.Modules.Finance.Domain;
+using Ltl.SharedKernel.Application;
 using Ltl.Modules.Organization.Application.Auth;
+using Ltl.Modules.Organization.Application.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -35,7 +37,28 @@ public static class FinanceEndpoints
             RequireManage(user);
             return Results.Ok(await service.RefundAsync(RequireUserId(user), request));
         });
+        finance.MapPost("/statements", async (GenerateStatementRequest request, ClaimsPrincipal user, IFinanceService service) =>
+        {
+            RequireManage(user);
+            var statement = await service.GenerateStatementAsync(
+                RequireUserId(user), request.CustomerId, request.Period);
+            return Results.Ok(new { statement.Id, statement.CustomerId, statement.Period, statement.TotalAmount, statement.Status });
+        });
+        finance.MapPost("/statements/{id:guid}/confirm", async (Guid id, ClaimsPrincipal user, IFinanceService service) =>
+        {
+            RequireManage(user);
+            await service.ConfirmStatementAsync(RequireUserId(user), id);
+            return Results.Ok(new { confirmed = true });
+        });
+        finance.MapPost("/statements/{id:guid}/close", async (Guid id, ClaimsPrincipal user, IFinanceService service) =>
+        {
+            RequireManage(user);
+            await service.CloseStatementAsync(RequireUserId(user), id);
+            return Results.Ok(new { closed = true });
+        });
     }
+
+    public sealed record GenerateStatementRequest(Guid CustomerId, string Period);
 
     private static void RequireRead(ClaimsPrincipal user)
     {

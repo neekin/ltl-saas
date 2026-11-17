@@ -138,3 +138,42 @@ public sealed class CodSettlementConfiguration : IEntityTypeConfiguration<CodSet
         builder.Property<uint>("xmin").IsRowVersion();
     }
 }
+
+
+public sealed class CustomerStatementConfiguration : IEntityTypeConfiguration<CustomerStatement>
+{
+    public void Configure(EntityTypeBuilder<CustomerStatement> builder)
+    {
+        builder.ToTable("customer_statements", t => {
+            t.HasCheckConstraint("ck_customer_statements_amount", "total_amount > 0");
+            t.HasCheckConstraint("ck_customer_statements_status", "status IN (1, 2, 3)");
+        });
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.CustomerId).IsRequired();
+        builder.Property(x => x.Period).HasMaxLength(6).IsRequired();
+        builder.Property(x => x.TotalAmount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.Status).HasConversion(v => (short)v, v => (CustomerStatementStatus)v).HasColumnType("smallint").IsRequired();
+        builder.Property(x => x.ConfirmedAt).HasColumnType("timestamptz");
+        builder.Property(x => x.ClosedAt).HasColumnType("timestamptz");
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.CustomerId, x.Period }).IsUnique()
+            .HasDatabaseName("ux_customer_statements_customer_period");
+        builder.HasIndex(x => new { x.TenantId, x.Id }).IsUnique().HasDatabaseName("ux_customer_statements_tenant_id");
+        builder.Property<uint>("xmin").IsRowVersion();
+    }
+}
+
+public sealed class CodRefundRecordConfiguration : IEntityTypeConfiguration<CodRefundRecord>
+{
+    public void Configure(EntityTypeBuilder<CodRefundRecord> builder)
+    {
+        builder.ToTable("cod_refund_records", t => t.HasCheckConstraint("ck_cod_refund_records_amount", "amount > 0"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.CollectionId).IsRequired();
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.Reason).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.OccurredAt).HasColumnType("timestamptz").IsRequired();
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.CollectionId }).HasDatabaseName("ix_cod_refund_records_collection");
+    }
+}
