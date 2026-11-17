@@ -177,3 +177,20 @@ public sealed class CodRefundRecordConfiguration : IEntityTypeConfiguration<CodR
         builder.HasIndex(x => new { x.TenantId, x.CollectionId }).HasDatabaseName("ix_cod_refund_records_collection");
     }
 }
+
+
+public sealed class CustomerStatementItemConfiguration : IEntityTypeConfiguration<CustomerStatementItem>
+{
+    public void Configure(EntityTypeBuilder<CustomerStatementItem> builder)
+    {
+        builder.ToTable("customer_statement_items");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.StatementId).IsRequired();
+        builder.Property(x => x.ReceivableId).IsRequired();
+        builder.Property(x => x.WaybillId).IsRequired();
+        builder.Property(x => x.SnapshotAmount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.SnapshotSettledAmount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.StatementId }).HasDatabaseName("ix_customer_statement_items_statement");
+    }
+}

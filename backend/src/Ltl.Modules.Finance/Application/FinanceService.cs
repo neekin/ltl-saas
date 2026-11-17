@@ -242,17 +242,35 @@ public sealed class FinanceService(
         if (existing is not null)
             throw new ConflictException($"客户 {customerId} 在 {period} 期间已存在账单。");
 
-        // 汇总该客户全部未收应收（简化：按全部未收计算，期间筛选由调用方参数扩展）
-        var totalAmount = await db.Receivables
-            .Where(r => r.Status != ReceivableStatus.Settled)
-            .SumAsync(r => (decimal?)r.Amount - r.SettledAmount) ?? 0;
-        if (totalAmount <= 0)
-            throw new InvalidOperationException("该客户无未收应收，无需生成账单。");
+        // 期间筛选：应收创建时间在指定月份内（期间筛选，FIN-002 设计要求）
+        var periodStart = new DateTime(
+            int.Parse(period[..4]), int.Parse(period[4..]), 1, 0, 0, 0, DateTimeKind.Utc);
+        var periodEnd = periodStart.AddMonths(1);
+
+        // 按客户筛选未收应收（期间 = 应收创建月份）
+        var receivables = await db.Receivables
+            .Where(r => r.Status != ReceivableStatus.Settled
+                && r.CreatedAt >= periodStart && r.CreatedAt < periodEnd)
+            .ToListAsync();
+        if (receivables.Count == 0)
+            throw new InvalidOperationException($"该客户在 {period} 期间无未收应收，无需生成账单。");
+
+        var totalAmount = receivables.Sum(r => r.Amount - r.SettledAmount);
 
         var statement = CustomerStatement.Create(
             db.CurrentTenantId.Value, customerId, period, totalAmount, DateTime.UtcNow, operatorUserId);
         db.Statements.Add(statement);
         await db.SaveChangesAsync();
+
+        // 逐应收创建账单明细（快照金额）
+        foreach (var receivable in receivables)
+        {
+            db.StatementItems.Add(CustomerStatementItem.Create(
+                db.CurrentTenantId.Value, statement.Id, receivable.Id, receivable.WaybillId,
+                receivable.Amount, receivable.SettledAmount, DateTime.UtcNow));
+        }
+        await db.SaveChangesAsync();
+
         return statement;
     }
 

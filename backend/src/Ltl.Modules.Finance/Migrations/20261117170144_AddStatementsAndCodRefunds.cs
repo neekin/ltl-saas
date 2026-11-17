@@ -32,6 +32,24 @@ namespace Ltl.Modules.Finance.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "customer_statement_items",
+                columns: table => new
+                {
+                    id = table.Column<Guid>(type: "uuid", nullable: false),
+                    tenant_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    statement_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    receivable_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    waybill_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    snapshot_amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    snapshot_settled_amount = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamptz", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_customer_statement_items", x => x.id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "customer_statements",
                 columns: table => new
                 {
@@ -62,6 +80,11 @@ namespace Ltl.Modules.Finance.Migrations
                 name: "ix_cod_refund_records_collection",
                 table: "cod_refund_records",
                 columns: new[] { "tenant_id", "collection_id" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_customer_statement_items_statement",
+                table: "customer_statement_items",
+                columns: new[] { "tenant_id", "statement_id" });
 
             migrationBuilder.CreateIndex(
                 name: "ux_customer_statements_customer_period",
@@ -95,6 +118,9 @@ namespace Ltl.Modules.Finance.Migrations
         {
             migrationBuilder.DropTable(
                 name: "cod_refund_records");
+
+            migrationBuilder.DropTable(
+                name: "customer_statement_items");
 
             migrationBuilder.DropTable(
                 name: "customer_statements");

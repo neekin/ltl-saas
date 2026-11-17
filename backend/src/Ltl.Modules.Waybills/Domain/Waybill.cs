@@ -344,6 +344,23 @@ public sealed class Waybill : TenantScopedEntity
         Touch(nowUtc, operatorUserId);
     }
 
+    /// <summary>
+    /// COD 金额变更（仅 Draft；AGENTS §6.5：COD 独立于运费）。变更审计由调用方记录。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">非 Draft 状态时抛出。</exception>
+    public void UpdateCodAmount(decimal? newCodAmount, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        RequireDraft("变更 COD 金额");
+        if (newCodAmount is < 0)
+            throw new ArgumentException("COD 金额不能为负数。", nameof(newCodAmount));
+
+        CodAmount = newCodAmount is > 0 ? newCodAmount : null;
+        CodStatus = CodAmount is > 0
+            ? WaybillCodStatus.PendingCollection
+            : WaybillCodStatus.None;
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>汇总件数（Σ货物件件数）。</summary>
     public int TotalPieces => _packages.Sum(p => p.Quantity);
 

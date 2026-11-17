@@ -354,6 +354,50 @@ namespace Ltl.Modules.Finance.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Ltl.Modules.Finance.Domain.CustomerStatementItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("ReceivableId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("receivable_id");
+
+                    b.Property<decimal>("SnapshotAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("snapshot_amount");
+
+                    b.Property<decimal>("SnapshotSettledAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("snapshot_settled_amount");
+
+                    b.Property<Guid>("StatementId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("statement_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<Guid>("WaybillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waybill_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_statement_items");
+
+                    b.HasIndex("TenantId", "StatementId")
+                        .HasDatabaseName("ix_customer_statement_items_statement");
+
+                    b.ToTable("customer_statement_items", (string)null);
+                });
+
             modelBuilder.Entity("Ltl.Modules.Finance.Domain.PaymentAllocation", b =>
                 {
                     b.Property<Guid>("Id")
