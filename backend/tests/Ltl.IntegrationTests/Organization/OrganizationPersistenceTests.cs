@@ -1,6 +1,7 @@
 using Ltl.Modules.Organization.Domain;
 using Ltl.Modules.Warehouse.Domain;
 using Ltl.Modules.Customers.Domain;
+using Ltl.Modules.Finance.Domain;
 using Ltl.Modules.Delivery.Domain;
 using Ltl.Modules.Pricing.Domain;
 using Ltl.Modules.Routing.Domain;
@@ -51,7 +52,8 @@ public sealed class OrganizationPersistenceTests(PostgreSqlFixture fixture) : IC
             + RoutePermissionCodes.All.Count
             + PricingPermissionCodes.All.Count
             + Ltl.Modules.Arrivals.Domain.ArrivalPermissionCodes.All.Count
-            + DeliveryPermissionCodes.All.Count,
+            + DeliveryPermissionCodes.All.Count
+            + FinancePermissionCodes.All.Count,
             permissionCount);
     }
 

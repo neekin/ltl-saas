@@ -23,6 +23,7 @@
     <ProjectReference Include="..\Ltl.Modules.Warehouse\Ltl.Modules.Warehouse.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Arrival\Ltl.Modules.Arrivals.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Delivery\Ltl.Modules.Delivery.csproj" />
+    <ProjectReference Include="..\Ltl.Modules.Finance\Ltl.Modules.Finance.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Transport\Ltl.Modules.Transport.csproj" />
   </ItemGroup>
 
