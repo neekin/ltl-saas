@@ -19,6 +19,11 @@ public sealed class FinanceDbContext(
     public DbSet<PaymentAllocation> Allocations => Set<PaymentAllocation>();
     public DbSet<RefundRecord> Refunds => Set<RefundRecord>();
 
+    // ===== COD（独立资金，AGENTS §6.5：与运费财务完全分离） =====
+    public DbSet<CodOrder> CodOrders => Set<CodOrder>();
+    public DbSet<CodCollection> CodCollections => Set<CodCollection>();
+    public DbSet<CodSettlement> CodSettlements => Set<CodSettlement>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(FinanceDbContext).Assembly);

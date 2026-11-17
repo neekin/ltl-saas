@@ -76,3 +76,65 @@ public sealed class RefundRecordConfiguration : IEntityTypeConfiguration<RefundR
         builder.Property<uint>("xmin").IsRowVersion();
     }
 }
+
+
+public sealed class CodOrderConfiguration : IEntityTypeConfiguration<CodOrder>
+{
+    public void Configure(EntityTypeBuilder<CodOrder> builder)
+    {
+        builder.ToTable("cod_orders", t => {
+            t.HasCheckConstraint("ck_cod_orders_amount", "amount > 0");
+            t.HasCheckConstraint("ck_cod_orders_collected", "collected_amount >= 0 AND collected_amount <= amount");
+            t.HasCheckConstraint("ck_cod_orders_settled", "settled_amount >= 0 AND settled_amount <= collected_amount");
+            t.HasCheckConstraint("ck_cod_orders_paid", "paid_amount >= 0 AND paid_amount <= settled_amount");
+            t.HasCheckConstraint("ck_cod_orders_status", "status IN (1, 2, 3, 4)");
+        });
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.WaybillId).IsRequired();
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.CollectedAmount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.SettledAmount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.PaidAmount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.Status).HasConversion(v => (short)v, v => (CodOrderStatus)v).HasColumnType("smallint").IsRequired();
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
+        builder.Property(x => x.UpdatedAt).HasColumnType("timestamptz");
+        builder.HasIndex(x => new { x.TenantId, x.WaybillId }).IsUnique().HasDatabaseName("ux_cod_orders_tenant_waybill");
+        builder.HasIndex(x => new { x.TenantId, x.Id }).IsUnique().HasDatabaseName("ux_cod_orders_tenant_id");
+        builder.Property<uint>("xmin").IsRowVersion();
+    }
+}
+
+public sealed class CodCollectionConfiguration : IEntityTypeConfiguration<CodCollection>
+{
+    public void Configure(EntityTypeBuilder<CodCollection> builder)
+    {
+        builder.ToTable("cod_collections", t => t.HasCheckConstraint("ck_cod_collections_amount", "amount > 0"));
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.CodOrderId).IsRequired();
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.Note).HasMaxLength(500);
+        builder.Property(x => x.OccurredAt).HasColumnType("timestamptz").IsRequired();
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.CodOrderId }).HasDatabaseName("ix_cod_collections_order");
+    }
+}
+
+public sealed class CodSettlementConfiguration : IEntityTypeConfiguration<CodSettlement>
+{
+    public void Configure(EntityTypeBuilder<CodSettlement> builder)
+    {
+        builder.ToTable("cod_settlements", t => {
+            t.HasCheckConstraint("ck_cod_settlements_amount", "amount > 0");
+            t.HasCheckConstraint("ck_cod_settlements_status", "status IN (1, 2, 3)");
+        });
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.CodOrderId).IsRequired();
+        builder.Property(x => x.Amount).HasColumnType("numeric(18,2)").IsRequired();
+        builder.Property(x => x.Status).HasConversion(v => (short)v, v => (CodSettlementStatus)v).HasColumnType("smallint").IsRequired();
+        builder.Property(x => x.ApprovedAt).HasColumnType("timestamptz");
+        builder.Property(x => x.PaidAt).HasColumnType("timestamptz");
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.CodOrderId }).HasDatabaseName("ix_cod_settlements_order");
+        builder.Property<uint>("xmin").IsRowVersion();
+    }
+}

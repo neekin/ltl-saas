@@ -22,6 +22,203 @@ namespace Ltl.Modules.Finance.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Ltl.Modules.Finance.Domain.CodCollection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<Guid>("CodOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cod_order_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<Guid?>("OperatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operator_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cod_collections");
+
+                    b.HasIndex("TenantId", "CodOrderId")
+                        .HasDatabaseName("ix_cod_collections_order");
+
+                    b.ToTable("cod_collections", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cod_collections_amount", "amount > 0");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Finance.Domain.CodOrder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal>("CollectedAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("collected_amount");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by");
+
+                    b.Property<decimal>("PaidAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("paid_amount");
+
+                    b.Property<decimal>("SettledAmount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("settled_amount");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by");
+
+                    b.Property<Guid>("WaybillId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("waybill_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cod_orders");
+
+                    b.HasIndex("TenantId", "Id")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cod_orders_tenant_id");
+
+                    b.HasIndex("TenantId", "WaybillId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cod_orders_tenant_waybill");
+
+                    b.ToTable("cod_orders", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cod_orders_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_cod_orders_collected", "collected_amount >= 0 AND collected_amount <= amount");
+
+                            t.HasCheckConstraint("ck_cod_orders_paid", "paid_amount >= 0 AND paid_amount <= settled_amount");
+
+                            t.HasCheckConstraint("ck_cod_orders_settled", "settled_amount >= 0 AND settled_amount <= collected_amount");
+
+                            t.HasCheckConstraint("ck_cod_orders_status", "status IN (1, 2, 3, 4)");
+                        });
+                });
+
+            modelBuilder.Entity("Ltl.Modules.Finance.Domain.CodSettlement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("approved_at");
+
+                    b.Property<Guid?>("ApprovedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by");
+
+                    b.Property<Guid>("CodOrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("cod_order_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("OperatorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("operator_user_id");
+
+                    b.Property<DateTime?>("PaidAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("paid_at");
+
+                    b.Property<Guid?>("PaidBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("paid_by");
+
+                    b.Property<short>("Status")
+                        .HasColumnType("smallint")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cod_settlements");
+
+                    b.HasIndex("TenantId", "CodOrderId")
+                        .HasDatabaseName("ix_cod_settlements_order");
+
+                    b.ToTable("cod_settlements", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cod_settlements_amount", "amount > 0");
+
+                            t.HasCheckConstraint("ck_cod_settlements_status", "status IN (1, 2, 3)");
+                        });
+                });
+
             modelBuilder.Entity("Ltl.Modules.Finance.Domain.PaymentAllocation", b =>
                 {
                     b.Property<Guid>("Id")

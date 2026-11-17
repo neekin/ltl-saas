@@ -53,7 +53,8 @@ public sealed class OrganizationPersistenceTests(PostgreSqlFixture fixture) : IC
             + PricingPermissionCodes.All.Count
             + Ltl.Modules.Arrivals.Domain.ArrivalPermissionCodes.All.Count
             + DeliveryPermissionCodes.All.Count
-            + FinancePermissionCodes.All.Count,
+            + FinancePermissionCodes.All.Count
+            + 2,  // COD 权限点（cod.read + cod.manage，COD-001）
             permissionCount);
     }
 

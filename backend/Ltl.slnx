@@ -1,7 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Ltl.Api/Ltl.Api.csproj" />
-    <Project Path="src/Ltl.Modules.Arrival/Ltl.Modules.Arrival.csproj" />
+    <Project Path="src/Ltl.Modules.Arrival/Ltl.Modules.Arrivals.csproj" />
     <Project Path="src/Ltl.Modules.Cod/Ltl.Modules.Cod.csproj" />
     <Project Path="src/Ltl.Modules.Customers/Ltl.Modules.Customers.csproj" />
     <Project Path="src/Ltl.Modules.Delivery/Ltl.Modules.Delivery.csproj" />

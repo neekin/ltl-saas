@@ -133,6 +133,8 @@ namespace Ltl.Modules.Finance.Migrations
                 {
                     { new Guid("00000000-0000-0000-0000-000000001001"), FinancePermissionCodes.FinanceRead, "查看应收/收款/退款", FinancePermissionCodes.Module },
                     { new Guid("00000000-0000-0000-0000-000000001002"), FinancePermissionCodes.FinanceManage, "管理收款/退款/核销", FinancePermissionCodes.Module },
+                    { new Guid("00000000-0000-0000-0000-000000001003"), "cod.read", "查看 COD 订单/收款/结算", "cod" },
+                    { new Guid("00000000-0000-0000-0000-000000001004"), "cod.manage", "管理 COD 收款/结算/付款", "cod" },
                 });
 
             migrationBuilder.AddForeignKey(

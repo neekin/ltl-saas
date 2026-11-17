@@ -163,6 +163,7 @@ builder.Services.AddDbContext<FinanceDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IFinanceService, FinanceService>();
+builder.Services.AddScoped<ICodService, CodService>();
 
 // Transport 模块（VEHICLE-001：车辆/司机档案）
 builder.Services.AddDbContext<TransportDbContext>(options =>
@@ -265,6 +266,7 @@ app.MapTransportEndpoints();
 app.MapArrivalEndpoints();
 app.MapDeliveryEndpoints();
 app.MapFinanceEndpoints();
+app.MapCodEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
