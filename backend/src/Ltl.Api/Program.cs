@@ -19,6 +19,8 @@ using Ltl.Modules.Tenancy.Infrastructure;
 using Ltl.Modules.Warehouse.Application;
 using Ltl.Modules.Transport.Application;
 using Ltl.Modules.Transport.Infrastructure;
+using Ltl.Modules.Delivery.Application;
+using Ltl.Modules.Delivery.Infrastructure;
 using Ltl.Modules.Arrivals.Application;
 using Ltl.Modules.Arrivals.Infrastructure;
 using Ltl.Modules.Warehouse.Infrastructure;
@@ -148,6 +150,12 @@ builder.Services.AddDbContext<ArrivalDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IArrivalService, ArrivalService>();
 
+// Delivery 模块（DELIVERY-001：交付/签收/拒收）
+builder.Services.AddDbContext<DeliveryDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
+builder.Services.AddScoped<IDeliveryService, DeliveryService>();
+
 // Transport 模块（VEHICLE-001：车辆/司机档案）
 builder.Services.AddDbContext<TransportDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
@@ -247,6 +255,7 @@ app.MapWarehouseEndpoints();
 app.MapWaybillEndpoints();
 app.MapTransportEndpoints();
 app.MapArrivalEndpoints();
+app.MapDeliveryEndpoints();
 
 // 诊断端点：返回服务端解析出的租户上下文（TEN-001 设计文档第 7 节）；
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
@@ -270,6 +279,7 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<WarehouseDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<TransportDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<ArrivalDbContext>().Database.Migrate();
+        scope.ServiceProvider.GetRequiredService<DeliveryDbContext>().Database.Migrate();
     }
 
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露

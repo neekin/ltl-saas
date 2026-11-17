@@ -11,7 +11,7 @@ public sealed class WaybillEventConfiguration : IEntityTypeConfiguration<Waybill
     {
         builder.ToTable("waybill_events", table =>
         {
-            table.HasCheckConstraint("ck_waybill_events_type", "event_type IN (1, 2, 3, 4, 5, 6, 7)");
+            table.HasCheckConstraint("ck_waybill_events_type", "event_type IN (1, 2, 3, 4, 5, 6, 7, 8, 9)");
             table.HasCheckConstraint(
                 "ck_waybill_events_from_status", "from_status IS NULL OR from_status IN (1, 2, 3)");
             table.HasCheckConstraint("ck_waybill_events_to_status", "to_status IN (1, 2, 3)");

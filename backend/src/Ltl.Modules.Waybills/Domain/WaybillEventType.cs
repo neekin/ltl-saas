@@ -26,4 +26,10 @@ public enum WaybillEventType
 
     /// <summary>批次到达（TRIP-002；不改交付状态）。</summary>
     Arrived = 7,
+
+    /// <summary>交付签收（DELIVERY-001）。</summary>
+    Delivered = 8,
+
+    /// <summary>交付拒收（DELIVERY-001 异常流程）。</summary>
+    RejectedDelivery = 9,
 }

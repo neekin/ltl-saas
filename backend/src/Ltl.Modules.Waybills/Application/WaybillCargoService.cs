@@ -12,6 +12,7 @@ public sealed record WaybillCargoSnapshot(
     WaybillStatus Status,
     WaybillCargoStatus CargoStatus,
     WaybillTransportStatus TransportStatus,
+    WaybillDeliveryStatus DeliveryStatus,
     int DeclaredPieces,
     decimal DeclaredWeightKg,
     decimal DeclaredVolumeM3);
@@ -41,6 +42,12 @@ public interface IWaybillCargoService
 
     /// <summary>交付状态流转：到货（ARRIVAL-001，未发运守卫在聚合）+ 运单事件 Arrived。</summary>
     Task<WaybillCargoSnapshot> MarkArrivedAtDestinationAsync(Guid waybillId, Guid? operatorUserId, string detail);
+
+    /// <summary>交付状态流转：签收（DELIVERY-001，WaitingPickup → Delivered）+ 运单事件。</summary>
+    Task MarkDeliveredAsync(Guid waybillId, Guid? operatorUserId, string detail);
+
+    /// <summary>交付状态流转：拒收（DELIVERY-001，WaitingPickup → Rejected）+ 运单事件。</summary>
+    Task MarkRejectedAsync(Guid waybillId, Guid? operatorUserId, string detail);
 }
 
 public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoService
@@ -92,6 +99,22 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
         return Snapshot(waybill);
     }
 
+    public async Task MarkDeliveredAsync(Guid waybillId, Guid? operatorUserId, string detail)
+    {
+        var waybill = await RequireWaybillAsync(waybillId);
+        waybill.MarkDelivered(DateTime.UtcNow, operatorUserId);
+        AppendEvent(waybill, WaybillEventType.Delivered, operatorUserId, detail);
+        await db.SaveChangesAsync();
+    }
+
+    public async Task MarkRejectedAsync(Guid waybillId, Guid? operatorUserId, string detail)
+    {
+        var waybill = await RequireWaybillAsync(waybillId);
+        waybill.MarkRejected(DateTime.UtcNow, operatorUserId);
+        AppendEvent(waybill, WaybillEventType.RejectedDelivery, operatorUserId, detail);
+        await db.SaveChangesAsync();
+    }
+
     private async Task<Waybill> RequireWaybillAsync(Guid waybillId)
     {
         // 包含货物件：申报口径快照（Σ件数/重量/体积）依赖聚合明细
@@ -111,5 +134,6 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
     private static WaybillCargoSnapshot Snapshot(Waybill waybill) => new(
         waybill.Id, waybill.WaybillNo, waybill.Status, waybill.CargoStatus,
         waybill.TransportStatus,
+        waybill.DeliveryStatus,
         waybill.TotalPieces, waybill.TotalWeightKg, waybill.TotalVolumeM3);
 }

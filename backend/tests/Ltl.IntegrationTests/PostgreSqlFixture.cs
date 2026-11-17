@@ -3,6 +3,7 @@ using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Infrastructure;
+using Ltl.Modules.Delivery.Infrastructure;
 using Ltl.Modules.Arrivals.Infrastructure;
 using Ltl.Modules.Transport.Infrastructure;
 using Ltl.Modules.Warehouse.Infrastructure;
@@ -80,6 +81,11 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
         await using (var arrival = CreateArrivalContext())
         {
             await arrival.Database.MigrateAsync();
+        }
+
+        await using (var delivery = CreateDeliveryContext())
+        {
+            await delivery.Database.MigrateAsync();
         }
     }
 
@@ -212,6 +218,21 @@ public sealed class PostgreSqlFixture : IAsyncLifetime
             .UseSnakeCaseNamingConvention()
             .Options;
         return new ArrivalDbContext(options, tenantContext);
+    }
+
+    public DeliveryDbContext CreateDeliveryContext(Guid? tenantId = null)
+    {
+        var tenantContext = new TenantContext();
+        if (tenantId is { } id)
+        {
+            tenantContext.SetTenant(id);
+        }
+
+        var options = new DbContextOptionsBuilder<DeliveryDbContext>()
+            .UseNpgsql(ConnectionStringWithDetailedErrors)
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        return new DeliveryDbContext(options, tenantContext);
     }
 
     public PricingDbContext CreatePricingContext(Guid? tenantId = null)
