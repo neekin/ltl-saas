@@ -84,6 +84,9 @@ const menuSections: MenuSection[] = [
     icon: <ShopOutlined />,
     items: [
       { key: '/arrivals', label: '到货登记', permission: 'arrival.record' },
+      { key: '/arrivals/differences', label: '到货差异', permission: 'arrival.read' },
+      { key: '/arrivals/pickup', label: '待提货列表', permission: 'delivery.read' },
+      { key: '/arrivals/exceptions', label: '异常件', permission: 'arrival.read' },
       { key: '/deliveries', label: '交付确认', permission: 'delivery.manage' },
     ],
   },
@@ -93,7 +96,10 @@ const menuSections: MenuSection[] = [
     icon: <DollarOutlined />,
     items: [
       { key: '/finance', label: '财务管理', permission: 'finance.read' },
+      { key: '/finance/allocations', label: '收款核销', permission: 'finance.read' },
+      { key: '/finance/statements', label: '月结账单', permission: 'finance.read' },
       { key: '/finance/cod', label: 'COD 工作台', permission: 'cod.read' },
+      { key: '/finance/cod/manage', label: 'COD 管理', permission: 'cod.manage' },
     ],
   },
   {

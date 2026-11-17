@@ -23,6 +23,12 @@ import { ArrivalPage } from '../../modules/arrivals/pages/ArrivalPage';
 import { DeliveryPage } from '../../modules/delivery/pages/DeliveryPage';
 import { FinancePage } from '../../modules/finance/pages/FinancePage';
 import { CodWorkbenchPage } from '../../modules/finance/pages/CodWorkbenchPage';
+import { CodManagementPage } from '../../modules/finance/pages/CodManagementPage';
+import { ArrivalDifferencePage } from '../../modules/arrivals/pages/ArrivalDifferencePage';
+import { ExceptionWorkbenchPage } from '../../modules/arrivals/pages/ExceptionWorkbenchPage';
+import { PickupDeliveryPage } from '../../modules/arrivals/pages/PickupDeliveryPage';
+import { StatementPage } from '../../modules/finance/pages/StatementPage';
+import { PaymentAllocationPage } from '../../modules/finance/pages/PaymentAllocationPage';
 import { SortingTasksPage } from '../../modules/warehouse/pages/SortingTasksPage';
 
 /** 路由表：登录页匿名；业务页面统一经 RequireAuth 守卫（会话由 Zustand 持久化）。 */
@@ -64,6 +70,12 @@ export const router = createBrowserRouter([
           { path: 'transfers', element: <TransferListPage /> },
           { path: 'transfers/:id', element: <TransferDetailPage /> },
           { path: 'arrivals', element: <ArrivalPage /> },
+          { path: 'arrivals/differences', element: <ArrivalDifferencePage /> },
+          { path: 'arrivals/pickup', element: <PickupDeliveryPage /> },
+          { path: 'arrivals/exceptions', element: <ExceptionWorkbenchPage /> },
+          { path: 'finance/allocations', element: <PaymentAllocationPage /> },
+          { path: 'finance/statements', element: <StatementPage /> },
+          { path: 'finance/cod/manage', element: <CodManagementPage /> },
           { path: 'deliveries', element: <DeliveryPage /> },
           { path: 'finance', element: <FinancePage /> },
           { path: 'finance/cod', element: <CodWorkbenchPage /> },
