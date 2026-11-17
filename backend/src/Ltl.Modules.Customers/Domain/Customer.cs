@@ -54,6 +54,19 @@ public sealed class Customer : TenantScopedEntity
         Touch(nowUtc, updatedBy);
     }
 
+    /// <summary>设置信用额度和账期（月结客户专用）。</summary>
+    /// <exception cref="ArgumentException">creditLimit/paymentTermsDays 为负数时抛出。</exception>
+    public void SetCreditPolicy(decimal? creditLimit, int? paymentTermsDays, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        if (creditLimit is < 0)
+            throw new ArgumentException("信用额度不能为负数。", nameof(creditLimit));
+        if (paymentTermsDays is < 0)
+            throw new ArgumentException("账期天数不能为负数。", nameof(paymentTermsDays));
+        CreditLimit = creditLimit;
+        PaymentTermsDays = paymentTermsDays;
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>停用客户（幂等）。</summary>
     public void Disable(DateTime nowUtc, Guid? updatedBy = null)
     {

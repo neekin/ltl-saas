@@ -28,6 +28,10 @@ public interface IFinanceService
 {
     /// <summary>确保应收存在（运单确认后首次收款时懒创建，金额 = 运单 TotalAmount）。</summary>
     Task<ReceivableDto> EnsureReceivableAsync(Guid waybillId);
+
+    /// <summary>信用额度检查（月结客户；outstanding > credit_limit → false）。customerId 无额度 → true。</summary>
+    Task<bool> IsWithinCreditLimitAsync(Guid customerId);
+
     Task<ReceivableDto?> GetReceivableAsync(Guid waybillId);
     Task<PaymentRecordDto> RecordPaymentAsync(Guid operatorUserId, RecordPaymentRequest request);
     Task<RefundRecordDto> RefundAsync(Guid operatorUserId, RefundPaymentRequest request);
@@ -74,6 +78,27 @@ public sealed class FinanceService(
         db.Receivables.Add(receivable);
         await db.SaveChangesAsync();
         return ToDto(receivable);
+    }
+
+    /// <summary>信用额度检查（AGENTS §6.5 / ROADMAP P7 逾期和信用额度检查）。</summary>
+    public async Task<bool> IsWithinCreditLimitAsync(Guid customerId)
+    {
+        if (db.CurrentTenantId is null)
+            throw new TenantContextMissingException();
+
+        var creditLimit = (await db.Database
+                .SqlQuery<CreditLimitRow>(
+                    $"SELECT credit_limit AS \"CreditLimit\" FROM customers WHERE tenant_id = {db.CurrentTenantId} AND id = {customerId}")
+                .ToListAsync())
+            .SingleOrDefault()?.CreditLimit;
+
+        if (creditLimit is not { } limit)
+            return true;
+
+        var outstanding = await db.Receivables
+            .Where(r => r.Status != ReceivableStatus.Settled)
+            .SumAsync(r => r.Amount - r.SettledAmount);
+        return outstanding <= limit;
     }
 
     public async Task<ReceivableDto?> GetReceivableAsync(Guid waybillId)
@@ -248,6 +273,8 @@ public sealed class FinanceService(
     }
 
     private sealed record TotalAmountRow(decimal? TotalAmount);
+
+    private sealed record CreditLimitRow(decimal? CreditLimit);
 
     private static ReceivableDto ToDto(Receivable r) => new(
         r.Id, r.WaybillId, r.Amount, r.SettledAmount, r.Outstanding, r.Status.ToString());
