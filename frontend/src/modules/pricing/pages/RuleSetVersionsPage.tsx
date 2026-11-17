@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Card, Input, Popconfirm, Space, Spin, Tag, Typography } from 'antd';
+import { App, Button, Card, Input, Popconfirm, Space, Spin, Typography } from 'antd';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import {
   createDraftVersion,
   listVersions,
@@ -27,19 +28,10 @@ const EMPTY_DEFINITION: PricingDefinition = {
   ],
 };
 
-function statusTag(status: string) {
-  const map: Record<string, { color: string; text: string }> = {
-    Draft: { color: 'orange', text: '草稿' },
-    Published: { color: 'green', text: '已发布' },
-    Superseded: { color: 'default', text: '已取代' },
-  };
-  const item = map[status];
-  return item ? <Tag color={item.color}>{item.text}</Tag> : <Tag>{status}</Tag>;
-}
-
 /** 规则集版本管理页（P3 前端）：版本列表 + 定义 JSON 编辑 + 校验/发布。 */
 export function RuleSetVersionsPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -103,21 +95,40 @@ export function RuleSetVersionsPage() {
   });
 
   if (versionsQuery.isLoading) {
-    return <Spin />;
+    return (
+      <div>
+        <PageHeader title="规则版本" onBack={() => navigate('/pricing/rule-sets')} />
+        <Card><Spin tip="加载中…" /></Card>
+      </div>
+    );
   }
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" onClick={() => createMutation.mutate()} loading={createMutation.isPending}>
-          新建草稿版本
-        </Button>
-      </Space>
+      <PageHeader
+        title="规则版本"
+        description="编辑规则的声明式定义 JSON，校验通过后发布；已发布版本不可修改。"
+        onBack={() => navigate('/pricing/rule-sets')}
+        actions={
+          <Button type="primary" onClick={() => createMutation.mutate()} loading={createMutation.isPending}>
+            新建草稿版本
+          </Button>
+        }
+      />
+
+      {(versionsQuery.data ?? []).length === 0 && (
+        <Card><EmptyState description="暂无版本，点击右上角「新建草稿版本」" /></Card>
+      )}
 
       {versionsQuery.data?.map((version) => (
         <Card
           key={version.id}
-          title={`v${version.versionNumber} ${statusTag(version.status)}`}
+          title={
+            <Space size={10}>
+              <span>v{version.versionNumber}</span>
+              <StatusTag status={version.status} />
+            </Space>
+          }
           style={{ marginBottom: 16 }}
           extra={
             version.status === 'Draft' && editingId !== version.id ? (

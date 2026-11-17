@@ -11,7 +11,7 @@ describe('HomePage', () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByText('概览')).toBeInTheDocument();
+    expect(screen.getByText('工作台')).toBeInTheDocument();
     expect(screen.getByText('今日运单')).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import { RouterProvider } from 'react-router-dom';
 import { router } from '../router';
+import { appTheme } from './theme';
 
 dayjs.locale('zh-cn');
 
@@ -26,7 +27,7 @@ const queryClient = new QueryClient({
  */
 export function AppProviders() {
   return (
-    <ConfigProvider locale={zhCN}>
+    <ConfigProvider locale={zhCN} theme={appTheme}>
       <AntdApp>
         <QueryClientProvider client={queryClient}>
           <RouterProvider router={router} />

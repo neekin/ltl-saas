@@ -1,8 +1,9 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Form, Input, InputNumber, Select, Space, Table, Tag } from 'antd';
+import { App, Button, Card, Form, Input, InputNumber, Select, Space, Table } from 'antd';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 import { createTransfer, listTransfers, type BranchTransfer } from '../api/transfers';
 import type { ColumnsType } from 'antd/es/table';
@@ -11,18 +12,6 @@ interface BranchOption {
   id: string;
   code: string;
   name: string;
-}
-
-function statusTag(status: string) {
-  const map: Record<string, { color: string; text: string }> = {
-    Draft: { color: 'orange', text: '草稿' },
-    Submitted: { color: 'blue', text: '已提交' },
-    Dispatched: { color: 'cyan', text: '已发出' },
-    Received: { color: 'green', text: '已验收' },
-    Cancelled: { color: 'default', text: '已取消' },
-  };
-  const item = map[status];
-  return item ? <Tag color={item.color}>{item.text}</Tag> : <Tag>{status}</Tag>;
 }
 
 /** 调拨单列表页（P5 前端）。 */
@@ -52,11 +41,12 @@ export function TransferListPage() {
   const listQuery = useQuery({ queryKey: ['transfers', page], queryFn: () => listTransfers(page, 10) });
 
   const columns: ColumnsType<BranchTransfer> = [
-    { title: '调拨单号', dataIndex: 'transferNo' },
+    { title: '调拨单号', dataIndex: 'transferNo', width: 180, render: (v: string) => <span className="ltl-code">{v}</span> },
     {
       title: '状态',
       dataIndex: 'status',
-      render: (status) => statusTag(status),
+      width: 110,
+      render: (status) => <StatusTag status={status} category="transfer" />,
     },
     {
       title: '清单',
@@ -66,6 +56,8 @@ export function TransferListPage() {
     {
       title: '操作',
       key: 'actions',
+      width: 120,
+      fixed: 'right',
       render: (_, record) => (
         <Button type="link" size="small" onClick={() => navigate(`/transfers/${record.id}`)}>
           详情/验收
@@ -94,49 +86,71 @@ export function TransferListPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(!createOpen)}>
-          创建调拨单
-        </Button>
-      </Space>
+      <PageHeader
+        title="网点调拨"
+        description="同一租户内直营网点间的货物交接，记录调出、发出与验收差异。"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(!createOpen)}>
+            创建调拨单
+          </Button>
+        }
+      />
 
       {createOpen && (
-        <Form form={form} layout="inline" onFinish={(values) => createMutation.mutate(values)} style={{ flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          <Form.Item name="fromBranchId" label="调出网点" rules={[{ required: true }]}>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              style={{ width: 180 }}
-              options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
-            />
-          </Form.Item>
-          <Form.Item name="toBranchId" label="调入网点" rules={[{ required: true }]}>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              style={{ width: 180 }}
-              options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
-            />
-          </Form.Item>
-          <Form.Item name="cargoName" label="货物" rules={[{ required: true }]}>
-            <Input placeholder="货物名称" style={{ width: 160 }} />
-          </Form.Item>
-          <Form.Item name="quantity" label="数量" rules={[{ required: true }]} initialValue={1}>
-            <InputNumber min={1} precision={0} style={{ width: 110 }} />
-          </Form.Item>
-          <Button htmlType="submit" loading={createMutation.isPending}>
-            创建
-          </Button>
-        </Form>
+        <Card title="新建调拨单" style={{ marginBottom: 16 }}>
+          <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
+            <Space align="end" size={12} wrap style={{ width: '100%' }}>
+              <Form.Item name="fromBranchId" label="调出网点" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  style={{ width: 180 }}
+                  placeholder="选择调出网点"
+                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                />
+              </Form.Item>
+              <Form.Item name="toBranchId" label="调入网点" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  style={{ width: 180 }}
+                  placeholder="选择调入网点"
+                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                />
+              </Form.Item>
+              <Form.Item name="cargoName" label="货物" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+                <Input placeholder="货物名称" style={{ width: 160 }} />
+              </Form.Item>
+              <Form.Item name="quantity" label="数量" rules={[{ required: true }]} initialValue={1} style={{ marginBottom: 0 }}>
+                <InputNumber min={1} precision={0} style={{ width: 110 }} />
+              </Form.Item>
+              <Button type="primary" htmlType="submit" loading={createMutation.isPending}>
+                创建
+              </Button>
+            </Space>
+          </Form>
+        </Card>
       )}
 
-      <Table
-        rowKey="id"
-        loading={listQuery.isLoading}
-        dataSource={listQuery.data?.items}
-        pagination={{ current: page, pageSize: 10, total: listQuery.data?.total, onChange: setPage }}
-        columns={columns}
-      />
+      <Card styles={{ body: { padding: 0 } }}>
+        <Table<BranchTransfer>
+          rowKey="id"
+          loading={listQuery.isLoading}
+          dataSource={listQuery.data?.items}
+          columns={columns}
+          size="middle"
+          scroll={{ x: 750 }}
+          locale={{ emptyText: <EmptyState description="暂无调拨单" /> }}
+          pagination={{
+            current: page,
+            pageSize: 10,
+            total: listQuery.data?.total ?? 0,
+            onChange: setPage,
+            showTotal: (total) => `共 ${total} 条`,
+            showSizeChanger: false,
+          }}
+        />
+      </Card>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { Table, Tag, Typography } from 'antd';
+import { Card, Table } from 'antd';
 import { useState } from 'react';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 
 interface WaybillItem {
@@ -32,32 +33,39 @@ export function PickupDeliveryPage() {
 
   return (
     <div>
-      <Typography.Title level={4}>待自提 / 配送任务</Typography.Title>
-      <Typography.Paragraph type="secondary">
-        已到货但尚未交付的运单。创建交付单请前往交付确认页。
-      </Typography.Paragraph>
-      <Table
-        rowKey="id"
-        loading={listQuery.isLoading}
-        dataSource={listQuery.data?.items}
-        pagination={{ current: page, pageSize: 20, total: listQuery.data?.total, onChange: setPage }}
-        columns={[
-          { title: '运单号', dataIndex: 'waybillNo' },
-          {
-            title: '货物状态',
-            dataIndex: 'cargoStatus',
-            render: (s: string) => {
-              const map: Record<string, string> = { Received: '已收货', Sorted: '已分拣' };
-              return <Tag>{map[s] ?? s}</Tag>;
+      <PageHeader title="待自提 / 配送任务" description="已到货但尚未交付的运单。创建交付单请前往交付确认页。" />
+      <Card styles={{ body: { padding: 0 } }}>
+        <Table<WaybillItem>
+          rowKey="id"
+          loading={listQuery.isLoading}
+          dataSource={listQuery.data?.items}
+          size="middle"
+          scroll={{ x: 650 }}
+          locale={{ emptyText: <EmptyState description="暂无待交付运单" /> }}
+          pagination={{
+            current: page,
+            pageSize: 20,
+            total: listQuery.data?.total ?? 0,
+            onChange: setPage,
+            showTotal: (total) => `共 ${total} 条`,
+          }}
+          columns={[
+            { title: '运单号', dataIndex: 'waybillNo', width: 180, render: (v: string) => <span className="ltl-code">{v}</span> },
+            {
+              title: '货物状态',
+              dataIndex: 'cargoStatus',
+              width: 130,
+              render: (s: string) => <StatusTag status={s} />,
             },
-          },
-          {
-            title: '交付状态',
-            dataIndex: 'deliveryStatus',
-            render: (s: string) => <Tag>{s}</Tag>,
-          },
-        ]}
-      />
+            {
+              title: '交付状态',
+              dataIndex: 'deliveryStatus',
+              width: 130,
+              render: (s: string) => <StatusTag status={s} />,
+            },
+          ]}
+        />
+      </Card>
     </div>
   );
 }

@@ -42,11 +42,11 @@ function renderPage() {
 describe('WaybillCreatePage', () => {
   it('渲染业务信息与收发货人必填字段', async () => {
     renderPage();
-    expect(await screen.findByText('开单')).toBeInTheDocument();
+    expect(await screen.findByText('新建运单')).toBeInTheDocument();
     expect(screen.getByLabelText('始发网点')).toBeInTheDocument();
     expect(screen.getByLabelText('目的网点')).toBeInTheDocument();
     expect(screen.getByLabelText('发货人')).toBeInTheDocument();
-    expect(screen.getByText('开单（固化费用）')).toBeInTheDocument();
+    expect(screen.getByText('开单并固化费用')).toBeInTheDocument();
   });
 
   it('试算按钮在无货物件时渲染为可点击（后端报错而非前端崩溃）', async () => {

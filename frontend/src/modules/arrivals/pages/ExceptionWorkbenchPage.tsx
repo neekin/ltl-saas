@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { Table, Tag, Typography } from 'antd';
+import { Card, Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 
 interface ExceptionItem {
@@ -27,27 +29,43 @@ export function ExceptionWorkbenchPage() {
     },
   });
 
+  const columns: ColumnsType<ExceptionItem> = [
+    { title: '运单号', dataIndex: 'waybillNo', width: 180, render: (v: string) => <span className="ltl-code">{v}</span> },
+    {
+      title: '交付状态',
+      dataIndex: 'deliveryStatus',
+      width: 130,
+      render: (s: string) => <StatusTag status={s} />,
+    },
+    {
+      title: '货物状态',
+      dataIndex: 'cargoStatus',
+      width: 130,
+      render: (s: string) => <StatusTag status={s} />,
+    },
+  ];
+
   return (
     <div>
-      <Typography.Title level={4}>异常件工作台</Typography.Title>
-      <Typography.Paragraph type="secondary">
-        列出拒收/差异运单，追踪责任网点和处理结果。
-      </Typography.Paragraph>
-      <Table
-        rowKey="id"
-        loading={rejectedQuery.isLoading}
-        dataSource={rejectedQuery.data?.items}
-        pagination={{ current: page, pageSize: 20, total: rejectedQuery.data?.total, onChange: setPage }}
-        columns={[
-          { title: '运单号', dataIndex: 'waybillNo' },
-          {
-            title: '交付状态',
-            dataIndex: 'deliveryStatus',
-            render: (s: string) => <Tag color="red">{s}</Tag>,
-          },
-          { title: '货物状态', dataIndex: 'cargoStatus' },
-        ]}
-      />
+      <PageHeader title="异常件工作台" description="列出拒收/异常运单，便于追踪责任网点与处理结果。" />
+      <Card styles={{ body: { padding: 0 } }}>
+        <Table<ExceptionItem>
+          rowKey="id"
+          loading={rejectedQuery.isLoading}
+          dataSource={rejectedQuery.data?.items}
+          columns={columns}
+          size="middle"
+          scroll={{ x: 600 }}
+          locale={{ emptyText: <EmptyState description="暂无异常运单" /> }}
+          pagination={{
+            current: page,
+            pageSize: 20,
+            total: rejectedQuery.data?.total ?? 0,
+            onChange: setPage,
+            showTotal: (total) => `共 ${total} 条`,
+          }}
+        />
+      </Card>
     </div>
   );
 }

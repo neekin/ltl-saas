@@ -1,16 +1,19 @@
+import { useState } from 'react';
 import {
   CarOutlined,
   DashboardOutlined,
+  DeploymentUnitOutlined,
+  DownOutlined,
+  DollarOutlined,
   FileTextOutlined,
   LogoutOutlined,
-  DollarOutlined,
   ShopOutlined,
   SwapOutlined,
   TagsOutlined,
   ToolOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Dropdown, Layout, Menu, Typography } from 'antd';
+import { Avatar, Breadcrumb, Dropdown, Layout, Menu, Typography } from 'antd';
 import type { MenuProps } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../modules/auth/api/auth';
@@ -57,7 +60,7 @@ const menuSections: MenuSection[] = [
     label: '运单',
     icon: <FileTextOutlined />,
     items: [
-      { key: '/waybills', label: '运单列表', permission: PERMISSIONS.waybillRead },
+      { key: '/waybills', label: '运单查询', permission: PERMISSIONS.waybillRead },
       { key: '/waybills/create', label: '开单', permission: PERMISSIONS.waybillManage },
       { key: '/warehouse/sorting', label: '分拣作业', permission: PERMISSIONS.cargoSort },
     ],
@@ -110,12 +113,82 @@ const menuSections: MenuSection[] = [
   },
 ];
 
+/** 详情类路由（不在菜单中）的面包屑末级名称，按前缀匹配。 */
+const DETAIL_LABELS: { prefix: string; label: string }[] = [
+  { prefix: '/waybills/', label: '运单详情' },
+  { prefix: '/transport/trips/', label: '配载工作台' },
+  { prefix: '/transfers/', label: '调拨详情' },
+  { prefix: '/customers/', label: '客户详情' },
+  { prefix: '/routes/', label: '线路编辑' },
+  { prefix: '/pricing/rule-sets/', label: '规则版本' },
+];
+
+interface NavResolution {
+  activeKey: string;
+  sectionKey: string;
+  sectionLabel: string;
+  pageLabel: string;
+}
+
+/** 从当前路径解析：高亮菜单项、所属分组、面包屑文案。菜单配置为唯一数据源。 */
+function resolveNav(pathname: string): NavResolution {
+  const home: NavResolution = {
+    activeKey: '/',
+    sectionKey: 'dashboard',
+    sectionLabel: '概览',
+    pageLabel: '工作台',
+  };
+  if (pathname === '/') {
+    return home;
+  }
+
+  let matched: { section: MenuSection; item: MenuSection['items'][number] } | null = null;
+  for (const section of menuSections) {
+    for (const item of section.items) {
+      if (pathname === item.key) {
+        const detail = DETAIL_LABELS.find((d) => pathname.startsWith(d.prefix));
+        return {
+          activeKey: item.key,
+          sectionKey: section.key,
+          sectionLabel: section.label,
+          pageLabel: detail?.label ?? item.label,
+        };
+      }
+      if (pathname.startsWith(`${item.key}/`) && (!matched || item.key.length > matched.item.key.length)) {
+        matched = { section, item };
+      }
+    }
+  }
+
+  if (!matched) {
+    return home;
+  }
+  const detail = DETAIL_LABELS.find((d) => pathname.startsWith(d.prefix));
+  return {
+    activeKey: matched.item.key,
+    sectionKey: matched.section.key,
+    sectionLabel: matched.section.label,
+    pageLabel: detail?.label ?? matched.item.label,
+  };
+}
+
 export function BasicLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const clear = useAuthStore((s) => s.clear);
+
+  const [collapsed, setCollapsed] = useState(false);
+  const nav = resolveNav(location.pathname);
+  const [openKeys, setOpenKeys] = useState<string[]>([nav.sectionKey]);
+  const [lastSectionKey, setLastSectionKey] = useState(nav.sectionKey);
+
+  // 路由切换时仅展开当前路径所属分组（渲染期同步派生状态，避免 effect 级联渲染）。
+  if (nav.sectionKey !== lastSectionKey) {
+    setLastSectionKey(nav.sectionKey);
+    setOpenKeys([nav.sectionKey]);
+  }
 
   const visibleSections = menuSections
     .map((section) => ({
@@ -131,6 +204,14 @@ export function BasicLayout() {
     children: section.items.map((item) => ({ key: item.key, label: item.label })),
   }));
 
+  const breadcrumbItems =
+    location.pathname === '/'
+      ? [{ title: '工作台' }]
+      : [
+          { title: nav.sectionLabel },
+          { title: nav.pageLabel },
+        ];
+
   const onLogout = async () => {
     if (refreshToken) {
       try {
@@ -145,17 +226,56 @@ export function BasicLayout() {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider width={220}>
-        <div style={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Typography.Title level={5} style={{ color: '#fff', margin: 0 }}>
-            LTL 物流系统
-          </Typography.Title>
+      <Sider
+        width={224}
+        collapsedWidth={80}
+        collapsible
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
+        breakpoint="lg"
+        onBreakpoint={(broken) => setCollapsed(broken)}
+      >
+        <div
+          style={{
+            height: 64,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            gap: 12,
+            padding: collapsed ? 0 : '0 20px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: 8,
+              background: '#1D4FA0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
+            <DeploymentUnitOutlined style={{ color: '#fff', fontSize: 18 }} />
+          </div>
+          {!collapsed && (
+            <div style={{ minWidth: 0 }}>
+              <div style={{ color: '#fff', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap' }}>LTL 零担物流</div>
+              <div style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 11, whiteSpace: 'nowrap' }}>
+                专线运营管理平台
+              </div>
+            </div>
+          )}
         </div>
         <Menu
           theme="dark"
           mode="inline"
-          selectedKeys={[location.pathname]}
-          defaultOpenKeys={visibleSections.map((s) => s.key)}
+          selectedKeys={[nav.activeKey]}
+          openKeys={openKeys}
+          onOpenChange={(keys) => setOpenKeys(keys as string[])}
           items={menuItems}
           onClick={({ key }) => navigate(key)}
         />
@@ -164,12 +284,14 @@ export function BasicLayout() {
         <Header
           style={{
             background: '#fff',
-            borderBottom: '1px solid #f0f0f0',
+            borderBottom: '1px solid #eef1f5',
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             alignItems: 'center',
+            padding: '0 24px',
           }}
         >
+          <Breadcrumb items={breadcrumbItems} />
           <Dropdown
             menu={{
               items: [{ key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: onLogout }],
@@ -178,11 +300,14 @@ export function BasicLayout() {
             <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Avatar size="small" icon={<UserOutlined />} />
               <Typography.Text>{user?.displayName ?? user?.username}</Typography.Text>
+              <DownOutlined style={{ fontSize: 10, color: '#8c96a5' }} />
             </span>
           </Dropdown>
         </Header>
-        <Content style={{ margin: 16 }}>
-          <Outlet />
+        <Content style={{ margin: 0, padding: '20px 24px', overflow: 'auto' }}>
+          <div className="ltl-page">
+            <Outlet />
+          </div>
         </Content>
       </Layout>
     </Layout>

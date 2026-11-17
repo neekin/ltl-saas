@@ -1,7 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Card, Descriptions, Input, InputNumber, Popconfirm, Space, Table, Tag, Timeline, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Row,
+  Space,
+  Table,
+  Timeline,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import {
   cancelWaybill,
   confirmWaybill,
@@ -21,7 +37,7 @@ const eventTypeText: Record<string, string> = {
   Arrived: '到达',
 };
 
-/** 运单详情页（P4 前端）：状态/货物件/收货登记/分拣/轨迹时间线/打印。 */
+/** 运单详情/货物跟踪页（P4 前端）：状态、货物件、收货登记、分拣、轨迹时间线、打印。 */
 export function WaybillDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -92,7 +108,7 @@ export function WaybillDetailPage() {
   });
 
   if (detailQuery.isLoading || !detailQuery.data) {
-    return <Typography.Text type="secondary">加载中…</Typography.Text>;
+    return <EmptyState simple description="加载中…" />;
   }
 
   const waybill = detailQuery.data;
@@ -103,111 +119,158 @@ export function WaybillDetailPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Button onClick={() => navigate('/waybills')}>返回列表</Button>
-        {canConfirm && (
-          <Button type="primary" onClick={() => confirmMutation.mutate()} loading={confirmMutation.isPending}>
-            确认运单
-          </Button>
-        )}
-        {canReceive && (
-          <Button type="primary" onClick={() => setReceiptOpen(true)}>
-            收货登记
-          </Button>
-        )}
-        {canSort && (
-          <Button onClick={() => sortMutation.mutate()} loading={sortMutation.isPending}>
-            创建分拣任务
-          </Button>
-        )}
-        {canCancel && (
-          <Popconfirm title="确认取消该运单？" onConfirm={() => cancelMutation.mutate('页面取消')}>
-            <Button danger>取消运单</Button>
-          </Popconfirm>
-        )}
-        <Button onClick={() => window.print()}>打印</Button>
-      </Space>
+      <PageHeader
+        title={
+          <Space size={12} wrap>
+            <span>运单详情</span>
+            <span className="ltl-code" style={{ fontSize: 16, color: '#5b6573', fontWeight: 400 }}>
+              {waybill.waybillNo}
+            </span>
+            <StatusTag status={waybill.status} category="waybill" />
+          </Space>
+        }
+        description="查看运单状态、货物明细与全程轨迹，并执行收货、分拣等操作。"
+        onBack={() => navigate('/waybills')}
+        actions={
+          <Space wrap>
+            {canConfirm && (
+              <Button type="primary" onClick={() => confirmMutation.mutate()} loading={confirmMutation.isPending}>
+                确认运单
+              </Button>
+            )}
+            {canReceive && (
+              <Button type="primary" onClick={() => setReceiptOpen(true)}>
+                收货登记
+              </Button>
+            )}
+            {canSort && (
+              <Button onClick={() => sortMutation.mutate()} loading={sortMutation.isPending}>
+                创建分拣任务
+              </Button>
+            )}
+            {canCancel && (
+              <Popconfirm title="确认取消该运单？" onConfirm={() => cancelMutation.mutate('页面取消')}>
+                <Button danger>取消运单</Button>
+              </Popconfirm>
+            )}
+            <Button onClick={() => window.print()}>打印</Button>
+          </Space>
+        }
+      />
 
-      <Card title={`运单 ${waybill.waybillNo}`} style={{ marginBottom: 16 }}>
-        <Descriptions bordered size="small" column={3}>
-          <Descriptions.Item label="运单状态">
-            <Tag color={waybill.status === 'Cancelled' ? 'default' : 'green'}>{waybill.status}</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="货物/仓储">
-            <Tag>{waybill.cargoStatus}</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="运输状态">
-            <Tag>{waybill.transportStatus}</Tag>
-          </Descriptions.Item>
-          <Descriptions.Item label="支付方式">{waybill.paymentType}</Descriptions.Item>
-          <Descriptions.Item label="运费应收">
-            {waybill.totalAmount === null ? '未固化' : `${waybill.totalAmount.toFixed(2)} 元`}
-          </Descriptions.Item>
-          <Descriptions.Item label="COD">
-            {waybill.codAmount === null ? '—' : `${waybill.codAmount.toFixed(2)} 元（独立资金）`}
-          </Descriptions.Item>
-          <Descriptions.Item label="发货人" span={1}>
-            {waybill.senderName} / {waybill.senderPhone}
-          </Descriptions.Item>
-          <Descriptions.Item label="发货地址" span={2}>
-            {waybill.senderAddress}
-          </Descriptions.Item>
-          <Descriptions.Item label="收货人" span={1}>
-            {waybill.receiverName} / {waybill.receiverPhone}
-          </Descriptions.Item>
-          <Descriptions.Item label="收货地址" span={2}>
-            {waybill.receiverAddress}
-          </Descriptions.Item>
-        </Descriptions>
-      </Card>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} xl={14}>
+          <Card title="基本信息" style={{ height: '100%' }}>
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }}>
+              <Descriptions.Item label="运单状态">
+                <StatusTag status={waybill.status} category="waybill" />
+              </Descriptions.Item>
+              <Descriptions.Item label="货物/仓储">
+                <StatusTag status={waybill.cargoStatus} />
+              </Descriptions.Item>
+              <Descriptions.Item label="运输状态">
+                <StatusTag status={waybill.transportStatus} />
+              </Descriptions.Item>
+              <Descriptions.Item label="交付状态">
+                <StatusTag status={waybill.deliveryStatus} />
+              </Descriptions.Item>
+              <Descriptions.Item label="支付方式">{waybill.paymentType}</Descriptions.Item>
+              <Descriptions.Item label="运费应收">
+                {waybill.totalAmount === null ? (
+                  <Typography.Text type="secondary">未固化</Typography.Text>
+                ) : (
+                  <span className="ltl-amount ltl-amount--strong">¥ {waybill.totalAmount.toFixed(2)}</span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="COD 代收" span={2}>
+                {waybill.codAmount === null ? (
+                  <Typography.Text type="secondary">—</Typography.Text>
+                ) : (
+                  <span className="ltl-amount">¥ {waybill.codAmount.toFixed(2)}（独立资金，不计入运费）</span>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+        </Col>
+        <Col xs={24} xl={10}>
+          <Card title="收发货信息" style={{ height: '100%' }}>
+            <Descriptions size="small" column={1}>
+              <Descriptions.Item label="发货人">
+                {waybill.senderName} / {waybill.senderPhone}
+              </Descriptions.Item>
+              <Descriptions.Item label="发货地址">{waybill.senderAddress}</Descriptions.Item>
+              <Descriptions.Item label="收货人">
+                {waybill.receiverName} / {waybill.receiverPhone}
+              </Descriptions.Item>
+              <Descriptions.Item label="收货地址">{waybill.receiverAddress}</Descriptions.Item>
+            </Descriptions>
+          </Card>
+        </Col>
+      </Row>
 
-      <Card title="货物件" style={{ marginBottom: 16 }}>
+      <Card title="货物件" style={{ marginTop: 16 }}>
         <Table
           rowKey="id"
           size="small"
           dataSource={waybill.packages}
           pagination={false}
+          scroll={{ x: 700 }}
+          locale={{ emptyText: <EmptyState simple description="暂无货物件" /> }}
           columns={[
-            { title: '件号', dataIndex: 'packageNo', width: 70 },
+            { title: '件号', dataIndex: 'packageNo', width: 80 },
             { title: '货名', dataIndex: 'cargoName' },
-            { title: '件数', dataIndex: 'quantity', width: 80 },
+            { title: '件数', dataIndex: 'quantity', width: 90 },
             {
               title: '重量(kg)',
               dataIndex: 'weightKg',
-              width: 110,
-              render: (v: number) => v.toFixed(3),
+              width: 120,
+              align: 'right',
+              render: (v: number) => <span className="ltl-amount">{v.toFixed(3)}</span>,
             },
             {
               title: '体积(m³)',
               dataIndex: 'volumeM3',
-              width: 110,
-              render: (v: number) => v.toFixed(4),
+              width: 120,
+              align: 'right',
+              render: (v: number) => <span className="ltl-amount">{v.toFixed(4)}</span>,
             },
-            { title: '备注', dataIndex: 'remark' },
+            { title: '备注', dataIndex: 'remark', render: (v: string | null) => v ?? '—' },
           ]}
         />
       </Card>
 
-      <Card title="运单轨迹时间线" style={{ marginBottom: 16 }}>
-        <Timeline
-          items={(eventsQuery.data ?? []).map((event) => ({
-            children: (
-              <>
-                <Typography.Text strong>{eventTypeText[event.eventType] ?? event.eventType}</Typography.Text>
-                {event.detail && <Typography.Text type="secondary"> — {event.detail}</Typography.Text>}
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {new Date(event.occurredAt).toLocaleString('zh-CN')}
-                </Typography.Text>
-              </>
-            ),
-          }))}
-        />
-        {(eventsQuery.data ?? []).length === 0 && <Typography.Text type="secondary">暂无事件</Typography.Text>}
+      <Card title="运单轨迹" style={{ marginTop: 16 }}>
+        {(eventsQuery.data ?? []).length === 0 ? (
+          <EmptyState simple description="暂无轨迹事件" />
+        ) : (
+          <Timeline
+            items={(eventsQuery.data ?? []).map((event) => ({
+              color: event.eventType === 'Cancelled' ? 'red' : 'blue',
+              children: (
+                <>
+                  <Typography.Text strong>{eventTypeText[event.eventType] ?? event.eventType}</Typography.Text>
+                  {event.detail && <Typography.Text type="secondary"> — {event.detail}</Typography.Text>}
+                  <br />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {new Date(event.occurredAt).toLocaleString('zh-CN')}
+                  </Typography.Text>
+                </>
+              ),
+            }))}
+          />
+        )}
       </Card>
 
-      {receiptOpen && (
-        <Card title="收货登记（称重/体积复核）" style={{ marginBottom: 16 }}>
+      <Modal
+        title="收货登记（称重/体积复核）"
+        open={receiptOpen}
+        onCancel={() => setReceiptOpen(false)}
+        onOk={() => receiptMutation.mutate()}
+        okText="登记收货"
+        confirmLoading={receiptMutation.isPending}
+        destroyOnClose
+      >
+        <Space direction="vertical" style={{ width: '100%' }} size={12}>
           <Space wrap>
             <InputNumber
               min={1}
@@ -215,39 +278,30 @@ export function WaybillDetailPage() {
               value={receiptForm.pieces}
               onChange={(v: number | null) => setReceiptForm({ ...receiptForm, pieces: v ?? 1 })}
               addonBefore="实收件数"
-              style={{ width: 160 }}
+              style={{ width: 180 }}
             />
             <InputNumber
               min={0}
               value={receiptForm.weight}
               onChange={(v: number | null) => setReceiptForm({ ...receiptForm, weight: v ?? 0 })}
-              addonBefore="实收kg"
-              style={{ width: 170 }}
+              addonBefore="实收 kg"
+              style={{ width: 180 }}
             />
             <InputNumber
               min={0}
               value={receiptForm.volume}
               onChange={(v: number | null) => setReceiptForm({ ...receiptForm, volume: v ?? 0 })}
-              addonBefore="实收m³"
+              addonBefore="实收 m³"
               style={{ width: 180 }}
             />
-            <Input
-              placeholder="备注"
-              value={receiptForm.note}
-              onChange={(e) => setReceiptForm({ ...receiptForm, note: e.target.value })}
-              style={{ width: 160 }}
-            />
-            <Button
-              type="primary"
-              loading={receiptMutation.isPending}
-              onClick={() => receiptMutation.mutate()}
-            >
-              登记收货
-            </Button>
-            <Button onClick={() => setReceiptOpen(false)}>取消</Button>
           </Space>
-        </Card>
-      )}
+          <Input
+            placeholder="备注（可选）"
+            value={receiptForm.note}
+            onChange={(e) => setReceiptForm({ ...receiptForm, note: e.target.value })}
+          />
+        </Space>
+      </Modal>
     </div>
   );
 }

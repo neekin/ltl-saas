@@ -1,9 +1,10 @@
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Drawer, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Drawer, Flex, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import {
   addAddress,
   addContact,
@@ -27,10 +28,6 @@ interface BranchOption {
   code: string;
   name: string;
   status: string;
-}
-
-function StatusTag({ status }: { status: string }) {
-  return <Tag color={status === 'Active' ? 'green' : 'default'}>{status === 'Active' ? '启用' : '停用'}</Tag>;
 }
 
 /** 客户管理页（P2 前端）：列表/搜索/创建/编辑/启停 + 详情抽屉（联系人/地址/网点授权）。 */
@@ -116,7 +113,7 @@ export function CustomerListPage() {
   const detail = detailQuery.data;
 
   const columns = [
-    { title: '编码', dataIndex: 'code', key: 'code' },
+    { title: '编码', dataIndex: 'code', key: 'code', width: 130, render: (v: string) => <span className="ltl-code">{v}</span> },
     { title: '名称', dataIndex: 'name', key: 'name' },
     {
       title: '状态',
@@ -155,37 +152,52 @@ export function CustomerListPage() {
 
   return (
     <div>
-      <Typography.Title level={4}>客户管理</Typography.Title>
-      <Space style={{ marginBottom: 16 }}>
-        <Input.Search
-          placeholder="搜索编码/名称"
-          value={searchText}
-          onChange={(e) => setSearchText(e.target.value)}
-          onSearch={(value) => {
-            setKeyword(value);
-            setPage(1);
-          }}
-          style={{ width: 260 }}
-          allowClear
-        />
-        <Button icon={<ReloadOutlined />} onClick={() => invalidate()} />
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
-          新建客户
-        </Button>
-      </Space>
-
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={listQuery.data?.items}
-        loading={listQuery.isLoading}
-        pagination={{
-          current: page,
-          pageSize: 10,
-          total: listQuery.data?.total,
-          onChange: setPage,
-        }}
+      <PageHeader
+        title="客户管理"
+        description="维护客户档案、联系人、地址与可服务网点授权。"
+        actions={
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+            新建客户
+          </Button>
+        }
       />
+
+      <div className="ltl-filter-bar">
+        <Flex gap={12} wrap>
+          <Input.Search
+            placeholder="搜索编码/名称"
+            value={searchText}
+            onChange={(e) => setSearchText(e.target.value)}
+            onSearch={(value) => {
+              setKeyword(value);
+              setPage(1);
+            }}
+            style={{ width: 280 }}
+            allowClear
+          />
+          <Button icon={<ReloadOutlined />} onClick={() => invalidate()} />
+        </Flex>
+      </div>
+
+      <Card styles={{ body: { padding: 0 } }}>
+        <Table
+          rowKey="id"
+          columns={columns}
+          dataSource={listQuery.data?.items}
+          loading={listQuery.isLoading}
+          size="middle"
+          scroll={{ x: 700 }}
+          locale={{ emptyText: <EmptyState description="暂无客户，点击右上角「新建客户」" /> }}
+          pagination={{
+            current: page,
+            pageSize: 10,
+            total: listQuery.data?.total ?? 0,
+            onChange: setPage,
+            showTotal: (total) => `共 ${total} 条`,
+            showSizeChanger: false,
+          }}
+        />
+      </Card>
 
       <CreateCustomerDrawer
         open={createOpen}

@@ -1,8 +1,9 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Card, Form, Input, Select, Space, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, Form, Input, Row, Select, Space, Typography } from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 import {
   createPlan,
@@ -140,53 +141,66 @@ export function RouteEditPage() {
 
   return (
     <div>
-      <Typography.Title level={4}>{isNew ? '新建线路' : `线路：${route?.code ?? ''}`}</Typography.Title>
-
-      <Card title="基本信息" style={{ marginBottom: 16 }}>
-        <Form
-          layout="inline"
-          form={baseForm}
-          initialValues={{ code: route?.code, name: route?.name }}
-          style={{ flexWrap: 'wrap', gap: 8 }}
-        >
-          <Form.Item name="code" label="编码" rules={[{ required: isNew, message: '编码必填' }]}>
-            <Input disabled={!isNew} style={{ width: 160 }} />
-          </Form.Item>
-          <Form.Item name="name" label="名称" rules={[{ required: true, message: '名称必填' }]}>
-            <Input style={{ width: 220 }} />
-          </Form.Item>
-          {isNew ? (
-            <Button
-              type="primary"
-              onClick={async () => {
-                const values = await baseForm.validateFields();
-                createMutation.mutate(values);
-              }}
-              loading={createMutation.isPending}
-            >
-              创建
-            </Button>
-          ) : (
-            <Button
-              onClick={async () => {
-                const values = await baseForm.validateFields();
-                renameMutation.mutate(values.name);
-              }}
-              loading={renameMutation.isPending}
-            >
-              保存名称
-            </Button>
-          )}
-          {!isNew && route && (
-            <>
-              <Tag color={route.status === 'Active' ? 'green' : 'default'}>
-                {route.status === 'Active' ? '启用' : '停用'}
-              </Tag>
+      <PageHeader
+        title={isNew ? '新建线路' : '线路编辑'}
+        description={isNew ? '创建线路后继续配置站点与运输方案。' : '维护线路基本信息、站点序列与运输方案。'}
+        onBack={() => navigate('/routes')}
+        actions={
+          !isNew && route ? (
+            <Space>
+              <StatusTag status={route.status} />
               <Button danger={route.status === 'Active'} onClick={() => statusMutation.mutate(route.status === 'Active')}>
                 {route.status === 'Active' ? '停用' : '启用'}
               </Button>
-            </>
-          )}
+            </Space>
+          ) : undefined
+        }
+      />
+
+      <Card title="基本信息" style={{ marginBottom: 16 }}>
+        <Form
+          layout="vertical"
+          form={baseForm}
+          initialValues={{ code: route?.code, name: route?.name }}
+        >
+          <Row gutter={[16, 0]} align="bottom">
+            <Col xs={24} md={5}>
+              <Form.Item name="code" label="编码" rules={[{ required: isNew, message: '编码必填' }]}>
+                <Input disabled={!isNew} placeholder="线路编码" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={7}>
+              <Form.Item name="name" label="名称" rules={[{ required: true, message: '名称必填' }]}>
+                <Input placeholder="线路名称" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item label=" ">
+                {isNew ? (
+                  <Button
+                    type="primary"
+                    onClick={async () => {
+                      const values = await baseForm.validateFields();
+                      createMutation.mutate(values);
+                    }}
+                    loading={createMutation.isPending}
+                  >
+                    创建
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={async () => {
+                      const values = await baseForm.validateFields();
+                      renameMutation.mutate(values.name);
+                    }}
+                    loading={renameMutation.isPending}
+                  >
+                    保存名称
+                  </Button>
+                )}
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Card>
 
@@ -214,6 +228,7 @@ export function RouteEditPage() {
               </Space>
             }
           >
+            {sortedStops.length === 0 && <EmptyState simple description="暂无站点，点击「添加站点」开始配置" />}
             {sortedStops.map((stop, index) => (
               <Space key={index} style={{ display: 'flex', marginBottom: 8 }}>
                 <Typography.Text type="secondary">{index}</Typography.Text>
@@ -275,8 +290,10 @@ function PlanSection({
     <Card title="运输方案（1 区段=直达，多区段=中转；区段须首尾相连且落在站点内）">
       {plans.map((plan) => (
         <div key={plan.id} style={{ marginBottom: 12 }}>
-          <Typography.Text strong>{plan.name}</Typography.Text>{' '}
-          <Tag color={plan.status === 'Active' ? 'green' : 'default'}>{plan.status}</Tag>
+          <Space size={8}>
+            <Typography.Text strong>{plan.name}</Typography.Text>
+            <StatusTag status={plan.status} />
+          </Space>{' '}
           <div style={{ paddingLeft: 16 }}>
             {plan.segments.map((segment) => (
               <Typography.Text key={segment.id} type="secondary" style={{ marginRight: 12 }}>
@@ -287,7 +304,7 @@ function PlanSection({
           </div>
         </div>
       ))}
-      {plans.length === 0 && <Typography.Text type="secondary">暂无运输方案</Typography.Text>}
+      {plans.length === 0 && <EmptyState simple description="暂无运输方案" />}
 
       <Typography.Title level={5}>新建方案</Typography.Title>
       <Input

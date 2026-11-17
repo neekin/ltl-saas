@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Card, Input, InputNumber, Space, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import {
   cancelTransfer,
   dispatchTransfer,
@@ -15,6 +16,7 @@ import {
 /** 调拨单详情页（P5 前端）：提交/发出/验收（逐项数量核验 + 差异留痕）。 */
 export function TransferDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [receivedQuantities, setReceivedQuantities] = useState<Record<string, number>>({});
@@ -143,22 +145,28 @@ export function TransferDetailPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16 }}>
-        <Button onClick={() => window.history.back()}>返回</Button>
-        {detailQuery.data && (
-          <Typography.Title level={4} style={{ margin: 0 }}>
-            调拨单 {detailQuery.data.transferNo}（{status}）
-          </Typography.Title>
-        )}
-      </Space>
-
-      <Card
-        title="货物清单与验收"
-        style={{ marginBottom: 16 }}
-        extra={
-          <Space>
+      <PageHeader
+        title={
+          <Space size={12} wrap>
+            <span>调拨单详情</span>
+            {detailQuery.data && (
+              <span className="ltl-code" style={{ fontSize: 16, color: '#5b6573', fontWeight: 400 }}>
+                {detailQuery.data.transferNo}
+              </span>
+            )}
+            {status && <StatusTag status={status} category="transfer" />}
+          </Space>
+        }
+        description="按状态推进提交、发出与验收；验收数量逐项核验，差异留痕。"
+        onBack={() => navigate('/transfers')}
+        actions={
+          <Space wrap>
             {canSubmit && <Button onClick={() => submitMutation.mutate()}>提交</Button>}
-            {canDispatch && <Button type="primary" onClick={() => dispatchMutation.mutate()}>发出确认</Button>}
+            {canDispatch && (
+              <Button type="primary" onClick={() => dispatchMutation.mutate()}>
+                发出确认
+              </Button>
+            )}
             {canReceive && (
               <Button type="primary" onClick={() => receiveMutation.mutate()}>
                 验收入库
@@ -171,16 +179,20 @@ export function TransferDetailPage() {
             )}
           </Space>
         }
-      >
+      />
+
+      <Card title="货物清单与验收">
         <Table
           rowKey="id"
           size="small"
           loading={detailQuery.isLoading}
           dataSource={detailQuery.data?.items}
           pagination={false}
+          scroll={{ x: 800 }}
           columns={columns}
+          locale={{ emptyText: <EmptyState simple description="暂无货物清单" /> }}
         />
-        <Typography.Paragraph type="secondary" style={{ marginTop: 8 }}>
+        <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
           验收一次性写入、不可覆盖（AGENTS §6.3：原始交接记录不可覆盖）；破损计入实收；调拨不产生对外销售收入。
         </Typography.Paragraph>
       </Card>

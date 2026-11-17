@@ -1,5 +1,8 @@
+import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Form, Input, InputNumber, Popconfirm, Table, Tag, Typography } from 'antd';
+import { App, Button, Card, Flex, Form, Input, InputNumber, Popconfirm, Table } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import { createVehicle, disableVehicle, enableVehicle, listVehicles, type Vehicle } from '../api/fleet';
 
 /** 车辆档案页（P5 前端）。 */
@@ -31,57 +34,83 @@ export function VehicleListPage() {
     onError: (e: Error) => message.error(e.message),
   });
 
+  const columns: ColumnsType<Vehicle> = [
+    { title: '车牌号', dataIndex: 'plateNo', width: 140, render: (v: string) => <span className="ltl-code">{v}</span> },
+    { title: '车型', dataIndex: 'vehicleType', width: 120 },
+    {
+      title: '最大载重 (kg)',
+      dataIndex: 'maxLoadKg',
+      width: 140,
+      align: 'right',
+      render: (v: number) => <span className="ltl-amount">{v}</span>,
+    },
+    {
+      title: '最大容积 (m³)',
+      dataIndex: 'maxVolumeM3',
+      width: 140,
+      align: 'right',
+      render: (v: number) => <span className="ltl-amount">{v}</span>,
+    },
+    {
+      title: '状态',
+      dataIndex: 'status',
+      width: 100,
+      render: (status: string) => <StatusTag status={status} />,
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 90,
+      render: (_: unknown, record: Vehicle) => (
+        <Popconfirm
+          title={record.status === 'Active' ? '确认停用？' : '确认启用？'}
+          onConfirm={() => toggleMutation.mutate({ vehicle: record, disable: record.status === 'Active' })}
+        >
+          <Button type="link" size="small" danger={record.status === 'Active'}>
+            {record.status === 'Active' ? '停用' : '启用'}
+          </Button>
+        </Popconfirm>
+      ),
+    },
+  ];
+
   return (
     <div>
-      <Typography.Title level={4}>车辆档案</Typography.Title>
-      <Form form={form} layout="inline" onFinish={(values) => createMutation.mutate(values)} style={{ flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-        <Form.Item name="plateNo" rules={[{ required: true, message: '车牌必填' }]}>
-          <Input placeholder="车牌号" style={{ width: 120 }} />
-        </Form.Item>
-        <Form.Item name="vehicleType" rules={[{ required: true, message: '车型必填' }]} initialValue="truck">
-          <Input placeholder="车型(truck/van)" style={{ width: 130 }} />
-        </Form.Item>
-        <Form.Item name="maxLoadKg" rules={[{ required: true, message: '载重必填' }]}>
-          <InputNumber placeholder="最大载重kg" min={1} style={{ width: 150 }} />
-        </Form.Item>
-        <Form.Item name="maxVolumeM3" rules={[{ required: true, message: '容积必填' }]}>
-          <InputNumber placeholder="最大容积m³" min={0.1} style={{ width: 150 }} />
-        </Form.Item>
-        <Button htmlType="submit" loading={createMutation.isPending}>
-          添加
-        </Button>
-      </Form>
+      <PageHeader title="车辆档案" description="维护车队车辆信息与启停状态。" />
 
-      <Table
-        rowKey="id"
-        loading={listQuery.isLoading}
-        dataSource={listQuery.data?.items}
-        columns={[
-          { title: '车牌号', dataIndex: 'plateNo' },
-          { title: '车型', dataIndex: 'vehicleType' },
-          { title: '最大载重(kg)', dataIndex: 'maxLoadKg' },
-          { title: '最大容积(m³)', dataIndex: 'maxVolumeM3' },
-          {
-            title: '状态',
-            dataIndex: 'status',
-            render: (status: string) => <Tag color={status === 'Active' ? 'green' : 'default'}>{status === 'Active' ? '启用' : '停用'}</Tag>,
-          },
-          {
-            title: '操作',
-            key: 'actions',
-            render: (_: unknown, record: Vehicle) => (
-              <Popconfirm
-                title={record.status === 'Active' ? '确认停用？' : '确认启用？'}
-                onConfirm={() => toggleMutation.mutate({ vehicle: record, disable: record.status === 'Active' })}
-              >
-                <Button type="link" size="small" danger={record.status === 'Active'}>
-                  {record.status === 'Active' ? '停用' : '启用'}
-                </Button>
-              </Popconfirm>
-            ),
-          },
-        ]}
-      />
+      <Card title="添加车辆" style={{ marginBottom: 16 }}>
+        <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
+          <Flex gap={12} align="flex-end" wrap>
+            <Form.Item name="plateNo" label="车牌号" rules={[{ required: true, message: '车牌必填' }]} style={{ marginBottom: 0 }}>
+              <Input placeholder="如 粤A·12345" style={{ width: 150 }} />
+            </Form.Item>
+            <Form.Item name="vehicleType" label="车型" rules={[{ required: true, message: '车型必填' }]} initialValue="truck" style={{ marginBottom: 0 }}>
+              <Input placeholder="truck / van" style={{ width: 140 }} />
+            </Form.Item>
+            <Form.Item name="maxLoadKg" label="最大载重 (kg)" rules={[{ required: true, message: '载重必填' }]} style={{ marginBottom: 0 }}>
+              <InputNumber placeholder="载重" min={1} style={{ width: 140 }} />
+            </Form.Item>
+            <Form.Item name="maxVolumeM3" label="最大容积 (m³)" rules={[{ required: true, message: '容积必填' }]} style={{ marginBottom: 0 }}>
+              <InputNumber placeholder="容积" min={0.1} style={{ width: 140 }} />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={createMutation.isPending}>
+              添加
+            </Button>
+          </Flex>
+        </Form>
+      </Card>
+
+      <Card styles={{ body: { padding: 0 } }}>
+        <Table<Vehicle>
+          rowKey="id"
+          loading={listQuery.isLoading}
+          dataSource={listQuery.data?.items}
+          columns={columns}
+          size="middle"
+          scroll={{ x: 800 }}
+          locale={{ emptyText: <EmptyState description="暂无车辆，可在上方添加" /> }}
+        />
+      </Card>
     </div>
   );
 }

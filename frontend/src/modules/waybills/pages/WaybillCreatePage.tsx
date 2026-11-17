@@ -1,11 +1,17 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { App, Button, Card, Form, Input, InputNumber, Select, Space, Table, Typography } from 'antd';
-import { useState } from 'react';
+import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Table, Typography } from 'antd';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { PageHeader } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 import { trial, type TrialResult } from '../../pricing/api/pricing';
 import { createWaybill } from '../api/waybills';
+
+interface CustomerDetailContacts {
+  contacts: { id: string; name: string; phone: string; isPrimary: boolean }[];
+  addresses: { id: string; address: string; isDefault: boolean }[];
+}
 
 interface BranchOption {
   id: string;
@@ -63,6 +69,37 @@ export function WaybillCreatePage() {
       return response.data.filter((s) => s.status === 'Active');
     },
   });
+
+  // 监听客户选择变化 → 预填发货人信息（主联系人 + 默认地址）
+  const selectedCustomerId = Form.useWatch('customerId', form);
+  const customerDetailQuery = useQuery({
+    queryKey: ['customer-detail-for-prefill', selectedCustomerId],
+    queryFn: async () => {
+      const response = await http.get<CustomerDetailContacts>(`/customers/${selectedCustomerId}`);
+      return response.data;
+    },
+    enabled: !!selectedCustomerId,
+  });
+
+  useEffect(() => {
+    const detail = customerDetailQuery.data;
+    if (!detail) return;
+
+    const primary = detail.contacts.find((c) => c.isPrimary) ?? detail.contacts[0];
+    const defaultAddr = detail.addresses.find((a) => a.isDefault) ?? detail.addresses[0];
+
+    const patch: Record<string, string | undefined> = {};
+    if (primary) {
+      patch.senderName = primary.name;
+      patch.senderPhone = primary.phone;
+    }
+    if (defaultAddr) {
+      patch.senderAddress = defaultAddr.address;
+    }
+    if (Object.keys(patch).length > 0) {
+      form.setFieldsValue(patch);
+    }
+  }, [customerDetailQuery.data, form]);
 
   const branchOptions = branchQuery.data ?? [];
   const customerOptions = customerQuery.data ?? [];
@@ -134,86 +171,107 @@ export function WaybillCreatePage() {
 
   return (
     <div>
-      <Typography.Title level={4}>开单</Typography.Title>
+      <PageHeader title="新建运单" description="填写业务信息、收发货人与货物件，运费将按价卡规则实时试算并在开单时固化。" />
+
       <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
         <Card title="业务信息" style={{ marginBottom: 16 }}>
-          <Space wrap size={16}>
-            <Form.Item name="originBranchId" label="始发网点" rules={[{ required: true, message: '必选' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                style={{ width: 200 }}
-                placeholder="选择网点"
-                options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
-              />
-            </Form.Item>
-            <Form.Item name="destBranchId" label="目的网点" rules={[{ required: true, message: '必选' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                style={{ width: 200 }}
-                placeholder="选择网点"
-                options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
-              />
-            </Form.Item>
-            <Form.Item name="customerId" label="客户" rules={[{ required: true, message: '必选' }]}>
-              <Select
-                showSearch
-                optionFilterProp="label"
-                style={{ width: 200 }}
-                placeholder="选择客户"
-                options={customerOptions.map((c) => ({ value: c.id, label: `${c.code} ${c.name}` }))}
-              />
-            </Form.Item>
-            <Form.Item name="ruleSetId" label="价卡" rules={[{ required: true, message: '必选' }]}>
-              <Select
-                showSearch
-                style={{ width: 200 }}
-                placeholder="选择价卡"
-                options={(ruleSetQuery.data ?? []).map((s) => ({ value: s.id, label: `${s.code}` }))}
-              />
-            </Form.Item>
-            <Form.Item name="paymentType" label="支付方式" rules={[{ required: true, message: '必选' }]} initialValue="Cash">
-              <Select
-                style={{ width: 140 }}
-                options={[
-                  { value: 'Cash', label: '现付' },
-                  { value: 'OnDelivery', label: '到付' },
-                  { value: 'Monthly', label: '月结' },
-                ]}
-              />
-            </Form.Item>
-          </Space>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="originBranchId" label="始发网点" rules={[{ required: true, message: '必选' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择始发网点"
+                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="destBranchId" label="目的网点" rules={[{ required: true, message: '必选' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择目的网点"
+                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="customerId" label="客户" rules={[{ required: true, message: '必选' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择客户"
+                  options={customerOptions.map((c) => ({ value: c.id, label: `${c.code} ${c.name}` }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="ruleSetId" label="价卡" rules={[{ required: true, message: '必选' }]}>
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  placeholder="选择价卡"
+                  options={(ruleSetQuery.data ?? []).map((s) => ({ value: s.id, label: s.code }))}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="paymentType" label="支付方式" rules={[{ required: true, message: '必选' }]} initialValue="Cash">
+                <Select
+                  options={[
+                    { value: 'Cash', label: '现付' },
+                    { value: 'OnDelivery', label: '到付' },
+                    { value: 'Monthly', label: '月结' },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
         </Card>
 
         <Card title="收发货人" style={{ marginBottom: 16 }}>
-          <Space wrap size={16}>
-            <Form.Item name="senderName" label="发货人" rules={[{ required: true, message: '必填' }]}>
-              <Input style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="senderPhone" label="电话" rules={[{ required: true, message: '必填' }]}>
-              <Input style={{ width: 150 }} />
-            </Form.Item>
-            <Form.Item name="senderAddress" label="发货地址" rules={[{ required: true, message: '必填' }]}>
-              <Input style={{ width: 260 }} />
-            </Form.Item>
-            <Form.Item name="receiverName" label="收货人" rules={[{ required: true, message: '必填' }]}>
-              <Input style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="receiverPhone" label="电话" rules={[{ required: true, message: '必填' }]}>
-              <Input style={{ width: 150 }} />
-            </Form.Item>
-            <Form.Item name="receiverAddress" label="收货地址" rules={[{ required: true, message: '必填' }]}>
-              <Input style={{ width: 260 }} />
-            </Form.Item>
-            <Form.Item name="remark" label="备注">
-              <Input style={{ width: 160 }} />
-            </Form.Item>
-          </Space>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="senderName" label="发货人" rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="发货人姓名" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="senderPhone" label="发货人电话" rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="联系电话" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="senderAddress" label="发货地址" rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="详细发货地址" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="receiverName" label="收货人" rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="收货人姓名" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="receiverPhone" label="收货人电话" rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="联系电话" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="receiverAddress" label="收货地址" rules={[{ required: true, message: '必填' }]}>
+                <Input placeholder="详细收货地址" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item name="remark" label="备注">
+                <Input placeholder="可选" />
+              </Form.Item>
+            </Col>
+          </Row>
         </Card>
 
         <Card
-          title={`货物件（Σ ${declaredPieces} 件 / ${declaredWeight.toFixed(2)}kg / ${declaredVolume.toFixed(3)}m³）`}
+          title={`货物件（Σ ${declaredPieces} 件 / ${declaredWeight.toFixed(2)} kg / ${declaredVolume.toFixed(3)} m³）`}
           style={{ marginBottom: 16 }}
           extra={
             <Space>
@@ -221,6 +279,7 @@ export function WaybillCreatePage() {
                 实时试算
               </Button>
               <Button
+                type="primary"
                 icon={<PlusOutlined />}
                 onClick={() =>
                   setPackages([
@@ -234,89 +293,131 @@ export function WaybillCreatePage() {
             </Space>
           }
         >
-          {packages.length === 0 && <Typography.Text type="secondary">尚未添加货物件</Typography.Text>}
-          {packages.map((pkg, index) => (
-            <Space key={pkg.key} style={{ display: 'flex', marginBottom: 8 }} wrap>
-              <Input
-                placeholder="货名"
-                style={{ width: 180 }}
-                value={pkg.cargoName}
-                onChange={(e) => {
-                  const next = [...packages];
-                  next[index] = { ...pkg, cargoName: e.target.value };
-                  setPackages(next);
-                }}
-              />
-              <InputNumber
-                min={1}
-                precision={0}
-                value={pkg.quantity}
-                onChange={(v) => {
-                  const next = [...packages];
-                  next[index] = { ...pkg, quantity: v ?? 1 };
-                  setPackages(next);
-                }}
-                addonBefore="件数"
-                style={{ width: 140 }}
-              />
-              <InputNumber
-                min={0}
-                value={pkg.weightKg}
-                onChange={(v) => {
-                  const next = [...packages];
-                  next[index] = { ...pkg, weightKg: v ?? 0 };
-                  setPackages(next);
-                }}
-                addonBefore="重量kg"
-                style={{ width: 160 }}
-              />
-              <InputNumber
-                min={0}
-                value={pkg.volumeM3}
-                onChange={(v) => {
-                  const next = [...packages];
-                  next[index] = { ...pkg, volumeM3: v ?? 0 };
-                  setPackages(next);
-                }}
-                addonBefore="体积m³"
-                style={{ width: 170 }}
-              />
-              <Button
-                icon={<DeleteOutlined />}
-                onClick={() => setPackages(packages.filter((_, i) => i !== index))}
-              />
-            </Space>
-          ))}
+          <Table
+            rowKey="key"
+            size="small"
+            pagination={false}
+            dataSource={packages}
+            locale={{ emptyText: <Typography.Text type="secondary">尚未添加货物件，点击右上角「添加货物件」开始录入</Typography.Text> }}
+            columns={[
+              {
+                title: '货名',
+                dataIndex: 'cargoName',
+                render: (value: string, record: PackageRow) => (
+                  <Input
+                    placeholder="货物名称"
+                    value={value}
+                    onChange={(e) => {
+                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, cargoName: e.target.value } : p)));
+                    }}
+                  />
+                ),
+              },
+              {
+                title: '件数',
+                dataIndex: 'quantity',
+                width: 130,
+                render: (value: number, record: PackageRow) => (
+                  <InputNumber
+                    min={1}
+                    precision={0}
+                    value={value}
+                    onChange={(v) => {
+                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, quantity: v ?? 1 } : p)));
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                ),
+              },
+              {
+                title: '重量 (kg)',
+                dataIndex: 'weightKg',
+                width: 150,
+                align: 'right',
+                render: (value: number, record: PackageRow) => (
+                  <InputNumber
+                    min={0}
+                    precision={3}
+                    value={value}
+                    onChange={(v) => {
+                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, weightKg: v ?? 0 } : p)));
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                ),
+              },
+              {
+                title: '体积 (m³)',
+                dataIndex: 'volumeM3',
+                width: 150,
+                align: 'right',
+                render: (value: number, record: PackageRow) => (
+                  <InputNumber
+                    min={0}
+                    precision={4}
+                    value={value}
+                    onChange={(v) => {
+                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, volumeM3: v ?? 0 } : p)));
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                ),
+              },
+              {
+                title: '操作',
+                key: 'actions',
+                width: 70,
+                render: (_: unknown, record: PackageRow) => (
+                  <Button
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    danger
+                    onClick={() => setPackages(packages.filter((p) => p.key !== record.key))}
+                  />
+                ),
+              },
+            ]}
+          />
         </Card>
 
         {trialResult && (
-          <Card title={`试算：命中 ${trialResult.quote.matchedRuleName}（${trialResult.ruleSetCode} v${trialResult.versionNumber}）`} style={{ marginBottom: 16 }}>
+          <Card
+            title={`试算结果：命中 ${trialResult.quote.matchedRuleName}（${trialResult.ruleSetCode} v${trialResult.versionNumber}）`}
+            style={{ marginBottom: 16 }}
+          >
             <Table
               size="small"
               rowKey={(r) => `${r.kind}-${r.name}`}
               dataSource={trialResult.quote.items}
               pagination={false}
               columns={[
-                { title: '费用项', dataIndex: 'name', width: 140 },
+                { title: '费用项', dataIndex: 'name', width: 160 },
                 {
                   title: '金额',
                   dataIndex: 'amount',
-                  width: 110,
-                  render: (amount: number) => `${amount.toFixed(2)} 元`,
+                  width: 140,
+                  align: 'right',
+                  render: (amount: number) => <span className="ltl-amount">¥ {amount.toFixed(2)}</span>,
                 },
                 { title: '计算过程', dataIndex: 'detail' },
               ]}
             />
-            <Typography.Paragraph style={{ marginTop: 8, marginBottom: 0 }}>
-              应收 <Typography.Text strong style={{ fontSize: 18 }}>{trialResult.quote.total.toFixed(2)}</Typography.Text> 元
-              （开单后按此金额固化）
-            </Typography.Paragraph>
+            <div style={{ marginTop: 12, textAlign: 'right' }}>
+              <Typography.Text type="secondary">应收合计 </Typography.Text>
+              <Typography.Text strong className="ltl-amount" style={{ fontSize: 20, color: '#1D4FA0' }}>
+                ¥ {trialResult.quote.total.toFixed(2)}
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ marginLeft: 8 }}>（开单后按此金额固化）</Typography.Text>
+            </div>
           </Card>
         )}
 
-        <Button type="primary" size="large" htmlType="submit" loading={createMutation.isPending}>
-          开单（固化费用）
-        </Button>
+        <div className="ltl-no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <Button onClick={() => navigate('/waybills')}>取消</Button>
+          <Button type="primary" size="large" htmlType="submit" loading={createMutation.isPending}>
+            开单并固化费用
+          </Button>
+        </div>
       </Form>
     </div>
   );

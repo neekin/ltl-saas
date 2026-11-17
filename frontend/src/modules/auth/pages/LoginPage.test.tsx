@@ -26,6 +26,6 @@ describe('LoginPage', () => {
     renderPage();
     const user = userEvent.setup();
     await user.click(screen.getAllByRole('button')[0]);
-    expect(screen.getAllByText('LTL 物流系统').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('LTL 零担物流').length).toBeGreaterThan(0);
   });
 });

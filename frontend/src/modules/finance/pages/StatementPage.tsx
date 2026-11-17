@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
-import { App, Button, Card, Form, Input, Popconfirm, Space, Typography } from 'antd';
+import { App, Button, Card, Col, Form, Input, Popconfirm, Row, Space, Typography } from 'antd';
 import { useState } from 'react';
+import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 
 interface Statement {
@@ -47,27 +48,50 @@ export function StatementPage() {
 
   return (
     <div>
-      <Typography.Title level={4}>月结账单</Typography.Title>
+      <PageHeader title="月结账单" description="按客户与账期生成月结账单，确认后明细冻结，关闭为终态。" />
+
       <Card title="生成账单" style={{ marginBottom: 16 }}>
-        <Form form={form} layout="inline" onFinish={(values) => generateMutation.mutate(values)}>
-          <Form.Item name="customerId" label="客户 ID" rules={[{ required: true }]}>
-            <Input style={{ width: 300 }} />
-          </Form.Item>
-          <Form.Item name="period" label="账期" rules={[{ required: true, message: '格式 yyyyMM' }]}>
-            <Input placeholder="yyyyMM" style={{ width: 120 }} />
-          </Form.Item>
-          <Button htmlType="submit" loading={generateMutation.isPending}>
-            生成
-          </Button>
+        <Form form={form} layout="vertical" onFinish={(values) => generateMutation.mutate(values)}>
+          <Row gutter={[16, 0]} align="bottom">
+            <Col xs={24} md={8}>
+              <Form.Item name="customerId" label="客户 ID" rules={[{ required: true }]}>
+                <Input placeholder="输入客户 ID" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item name="period" label="账期" rules={[{ required: true, message: '格式 yyyyMM' }]}>
+                <Input placeholder="yyyyMM" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={6}>
+              <Form.Item label=" ">
+                <Button type="primary" htmlType="submit" loading={generateMutation.isPending}>
+                  生成
+                </Button>
+              </Form.Item>
+            </Col>
+          </Row>
         </Form>
       </Card>
 
+      {!statement && <Card><EmptyState description="生成账单后在此查看与确认" /></Card>}
+
       {statement && (
-        <Card title={`账单 ${statement.period}（${statement.status}）`}>
-          <Typography.Paragraph>
-            总金额 <Typography.Text strong>{statement.totalAmount.toFixed(2)}</Typography.Text> 元
-          </Typography.Paragraph>
-          <Space>
+        <Card
+          title={
+            <Space size={10}>
+              <span>账单 {statement.period}</span>
+              <StatusTag status={statement.status} />
+            </Space>
+          }
+        >
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: '#8c96a5', fontSize: 12 }}>账单总金额</div>
+            <div className="ltl-amount ltl-amount--strong" style={{ fontSize: 24, color: '#1D4FA0' }}>
+              ¥ {statement.totalAmount.toFixed(2)}
+            </div>
+          </div>
+          <Space wrap>
             {statement.status === 'Draft' && (
               <Popconfirm title="确认后明细冻结不可修改" onConfirm={() => confirmMutation.mutate(statement.id)}>
                 <Button type="primary">确认账单</Button>
@@ -79,9 +103,11 @@ export function StatementPage() {
               </Popconfirm>
             )}
           </Space>
+          <Typography.Paragraph type="secondary" style={{ marginTop: 16, marginBottom: 0 }}>
+            确认后明细冻结不可修改；调整须通过调整单或冲正记录完成。
+          </Typography.Paragraph>
         </Card>
       )}
     </div>
   );
 }
-
