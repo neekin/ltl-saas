@@ -146,12 +146,13 @@ function resolveNav(pathname: string): NavResolution {
   for (const section of menuSections) {
     for (const item of section.items) {
       if (pathname === item.key) {
-        const detail = DETAIL_LABELS.find((d) => pathname.startsWith(d.prefix));
+        // 精确命中菜单项时直接用其标签，避免被详情路由的前缀规则误判
+        // （如 /waybills/create 会被 /waybills/ 前缀匹配成"运单详情"）。
         return {
           activeKey: item.key,
           sectionKey: section.key,
           sectionLabel: section.label,
-          pageLabel: detail?.label ?? item.label,
+          pageLabel: item.label,
         };
       }
       if (pathname.startsWith(`${item.key}/`) && (!matched || item.key.length > matched.item.key.length)) {

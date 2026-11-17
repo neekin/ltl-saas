@@ -1,6 +1,6 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { BasicLayout } from '../layouts/BasicLayout';
-import { HomePage } from '../../modules/dashboard/pages/HomePage';
+import { DashboardPage } from '../../modules/reports/pages/DashboardPage';
 import { SystemStatusPage } from '../../modules/system/pages/SystemStatusPage';
 import { LoginPage } from '../../modules/auth/pages/LoginPage';
 import { RequireAuth } from './RequireAuth';
@@ -42,7 +42,7 @@ export const router = createBrowserRouter([
         path: '/',
         element: <BasicLayout />,
         children: [
-          { index: true, element: <HomePage /> },
+          { index: true, element: <DashboardPage /> },
           { path: 'system/status', element: <SystemStatusPage /> },
 
           // P2：经营基础资料
