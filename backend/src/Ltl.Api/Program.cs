@@ -294,6 +294,9 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<FinanceDbContext>().Database.Migrate();
     }
 
+    // 开发环境种子数据：幂等（已存在则跳过）
+    SeedDevelopmentData(app.Services);
+
     // 供本地调试与集成测试验证统一异常处理；仅开发环境暴露
     app.MapGet("/dev/throw", () =>
     {
@@ -302,6 +305,145 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+// ===== 开发环境种子数据（幂等） =====
+static void SeedDevelopmentData(IServiceProvider services)
+{
+    var scope = services.CreateScope();
+    try
+    {
+        var tenancyDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Tenancy.Infrastructure.TenancyDbContext>();
+        var orgDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Organization.Infrastructure.OrganizationDbContext>();
+        var customersDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Customers.Infrastructure.CustomersDbContext>();
+        var pricingDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Pricing.Infrastructure.PricingDbContext>();
+
+        // 1. 租户
+        var tenant = tenancyDb.Tenants.FirstOrDefault(t => t.Code == "demo");
+        if (tenant is null)
+        {
+            tenant = Ltl.Modules.Tenancy.Domain.Tenant.Create("demo", "演示物流公司", DateTime.UtcNow);
+            tenancyDb.Tenants.Add(tenant);
+            tenancyDb.SaveChanges();
+        }
+
+        // 2. 网点
+        if (!orgDb.Branches.Any(b => b.Code == "GZ01"))
+        {
+            orgDb.Branches.Add(Ltl.Modules.Organization.Domain.Branch.Create(tenant.Id, "GZ01", "广州", DateTime.UtcNow));
+        }
+        if (!orgDb.Branches.Any(b => b.Code == "WH02"))
+        {
+            orgDb.Branches.Add(Ltl.Modules.Organization.Domain.Branch.Create(tenant.Id, "WH02", "武汉", DateTime.UtcNow));
+        }
+        orgDb.SaveChanges();
+
+        // 3. 角色 + 权限
+        var adminRole = orgDb.Roles.FirstOrDefault(r => r.Code == "admin");
+        if (adminRole is null)
+        {
+            adminRole = Ltl.Modules.Organization.Domain.Role.Create(tenant.Id, "admin", "管理员", DateTime.UtcNow);
+            orgDb.Roles.Add(adminRole);
+            orgDb.SaveChanges();
+        }
+
+        // 授予全部权限
+        foreach (var permission in orgDb.Permissions.ToList())
+        {
+            var exists = orgDb.RolePermissions.Any(rp => rp.RoleId == adminRole.Id && rp.PermissionId == permission.Id);
+            if (!exists)
+            {
+                orgDb.RolePermissions.Add(Ltl.Modules.Organization.Domain.RolePermission.Create(
+                    tenant.Id, adminRole.Id, permission.Id));
+            }
+        }
+        orgDb.SaveChanges();
+
+        // 4. 用户
+        var adminUser = orgDb.Users.FirstOrDefault(u => u.Username == "admin");
+        if (adminUser is null)
+        {
+            adminUser = Ltl.Modules.Organization.Domain.User.Create(
+                tenant.Id, "admin", "管理员",
+                Ltl.SharedKernel.Security.PasswordHasher.Hash("Admin@123"),
+                DateTime.UtcNow);
+            orgDb.Users.Add(adminUser);
+            orgDb.SaveChanges();
+        }
+
+        var userRoleExists = orgDb.UserRoles.Any(ur => ur.UserId == adminUser.Id && ur.RoleId == adminRole.Id);
+        if (!userRoleExists)
+        {
+            orgDb.UserRoles.Add(Ltl.Modules.Organization.Domain.UserRole.Create(tenant.Id, adminUser.Id, adminRole.Id));
+            orgDb.SaveChanges();
+        }
+
+        // 网点范围（租户级）
+        if (!adminUser.TenantWideScope)
+        {
+            adminUser.GrantTenantWideScope(DateTime.UtcNow);
+            orgDb.SaveChanges();
+        }
+
+        // 5. 客户
+        var customer = customersDb.Customers.FirstOrDefault(c => c.Code == "KH001");
+        if (customer is null)
+        {
+            customer = Ltl.Modules.Customers.Domain.Customer.Create(
+                tenant.Id, "KH001", "演示客户", DateTime.UtcNow);
+            customersDb.Customers.Add(customer);
+            customersDb.SaveChanges();
+        }
+
+        // 6. 已发布价卡
+        var ruleSet = pricingDb.RuleSets.FirstOrDefault(s => s.Code == "std");
+        if (ruleSet is null)
+        {
+            ruleSet = Ltl.Modules.Pricing.Domain.PricingRuleSet.Create(
+                tenant.Id, "std", "标准价卡", DateTime.UtcNow);
+            pricingDb.RuleSets.Add(ruleSet);
+            pricingDb.SaveChanges();
+
+            var version = Ltl.Modules.Pricing.Domain.PricingRuleSetVersion.CreateDraft(
+                tenant.Id, ruleSet.Id, 1,
+                new Ltl.Modules.Pricing.Domain.PricingRuleDefinition
+                {
+                    Rounding = Ltl.Modules.Pricing.Domain.RoundingPolicy.HalfUpTwoDecimals,
+                    Rules =
+                    [
+                        new Ltl.Modules.Pricing.Domain.PricingRule
+                        {
+                            Priority = 1,
+                            Name = "标准运价",
+                            Enabled = true,
+                            BillingWeightStrategy = Ltl.Modules.Pricing.Domain.BillingWeightStrategy.WeightOnly,
+                            Conditions = [],
+                            Freight = new Ltl.Modules.Pricing.Domain.PricingFreightFeeItem
+                            {
+                                Name = "运费",
+                                Type = Ltl.Modules.Pricing.Domain.PricingFreightType.ByWeight,
+                                UnitPrice = 1.5m,
+                            },
+                            Surcharges = [],
+                        },
+                    ],
+                },
+                DateTime.UtcNow);
+            pricingDb.RuleSetVersions.Add(version);
+            pricingDb.SaveChanges();
+
+            version.Publish(DateTime.UtcNow, adminUser.Id);
+            pricingDb.SaveChanges();
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[Seed] 种子数据创建失败：{ex.Message}");
+    }
+    finally
+    {
+        scope.Dispose();
+    }
+}
 
 // 供 WebApplicationFactory 集成测试作为入口类型
 public partial class Program;
