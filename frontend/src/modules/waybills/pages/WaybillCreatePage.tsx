@@ -151,6 +151,8 @@ export function WaybillCreatePage() {
         receiverPhone: values.receiverPhone as string,
         receiverAddress: values.receiverAddress as string,
         remark: (values.remark as string) || undefined,
+        declaredValue: (values.declaredValue as number) || undefined,
+        insuranceFee: (values.insuranceFee as number) || undefined,
         packages: packages.map((p) => ({
           cargoName: p.cargoName,
           quantity: p.quantity,

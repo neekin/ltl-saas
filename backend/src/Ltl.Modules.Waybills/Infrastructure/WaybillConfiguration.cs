@@ -78,6 +78,8 @@ public sealed class WaybillConfiguration : IEntityTypeConfiguration<Waybill>
             .IsRequired();
 
         builder.Property(x => x.CodAmount).HasColumnType("numeric(18,2)");
+        builder.Property(x => x.DeclaredValue).HasColumnType("numeric(18,2)");
+        builder.Property(x => x.InsuranceFee).HasColumnType("numeric(18,2)");
         builder.Property(x => x.TotalAmount).HasColumnType("numeric(18,2)");
 
         builder.Property(x => x.SenderName).HasMaxLength(100).IsRequired();

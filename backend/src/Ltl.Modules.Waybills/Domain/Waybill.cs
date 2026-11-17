@@ -62,6 +62,12 @@ public sealed class Waybill : TenantScopedEntity
 
     public string? Remark { get; private set; }
 
+    /// <summary>货物声明价值（托运人申报；null = 未声明）。</summary>
+    public decimal? DeclaredValue { get; private set; }
+
+    /// <summary>保险费（按声明价值计收；null = 未投保）。</summary>
+    public decimal? InsuranceFee { get; private set; }
+
     /// <summary>开单幂等键（WB-002：重复提交返回同一运单；null = 未携带）。</summary>
     public Guid? IdempotencyKey { get; private set; }
 
@@ -92,6 +98,8 @@ public sealed class Waybill : TenantScopedEntity
         decimal? codAmount = null,
         Guid? routeId = null,
         string? remark = null,
+        decimal? declaredValue = null,
+        decimal? insuranceFee = null,
         Guid? createdBy = null,
         Guid? idempotencyKey = null)
     {
@@ -148,6 +156,8 @@ public sealed class Waybill : TenantScopedEntity
             ReceiverPhone = RequireNonBlank(receiverPhone, "收货人电话", 50),
             ReceiverAddress = RequireNonBlank(receiverAddress, "收货地址", 500),
             Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim(),
+            DeclaredValue = declaredValue,
+            InsuranceFee = insuranceFee,
             IdempotencyKey = idempotencyKey,
             CreatedAt = now,
             CreatedBy = createdBy,
@@ -198,7 +208,8 @@ public sealed class Waybill : TenantScopedEntity
         string senderName, string senderPhone, string senderAddress,
         string receiverName, string receiverPhone, string receiverAddress,
         string? remark, IReadOnlyList<WaybillPackageDraft> packages,
-        DateTime nowUtc, Guid? updatedBy = null)
+        DateTime nowUtc, Guid? updatedBy = null,
+        decimal? declaredValue = null, decimal? insuranceFee = null)
     {
         RequireDraft("修改");
 
@@ -209,6 +220,8 @@ public sealed class Waybill : TenantScopedEntity
         ReceiverPhone = RequireNonBlank(receiverPhone, "收货人电话", 50);
         ReceiverAddress = RequireNonBlank(receiverAddress, "收货地址", 500);
         Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim();
+        DeclaredValue = declaredValue;
+        InsuranceFee = insuranceFee;
 
         if (packages.Count == 0)
         {

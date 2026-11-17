@@ -91,6 +91,8 @@ export async function createWaybill(payload: {
   receiverPhone: string;
   receiverAddress: string;
   remark?: string;
+  declaredValue?: number;
+  insuranceFee?: number;
   packages: { cargoName: string; quantity: number; weightKg: number; volumeM3: number }[];
 }): Promise<{ waybillId: string; waybillNo: string; totalAmount: number }> {
   const response = await http.post<{ waybillId: string; waybillNo: string; totalAmount: number }>('/waybills', payload);

@@ -69,6 +69,7 @@ public sealed class WaybillService(
             command.ReceiverName, command.ReceiverPhone, command.ReceiverAddress,
             command.Packages, now,
             codAmount: command.CodAmount, routeId: command.RouteId, remark: command.Remark,
+            declaredValue: command.DeclaredValue, insuranceFee: command.InsuranceFee,
             createdBy: command.OperatorId, idempotencyKey: command.IdempotencyKey);
         waybill.ApplyPricing(trial.Quote.Total, now, command.OperatorId);
 

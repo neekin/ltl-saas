@@ -53,6 +53,10 @@ namespace Ltl.Modules.Waybills.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("customer_id");
 
+                    b.Property<decimal?>("DeclaredValue")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("declared_value");
+
                     b.Property<short>("DeliveryStatus")
                         .HasColumnType("smallint")
                         .HasColumnName("delivery_status");
@@ -68,6 +72,10 @@ namespace Ltl.Modules.Waybills.Migrations
                     b.Property<Guid?>("IdempotencyKey")
                         .HasColumnType("uuid")
                         .HasColumnName("idempotency_key");
+
+                    b.Property<decimal?>("InsuranceFee")
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("insurance_fee");
 
                     b.Property<Guid>("OriginBranchId")
                         .HasColumnType("uuid")
