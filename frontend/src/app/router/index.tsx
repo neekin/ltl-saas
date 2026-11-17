@@ -19,6 +19,10 @@ import { TripListPage } from '../../modules/transport/pages/TripListPage';
 import { TripDetailPage } from '../../modules/transport/pages/TripDetailPage';
 import { TransferListPage } from '../../modules/warehouse/pages/TransferListPage';
 import { TransferDetailPage } from '../../modules/warehouse/pages/TransferDetailPage';
+import { ArrivalPage } from '../../modules/arrivals/pages/ArrivalPage';
+import { DeliveryPage } from '../../modules/delivery/pages/DeliveryPage';
+import { FinancePage } from '../../modules/finance/pages/FinancePage';
+import { CodWorkbenchPage } from '../../modules/finance/pages/CodWorkbenchPage';
 import { SortingTasksPage } from '../../modules/warehouse/pages/SortingTasksPage';
 
 /** 路由表：登录页匿名；业务页面统一经 RequireAuth 守卫（会话由 Zustand 持久化）。 */
@@ -59,6 +63,10 @@ export const router = createBrowserRouter([
           { path: 'transport/trips/:id', element: <TripDetailPage /> },
           { path: 'transfers', element: <TransferListPage /> },
           { path: 'transfers/:id', element: <TransferDetailPage /> },
+          { path: 'arrivals', element: <ArrivalPage /> },
+          { path: 'deliveries', element: <DeliveryPage /> },
+          { path: 'finance', element: <FinancePage /> },
+          { path: 'finance/cod', element: <CodWorkbenchPage /> },
         ],
       },
     ],

@@ -3,6 +3,7 @@ import {
   DashboardOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  DollarOutlined,
   ShopOutlined,
   SwapOutlined,
   TagsOutlined,
@@ -76,6 +77,24 @@ const menuSections: MenuSection[] = [
     label: '网点调拨',
     icon: <SwapOutlined />,
     items: [{ key: '/transfers', label: '调拨单', permission: PERMISSIONS.transferRead }],
+  },
+  {
+    key: 'arrival',
+    label: '到货/交付',
+    icon: <ShopOutlined />,
+    items: [
+      { key: '/arrivals', label: '到货登记', permission: 'arrival.record' },
+      { key: '/deliveries', label: '交付确认', permission: 'delivery.manage' },
+    ],
+  },
+  {
+    key: 'finance',
+    label: '财务/COD',
+    icon: <DollarOutlined />,
+    items: [
+      { key: '/finance', label: '财务管理', permission: 'finance.read' },
+      { key: '/finance/cod', label: 'COD 工作台', permission: 'cod.read' },
+    ],
   },
   {
     key: 'system',
