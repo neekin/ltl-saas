@@ -15,7 +15,7 @@ public sealed class WaybillConfiguration : IEntityTypeConfiguration<Waybill>
             table.HasCheckConstraint("ck_waybills_status", "waybill_status IN (1, 2, 3)");
             table.HasCheckConstraint("ck_waybills_cargo_status", "cargo_status IN (1, 2, 3)");
             table.HasCheckConstraint("ck_waybills_transport_status", "transport_status IN (1, 2)");
-            table.HasCheckConstraint("ck_waybills_delivery_status", "delivery_status IN (1)");
+            table.HasCheckConstraint("ck_waybills_delivery_status", "delivery_status IN (1, 2, 3, 4)");
             table.HasCheckConstraint("ck_waybills_freight_status", "freight_status IN (1, 2, 3)");
             table.HasCheckConstraint("ck_waybills_cod_status", "cod_status IN (1, 2, 3, 4, 5)");
             table.HasCheckConstraint("ck_waybills_cod_amount", "cod_amount IS NULL OR cod_amount >= 0");

@@ -299,6 +299,51 @@ public sealed class Waybill : TenantScopedEntity
         Touch(nowUtc, operatorUserId);
     }
 
+    /// <summary>
+    /// 交付状态流转：到货（ARRIVAL-001）。仅已发运（Shipped）且未交付 → 待提货。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">未发运或已在目的网点时抛出。</exception>
+    public void MarkArrivedAtDestination(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (TransportStatus != WaybillTransportStatus.Shipped)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 运输状态为 {TransportStatus}，仅已发运运单可到货登记。");
+        }
+
+        if (DeliveryStatus != WaybillDeliveryStatus.NotDelivered)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 交付状态为 {DeliveryStatus}，无需重复到货登记。");
+        }
+
+        DeliveryStatus = WaybillDeliveryStatus.WaitingPickup;
+        Touch(nowUtc, operatorUserId);
+    }
+
+    /// <summary>交付状态流转：签收（DELIVERY-001）。仅待提货 → 已交付；与运费财务状态独立（AGENTS §6.1）。</summary>
+    /// <exception cref="WaybillDomainException">非待提货状态时抛出。</exception>
+    public void MarkDelivered(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (DeliveryStatus != WaybillDeliveryStatus.WaitingPickup)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 交付状态为 {DeliveryStatus}，仅待提货运单可签收。");
+        }
+
+        DeliveryStatus = WaybillDeliveryStatus.Delivered;
+        Touch(nowUtc, operatorUserId);
+    }
+
+    /// <summary>交付状态流转：拒收（DELIVERY-001 异常流程）。仅待提货 → 拒收。</summary>
+    public void MarkRejected(DateTime nowUtc, Guid? operatorUserId)
+    {
+        if (DeliveryStatus != WaybillDeliveryStatus.WaitingPickup)
+        {
+            throw new WaybillDomainException($"运单 {WaybillNo} 交付状态为 {DeliveryStatus}，仅待提货运单可拒收。");
+        }
+
+        DeliveryStatus = WaybillDeliveryStatus.Rejected;
+        Touch(nowUtc, operatorUserId);
+    }
+
     /// <summary>汇总件数（Σ货物件件数）。</summary>
     public int TotalPieces => _packages.Sum(p => p.Quantity);
 

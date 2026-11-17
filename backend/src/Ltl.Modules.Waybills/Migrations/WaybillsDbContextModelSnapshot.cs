@@ -185,7 +185,7 @@ namespace Ltl.Modules.Waybills.Migrations
 
                             t.HasCheckConstraint("ck_waybills_cod_status", "cod_status IN (1, 2, 3, 4, 5)");
 
-                            t.HasCheckConstraint("ck_waybills_delivery_status", "delivery_status IN (1)");
+                            t.HasCheckConstraint("ck_waybills_delivery_status", "delivery_status IN (1, 2, 3, 4)");
 
                             t.HasCheckConstraint("ck_waybills_freight_status", "freight_status IN (1, 2, 3)");
 

@@ -11,6 +11,7 @@ public sealed record WaybillCargoSnapshot(
     string WaybillNo,
     WaybillStatus Status,
     WaybillCargoStatus CargoStatus,
+    WaybillTransportStatus TransportStatus,
     int DeclaredPieces,
     decimal DeclaredWeightKg,
     decimal DeclaredVolumeM3);
@@ -37,6 +38,9 @@ public interface IWaybillCargoService
 
     /// <summary>运单事件 Arrived（TRIP-002；不改运输/交付状态）。</summary>
     Task MarkTransportArrivedAsync(Guid waybillId, Guid? operatorUserId, string detail);
+
+    /// <summary>交付状态流转：到货（ARRIVAL-001，未发运守卫在聚合）+ 运单事件 Arrived。</summary>
+    Task<WaybillCargoSnapshot> MarkArrivedAtDestinationAsync(Guid waybillId, Guid? operatorUserId, string detail);
 }
 
 public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoService
@@ -79,6 +83,15 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
         await db.SaveChangesAsync();
     }
 
+    public async Task<WaybillCargoSnapshot> MarkArrivedAtDestinationAsync(Guid waybillId, Guid? operatorUserId, string detail)
+    {
+        var waybill = await RequireWaybillAsync(waybillId);
+        waybill.MarkArrivedAtDestination(DateTime.UtcNow, operatorUserId);
+        AppendEvent(waybill, WaybillEventType.Arrived, operatorUserId, detail);
+        await db.SaveChangesAsync();
+        return Snapshot(waybill);
+    }
+
     private async Task<Waybill> RequireWaybillAsync(Guid waybillId)
     {
         // 包含货物件：申报口径快照（Σ件数/重量/体积）依赖聚合明细
@@ -97,5 +110,6 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
 
     private static WaybillCargoSnapshot Snapshot(Waybill waybill) => new(
         waybill.Id, waybill.WaybillNo, waybill.Status, waybill.CargoStatus,
+        waybill.TransportStatus,
         waybill.TotalPieces, waybill.TotalWeightKg, waybill.TotalVolumeM3);
 }
