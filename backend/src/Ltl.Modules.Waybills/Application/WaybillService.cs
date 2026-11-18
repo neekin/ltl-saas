@@ -59,6 +59,12 @@ public sealed class WaybillService(
         };
         var trial = await pricingTrialService.TrialCalculateAsync(command.RuleSetId, input);
 
+        // 信用额度检查（月结客户；ROADMAP P7 逾期和信用额度检查）
+        if (command.PaymentType == Ltl.Modules.Waybills.Domain.WaybillPaymentType.Monthly)
+        {
+            await CheckCreditLimitAsync(tenantId, command.CustomerId);
+        }
+
         // 取运单号（SEQ-001：YB + 始发网点码 + 业务日期间 + 6 位序号）
         var waybillNo = await branchSequenceService.NextNumberAsync(
             command.OriginBranchId, BusinessDocumentType.Waybill, command.BusinessDate, origin.Code);
@@ -72,6 +78,10 @@ public sealed class WaybillService(
             declaredValue: command.DeclaredValue, insuranceFee: command.InsuranceFee,
             createdBy: command.OperatorId, idempotencyKey: command.IdempotencyKey);
         waybill.ApplyPricing(trial.Quote.Total, now, command.OperatorId);
+
+        // P10：生成客户查询码（明文仅返回，库内存哈希），客户凭运单号+查询码匿名查本票。
+        var queryCode = Waybill.GenerateQueryCode();
+        waybill.SetQueryCode(queryCode, now, command.OperatorId);
 
         db.Waybills.Add(waybill);
         db.PricingSnapshots.Add(WaybillPricingSnapshot.Create(
@@ -98,7 +108,7 @@ public sealed class WaybillService(
 
         return new CreateWaybillResult(
             waybill.Id, waybill.WaybillNo, waybill.Status, trial.Quote.Total, waybill.CodAmount,
-            trial.RuleSetCode, trial.VersionNumber);
+            trial.RuleSetCode, trial.VersionNumber, queryCode);
     }
 
     public async Task<Waybill> ConfirmWaybillAsync(Guid waybillId, Guid? branchId = null, Guid? operatorId = null)
@@ -148,11 +158,48 @@ public sealed class WaybillService(
             .ToListAsync();
     }
 
+    // ---------- 信用额度检查（月结客户，AGENTS §6.5 / ROADMAP P7） ----------
+
+    /// <summary>
+    /// 月结客户信用额度检查：汇总该客户全部未收应收，与新运单金额累加后与额度比对。
+    /// 超出 → ConflictException（409）。
+    /// </summary>
+    private async Task CheckCreditLimitAsync(Guid tenantId, Guid customerId, decimal newWaybillAmount = 0)
+    {
+        // 读取客户信用额度（原生 SQL，Finance 无 Customers DbSet）
+        var creditLimit = (await db.Database
+                .SqlQuery<CreditLimitRow>(
+                    $"SELECT credit_limit AS \"CreditLimit\" FROM customers WHERE tenant_id = {tenantId} AND id = {customerId}")
+                .ToListAsync())
+            .SingleOrDefault()?.CreditLimit;
+
+        // 未设置信用额度 → 不检查
+        if (creditLimit is not { } limit)
+            return;
+
+        // 汇总该客户全部未收应收（原生 SQL 跨模块聚合）
+        var outstanding = (await db.Database
+                .SqlQuery<OutstandingRow>(
+                    $"SELECT COALESCE(SUM(r.amount - r.settled_amount), 0) AS \"Outstanding\" FROM receivables r WHERE r.tenant_id = {tenantId} AND r.status != 3")
+                .ToListAsync())
+            .SingleOrDefault()?.Outstanding ?? 0;
+
+        if (outstanding + newWaybillAmount > limit)
+        {
+            throw new ConflictException(
+                $"月结客户信用额度不足：当前未收 {outstanding} 元 + 本单 {newWaybillAmount} 元 > 信用额度 {limit} 元。");
+        }
+    }
+
     // ---------- 跨模块资料校验（原生 SQL + 显式租户参数，AGENTS §5.1） ----------
 
     private sealed record BranchInfoRow(string Code, short Status);
 
     private sealed record StatusRow(short Status);
+
+    private sealed record CreditLimitRow(decimal? CreditLimit);
+
+    private sealed record OutstandingRow(decimal? Outstanding);
 
     /// <summary>网点存在且启用；返回编码（运单号组成）。停用 → 领域异常；不存在/跨租户 → 404 语义。</summary>
     private async Task<BranchInfoRow> RequireActiveBranchAsync(Guid tenantId, Guid branchId)

@@ -31,7 +31,9 @@ public sealed record UpdateWaybillDraftRequest(
     string SenderName, string SenderPhone, string SenderAddress,
     string ReceiverName, string ReceiverPhone, string ReceiverAddress,
     string? Remark,
-    IReadOnlyList<WaybillPackageDraft> Packages);
+    IReadOnlyList<WaybillPackageDraft> Packages,
+    decimal? DeclaredValue = null,
+    decimal? InsuranceFee = null);
 
 /// <summary>
 /// 运单查询与草稿修改（WB-003）。数据范围：租户级范围 / 始发或目的网点可达（WB-PRINT 同语义）。
@@ -122,7 +124,8 @@ public sealed class WaybillAdminService(
         waybill.UpdateDraft(
             request.SenderName, request.SenderPhone, request.SenderAddress,
             request.ReceiverName, request.ReceiverPhone, request.ReceiverAddress,
-            request.Remark, request.Packages, DateTime.UtcNow, operatorUserId);
+            request.Remark, request.Packages, DateTime.UtcNow, operatorUserId,
+            request.DeclaredValue, request.InsuranceFee);
 
         foreach (var oldPackage in oldPackages)
         {

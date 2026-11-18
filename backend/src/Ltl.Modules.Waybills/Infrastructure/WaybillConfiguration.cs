@@ -77,6 +77,7 @@ public sealed class WaybillConfiguration : IEntityTypeConfiguration<Waybill>
             .HasColumnName("cod_status")
             .IsRequired();
 
+        builder.Property(x => x.QueryCodeHash).HasMaxLength(64);
         builder.Property(x => x.CodAmount).HasColumnType("numeric(18,2)");
         builder.Property(x => x.DeclaredValue).HasColumnType("numeric(18,2)");
         builder.Property(x => x.InsuranceFee).HasColumnType("numeric(18,2)");

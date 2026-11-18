@@ -10,4 +10,5 @@ public sealed record CreateWaybillResult(
     decimal TotalAmount,
     decimal? CodAmount,
     string RuleSetCode,
-    int VersionNumber);
+    int VersionNumber,
+    string? QueryCode = null);

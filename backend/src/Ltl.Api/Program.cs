@@ -30,6 +30,8 @@ using Ltl.Modules.Warehouse.Infrastructure;
 using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.SharedKernel.Application;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
@@ -45,6 +47,12 @@ builder.Host.UseSerilog((context, services, configuration) => configuration
     .Enrich.FromLogContext());
 
 builder.Services.AddHealthChecks();
+
+// Hangfire 后台任务（PostgreSQL 存储）
+builder.Services.AddHangfire(config => config
+    .UsePostgreSqlStorage(c => c.UseNpgsqlConnection(builder.Configuration.GetConnectionString("Tenancy")))
+    .UseSerilogLogProvider());
+builder.Services.AddHangfireServer();
 builder.Services.AddOpenApi();
 // 枚举响应统一字符串（前端可读；请求侧 camelCase 由 Web 默认处理）
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -138,6 +146,7 @@ builder.Services.AddDbContext<WaybillsDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IWaybillService, WaybillService>();
 builder.Services.AddScoped<IWaybillCargoService, WaybillCargoService>();
+builder.Services.AddScoped<IWaybillQueryCodeService, WaybillQueryCodeService>();
 
 // Warehouse 模块（RECEIVE-001：收货登记、称重、体积复核）
 builder.Services.AddDbContext<WarehouseDbContext>(options =>
@@ -298,6 +307,27 @@ if (app.Environment.IsDevelopment())
         scope.ServiceProvider.GetRequiredService<DeliveryDbContext>().Database.Migrate();
         scope.ServiceProvider.GetRequiredService<FinanceDbContext>().Database.Migrate();
     }
+
+    // Hangfire Dashboard（仅开发环境）
+    app.UseHangfireDashboard("/hangfire");
+
+    // 周期任务：清理过期刷新令牌（每日）
+    RecurringJob.AddOrUpdate<HangfireJobs>(
+        "cleanup-expired-tokens",
+        j => j.CleanupExpiredTokensAsync(),
+        Cron.Daily);
+
+    // 周期任务：逾期应收检查（每日）
+    RecurringJob.AddOrUpdate<HangfireJobs>(
+        "overdue-receivables-check",
+        j => j.CheckOverdueReceivablesAsync(),
+        Cron.Daily);
+
+    // 周期任务：到货超时提醒（每日）
+    RecurringJob.AddOrUpdate<HangfireJobs>(
+        "arrival-timeout-alert",
+        j => j.CheckArrivalTimeoutAsync(),
+        Cron.Daily);
 
     // 开发环境种子数据：幂等（已存在则跳过）
     SeedDevelopmentData(app.Services);

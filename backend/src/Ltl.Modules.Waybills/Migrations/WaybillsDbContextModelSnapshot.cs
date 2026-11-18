@@ -77,6 +77,11 @@ namespace Ltl.Modules.Waybills.Migrations
                         .HasColumnType("numeric(18,2)")
                         .HasColumnName("insurance_fee");
 
+                    b.Property<string>("QueryCodeHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("query_code_hash");
+
                     b.Property<Guid>("OriginBranchId")
                         .HasColumnType("uuid")
                         .HasColumnName("origin_branch_id");

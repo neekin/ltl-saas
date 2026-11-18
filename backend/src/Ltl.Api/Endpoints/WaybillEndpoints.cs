@@ -17,6 +17,20 @@ public static class WaybillEndpoints
             Guid id, ClaimsPrincipal user, IWaybillPrintService service) =>
             Results.Ok(await service.GetPrintViewAsync(RequireUserId(user), id)));
 
+        // WB-002：开单（补暴露服务层能力）
+        app.MapPost("/api/waybills", async (
+            CreateWaybillRequest request, ClaimsPrincipal user, IWaybillService service) =>
+            Results.Ok(await service.CreateWaybillAsync(new CreateWaybillCommand(
+                request.OriginBranchId, request.DestBranchId, request.CustomerId,
+                request.PaymentType, request.SenderName, request.SenderPhone, request.SenderAddress,
+                request.ReceiverName, request.ReceiverPhone, request.ReceiverAddress,
+                request.Packages.Select(p => new WaybillPackageDraft(
+                    p.CargoName, p.Quantity, p.WeightKg, p.VolumeM3)).ToArray(),
+                request.RuleSetId, DateOnly.FromDateTime(DateTime.UtcNow),
+                Remark: request.Remark, DeclaredValue: request.DeclaredValue,
+                InsuranceFee: request.InsuranceFee, BranchId: request.OriginBranchId,
+                OperatorId: RequireUserId(user)))));
+
         // WB-003：查询/详情/草稿修改/确认/取消
         var waybills = app.MapGroup("/api/waybills");
         waybills.MapGet("/", async (
@@ -34,9 +48,51 @@ public static class WaybillEndpoints
         waybills.MapPost("/{id:guid}/cancel", async (
             Guid id, CancelWaybillRequest request, ClaimsPrincipal user, IWaybillAdminService service) =>
             Results.Ok(await service.CancelAsync(RequireUserId(user), id, request.Reason)));
+
+        // P10 客户查询：凭租户编码 + 运单号 + 查询码匿名查单票（脱敏）；防枚举统一 401。
+        app.MapPost("/api/public/waybill-query", async (
+            CustomerQueryRequest request, IWaybillQueryCodeService service) =>
+        {
+            try
+            {
+                return Results.Ok(await service.QueryAsync(request.TenantCode, request.WaybillNo, request.QueryCode));
+            }
+            catch (UnauthorizedAccessException)
+            {
+                return Results.Unauthorized();
+            }
+        }).AllowAnonymous();
+
+        // P10 内部重置查询码：需登录 + waybill.read（服务层校验，权限异常由全局 handler 映射 403）。
+        app.MapPost("/api/waybills/{id:guid}/query-code", async (
+            Guid id, ClaimsPrincipal user, IWaybillQueryCodeService service) =>
+            Results.Ok(new { queryCode = await service.ResetAsync(RequireUserId(user), id) }));
     }
 
+    public sealed record CustomerQueryRequest(string TenantCode, string WaybillNo, string QueryCode);
+
     public sealed record CancelWaybillRequest(string? Reason);
+
+    /// <summary>开单请求（WB-002）。支付方式按枚举名（Cash/OnDelivery/Monthly）由 JsonStringEnumConverter 绑定。</summary>
+    public sealed record CreateWaybillRequest(
+        Guid OriginBranchId,
+        Guid DestBranchId,
+        Guid CustomerId,
+        Guid RuleSetId,
+        WaybillPaymentType PaymentType,
+        string SenderName,
+        string SenderPhone,
+        string SenderAddress,
+        string ReceiverName,
+        string ReceiverPhone,
+        string ReceiverAddress,
+        IReadOnlyList<CreatePackageRequest> Packages,
+        string? Remark = null,
+        decimal? DeclaredValue = null,
+        decimal? InsuranceFee = null);
+
+    public sealed record CreatePackageRequest(
+        string CargoName, int Quantity, decimal WeightKg, decimal VolumeM3);
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
         Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) && userId != Guid.Empty

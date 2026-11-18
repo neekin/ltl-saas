@@ -1,3 +1,6 @@
+using System.Security.Cryptography;
+using System.Text;
+
 namespace Ltl.Modules.Waybills.Domain;
 
 /// <summary>
@@ -70,6 +73,9 @@ public sealed class Waybill : TenantScopedEntity
 
     /// <summary>开单幂等键（WB-002：重复提交返回同一运单；null = 未携带）。</summary>
     public Guid? IdempotencyKey { get; private set; }
+
+    /// <summary>客户查询码哈希（SHA256；明文仅开单/重置时返回，库内不存明文）。null = 未生成。</summary>
+    public string? QueryCodeHash { get; private set; }
 
     /// <summary>货物件明细（件号 1..N 连续）。</summary>
     public IReadOnlyList<WaybillPackage> Packages => _packages.AsReadOnly();
@@ -374,6 +380,21 @@ public sealed class Waybill : TenantScopedEntity
         Touch(nowUtc, updatedBy);
     }
 
+    /// <summary>
+    /// 重新计价（仅 Draft；修改货物件后调用）。覆盖已固化金额并记录变更审计。
+    /// 与 ApplyPricing 的区别：ApplyPricing 仅首次设置，RecalculatePricing 可覆盖。
+    /// </summary>
+    /// <exception cref="WaybillDomainException">非 Draft 状态或金额非法时抛出。</exception>
+    public void RecalculatePricing(decimal newTotalAmount, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        RequireDraft("重新计价");
+        if (newTotalAmount < 0)
+            throw new ArgumentException("运单总费用不能为负数。", nameof(newTotalAmount));
+
+        TotalAmount = newTotalAmount;
+        Touch(nowUtc, updatedBy);
+    }
+
     /// <summary>汇总件数（Σ货物件件数）。</summary>
     public int TotalPieces => _packages.Sum(p => p.Quantity);
 
@@ -418,6 +439,48 @@ public sealed class Waybill : TenantScopedEntity
         CargoStatus = WaybillCargoStatus.Sorted;
         Touch(nowUtc, operatorUserId);
     }
+
+    /// <summary>
+    /// 设置客户查询码（P10：凭运单号+查询码匿名查询本票）。仅存 SHA256 哈希，
+    /// 明文由调用方生成并返回给内部用户；换码作废旧码。
+    /// </summary>
+    public void SetQueryCode(string plainCode, DateTime nowUtc, Guid? operatorUserId = null)
+    {
+        if (string.IsNullOrWhiteSpace(plainCode) || plainCode.Length < 6)
+        {
+            throw new ArgumentException("查询码长度不足。", nameof(plainCode));
+        }
+        QueryCodeHash = HashQueryCode(plainCode);
+        Touch(nowUtc, operatorUserId);
+    }
+
+    /// <summary>校验客户查询码（常量时间比较，防时序侧信道）。</summary>
+    public bool VerifyQueryCode(string plainCode)
+    {
+        if (QueryCodeHash is null || string.IsNullOrWhiteSpace(plainCode))
+        {
+            return false;
+        }
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(HashQueryCode(plainCode)),
+            Encoding.UTF8.GetBytes(QueryCodeHash));
+    }
+
+    /// <summary>生成 8 位客户查询码（去除易混淆字符 0/O/1/I/l）。</summary>
+    public static string GenerateQueryCode()
+    {
+        const string alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+        var bytes = RandomNumberGenerator.GetBytes(8);
+        var chars = new char[8];
+        for (var i = 0; i < chars.Length; i++)
+        {
+            chars[i] = alphabet[bytes[i] % alphabet.Length];
+        }
+        return new string(chars);
+    }
+
+    private static string HashQueryCode(string plainCode) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(plainCode.Trim().ToUpperInvariant())));
 
     private void RequireDraft(string operation)
     {

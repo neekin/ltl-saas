@@ -247,6 +247,61 @@ public class WaybillTests
         return waybill;
     }
 
+    // ---------- P10 客户查询码 ----------
+
+    [Fact]
+    public void SetQueryCode_ShouldStoreHashOnly_AndVerify()
+    {
+        var waybill = CreateWaybill();
+        var code = Waybill.GenerateQueryCode();
+
+        waybill.SetQueryCode(code, Now);
+
+        Assert.NotNull(waybill.QueryCodeHash);
+        Assert.DoesNotContain(code, waybill.QueryCodeHash);
+        Assert.True(waybill.VerifyQueryCode(code));
+    }
+
+    [Fact]
+    public void VerifyQueryCode_ShouldBeCaseInsensitive_AndRejectWrongOrNull()
+    {
+        var waybill = CreateWaybill();
+        var code = Waybill.GenerateQueryCode();
+        waybill.SetQueryCode(code, Now);
+
+        Assert.True(waybill.VerifyQueryCode(code.ToLowerInvariant()));
+        Assert.False(waybill.VerifyQueryCode("WRONGCODE"));
+        Assert.False(waybill.VerifyQueryCode(string.Empty));
+
+        var withoutCode = CreateWaybill(waybillNo: "YBGZ0120261117000002");
+        Assert.False(withoutCode.VerifyQueryCode(code));
+    }
+
+    [Fact]
+    public void ResetQueryCode_ShouldInvalidateOldCode()
+    {
+        var waybill = CreateWaybill();
+        var oldCode = Waybill.GenerateQueryCode();
+        var newCode = Waybill.GenerateQueryCode();
+        waybill.SetQueryCode(oldCode, Now);
+
+        waybill.SetQueryCode(newCode, Now);
+
+        Assert.False(waybill.VerifyQueryCode(oldCode));
+        Assert.True(waybill.VerifyQueryCode(newCode));
+    }
+
+    [Fact]
+    public void GenerateQueryCode_ShouldBeUnambiguousEightChars()
+    {
+        var code = Waybill.GenerateQueryCode();
+        Assert.Equal(8, code.Length);
+        Assert.DoesNotContain('0', code);
+        Assert.DoesNotContain('O', code);
+        Assert.DoesNotContain('1', code);
+        Assert.DoesNotContain('I', code);
+    }
+
     /// <summary>测试辅助：模拟 P5 任务将来的运输状态流转（WB-001 未交付该流转，仅验证取消守卫）。</summary>
     private static void SetTransportStatus(Waybill waybill)
     {
