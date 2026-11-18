@@ -23,5 +23,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
     css: false,
+    // e2e 目录归 Playwright（npm run e2e），不参与 vitest 单测
+    exclude: ['**/node_modules/**', 'e2e/**'],
   },
 });

@@ -9,6 +9,7 @@
     "lint": "oxlint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "format": "prettier --write \"src/**/*.{ts,tsx,css,html}\" \"*.{json,ts,html}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css,html}\" \"*.{json,ts,html}\"",
     "preview": "vite preview"
@@ -30,6 +31,7 @@
     "zustand": "^5.1.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.12",
