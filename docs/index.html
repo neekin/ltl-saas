@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>使用文档 — LTL 零担物流 SaaS</title>
+  <meta name="description" content="LTL 零担物流 SaaS 使用文档：快速开始、开单、运输、调拨、财务与 COD、报表、权限、移动作业与客户查单。" />
+  <link rel="stylesheet" href="../assets/style.css" />
+</head>
+<body>
+  <nav class="site-nav">
+    <div class="site-nav-inner">
+      <a class="brand" href="../index.html"><span class="brand-mark">LTL</span>LTL 零担物流</a>
+      <a class="nav-link active" href="index.html">使用文档</a>
+      <span class="spacer"></span>
+      <a class="nav-cta" href="#quick-start">快速开始</a>
+    </div>
+  </nav>
+
+  <div class="docs-layout">
+    <aside class="docs-toc">
+      <div class="toc-title">文档目录</div>
+      <a href="#quick-start">1. 快速开始</a>
+      <a href="#basics">2. 基础资料</a>
+      <a href="#pricing">3. 计费引擎</a>
+      <a href="#waybill">4. 开单</a>
+      <a href="#waybill-flow">5. 运单全流程</a>
+      <a href="#transport">6. 运输批次</a>
+      <a href="#transfer">7. 网点调拨</a>
+      <a href="#finance">8. 财务与收款</a>
+      <a href="#cod">9. COD 代收款</a>
+      <a href="#reports">10. 报表与导出</a>
+      <a href="#permission">11. 组织与权限</a>
+      <a href="#mobile">12. 移动作业</a>
+      <a href="#track">13. 客户查单</a>
+      <a href="#notify">14. 消息通知</a>
+      <a href="#dispatch-gps">15. 移动派单与 GPS 轨迹</a>
+      <a href="#print-devices">16. 打印设备对接</a>
+      <a href="#quota">17. 套餐配额</a>
+    </aside>
+
+    <main class="docs-main">
+
+      <section class="doc-section" id="quick-start">
+        <h2>1. 快速开始</h2>
+        <p>打开管理后台首页，输入<strong>租户编码、用户名与密码</strong>登录。租户编码由承运方提供，决定你进入哪一家物流企业的数据空间。</p>
+        <div class="doc-shot"><img src="images/login.png" alt="登录页" /><div class="shot-caption">登录页：租户编码 + 用户名 + 密码</div></div>
+        <h3>开发环境演示账号</h3>
+        <ul>
+          <li>租户编码：<code>demo</code></li>
+          <li>用户名：<code>admin</code>，密码：<code>Admin@123</code></li>
+          <li>预置数据：广州 / 武汉 / 长沙三个网点、演示客户 <code>KH001</code>（月结额度 5 万 / 账期 30 天）、标准价卡 <code>std</code>（按重 1.5 元/kg）、演示车辆 <code>粤A88888</code></li>
+        </ul>
+        <div class="warn">生产环境请勿使用演示账号；首次登录后请立即修改密码。</div>
+        <p>登录后进入<strong>经营看板</strong>：运单总量、货量、运费收入、应收与 COD 已收已付等核心指标一目了然。</p>
+        <div class="doc-shot"><img src="images/dashboard.png" alt="经营看板" /><div class="shot-caption">经营看板：核心运营指标实时聚合</div></div>
+      </section>
+
+      <section class="doc-section" id="basics">
+        <h2>2. 基础资料</h2>
+        <p>开单之前，先在「基础资料 / 组织管理」中准备好以下数据：</p>
+        <ol>
+          <li><strong>网点</strong>：组织管理 → 网点管理，创建直营网点（编码 + 名称），支持重命名与启停用。</li>
+          <li><strong>客户</strong>：基础资料 → 客户管理，维护客户档案、联系人（发货人信息可自动预填）、默认地址与可服务网点授权；月结客户在此设置<strong>信用额度与账期</strong>。</li>
+          <li><strong>线路</strong>：基础资料 → 线路管理，定义线路起点、终点与途经站点顺序。</li>
+          <li><strong>价卡</strong>：计费引擎 → 规则集，见下一章。</li>
+        </ol>
+        <div class="tip">客户联系人设置为主联系人后，开单选择客户时发货人姓名、电话、地址会自动预填。</div>
+      </section>
+
+      <section class="doc-section" id="pricing">
+        <h2>3. 计费引擎</h2>
+        <p>计费引擎使用<strong>声明式规则</strong>：只允许白名单字段与操作符组合，不执行任何自定义代码，保证计费安全可审计。</p>
+        <ol>
+          <li>计费引擎 → 规则集 → 新建规则集（编码 + 名称）。</li>
+          <li>进入版本页，<strong>新建草稿版本</strong>。</li>
+          <li>对每条规则配置：优先级（小者先匹配）、名称、计费重量策略、运费类型（固定 / 按重 / 按体积 / 按件数 / 阶梯）、起步价与附加费。</li>
+          <li><strong>添加条件</strong>：字段（重量 / 体积 / 件数 / 客户 / 线路 / 始发目的网点）+ 操作符（等于 / 区间 / 大小比较）。设置「客户 = 某客户」即为客户专属价格；不设条件为默认规则。</li>
+          <li>点「校验」→ 零错误后「发布」。已发布版本不可修改，修改请新建版本。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/organization-roles.png" alt="规则与权限管理" /><div class="shot-caption">配置类页面统一交互：列表 + 结构化编辑 + 即时生效</div></div>
+        <div class="warn">规则匹配失败时开单会明确报错，不会静默按零元计费；历史运单保存价格快照，规则变更不影响已开运单。</div>
+      </section>
+
+      <section class="doc-section" id="waybill">
+        <h2>4. 开单</h2>
+        <p>运单 → 开单。按三块填写：</p>
+        <ol>
+          <li><strong>业务信息</strong>：始发网点、目的网点、客户、价卡、支付方式（现付 / 到付 / 月结），可选填 COD 代收金额。</li>
+          <li><strong>收发货人</strong>：选择客户后主联系人自动预填，可修改；收货人信息手工填写。</li>
+          <li><strong>货物件</strong>：支持多货物件，逐件填写货名、件数、重量、体积。</li>
+        </ol>
+        <p>点击<strong>实时试算</strong>查看命中规则与逐项费用明细；确认无误后点「开单并固化费用」。</p>
+        <div class="doc-shot"><img src="images/waybill-create.png" alt="开单页" /><div class="shot-caption">开单页：GZ01→WH02 演示件 10kg，命中标准运价 ¥15.00</div></div>
+        <div class="tip">开单成功后弹窗展示<strong>运单号与客户查询码</strong>——查询码只在本次显示明文，请连同查询入口一起转告客户。</div>
+        <div class="warn">开单请求自动携带幂等键（Idempotency-Key）：网络重试或重复提交不会产生重复运单，服务端返回原单。</div>
+      </section>
+
+      <section class="doc-section" id="waybill-flow">
+        <h2>5. 运单全流程</h2>
+        <p>运单创建后为<strong>草稿</strong>态，在详情页点击「确认运单」后生效，随后按仓库作业推进：</p>
+        <ol>
+          <li><strong>确认运单</strong>：草稿 → 已确认，费用固化并生成应收。</li>
+          <li><strong>收货登记</strong>：录入实收件数、称重与体积复核，系统自动计算与申报差异。</li>
+          <li><strong>创建分拣任务</strong>：到分拣作业页完成分拣（货物状态 → 已分拣）。</li>
+          <li><strong>装车运输</strong>：进入运输批次（下一章）。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/waybill-detail.png" alt="运单详情" /><div class="shot-caption">运单详情：六类状态独立展示，底部为全程轨迹时间线</div></div>
+        <p>详情页还可执行<strong>打印面单</strong>（标准 A5 模板 + 运单号二维码）与<strong>重新生成查询码</strong>（旧码立即失效）。</p>
+        <div class="doc-shot"><img src="images/waybill-list.png" alt="运单查询" /><div class="shot-caption">运单查询：按运单号检索，状态一目了然</div></div>
+      </section>
+
+      <section class="doc-section" id="transport">
+        <h2>6. 运输批次</h2>
+        <p>运输 → 批次列表 → <strong>新建批次</strong>：选择起点网点、目的网点、车辆（司机可选）。</p>
+        <ol>
+          <li><strong>装车确认</strong>：在工作台输入运单号装车；系统校验货物已收货/已分拣、车辆载重与容积，并防止同一票重复装车。</li>
+          <li><strong>发车</strong>：批次 → Departed，在车运单运输状态变为「运输中」，全程留痕。</li>
+          <li><strong>到达</strong>：批次 → Arrived，配载行转非活跃，可装入下一段批次。</li>
+          <li><strong>多段运输</strong>：例如广州—武汉—长沙，创建第二段批次（武汉→长沙）再次装车发车即可；运单轨迹完整记录每一段。</li>
+        </ol>
+        <div class="tip">运输费用（燃油 / 过路费 / 司机费用）可在批次详情逐笔登记，追加式记录不可覆盖。</div>
+      </section>
+
+      <section class="doc-section" id="transfer">
+        <h2>7. 网点调拨</h2>
+        <p>网点调拨用于<strong>同一租户内直营网点之间</strong>的货物交接，不产生对外销售收入。</p>
+        <ol>
+          <li>网点调拨 → 创建调拨单：调出网点、调入网点、货物与申报数量。</li>
+          <li><strong>提交</strong> → 调出方<strong>发出确认</strong>。</li>
+          <li>调入方<strong>验收入库</strong>：逐项录入实收数量与破损数，填写差异说明；验收一次性写入、不可覆盖。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/transfers.png" alt="网点调拨" /><div class="shot-caption">调拨单详情：申报 10 件、实收 7 + 破损 2，差异 -3 自动留痕</div></div>
+      </section>
+
+      <section class="doc-section" id="finance">
+        <h2>8. 财务与收款</h2>
+        <p>财务 / COD → 财务管理，按运单 ID 查询应收账款：</p>
+        <ol>
+          <li>应收在运单确认并固化费用后<strong>初始化</strong>（金额 = 运单费用总额）。</li>
+          <li>支持<strong>部分收款与多次收款</strong>：每次收款自动核销到应收，状态从未收 → 部分收款 → 结清。</li>
+          <li>月结客户开单时做<strong>信用额度前置校验</strong>：未收余额超过额度将拒绝开单；额度与账期在客户档案中设置。</li>
+          <li>退款与冲正采用追加式记录，原始资金流水不可修改删除。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/finance.png" alt="财务管理" /><div class="shot-caption">财务管理：应收查询、收款登记、收款记录</div></div>
+        <p>收款核销明细与月结账单分别见「收款核销」「月结账单」页面；网点维度的收款汇总见「网点收款汇总」（支持按月筛选与导出）。</p>
+      </section>
+
+      <section class="doc-section" id="cod">
+        <h2>9. COD 代收款</h2>
+        <p>COD（代收货款）是<strong>独立资金业务</strong>，金额不计入物流运费收入，全链路独立追踪：</p>
+        <ol>
+          <li><strong>开单设置代收金额</strong>：开单页填写 COD 代收金额后自动生成 COD 订单。</li>
+          <li><strong>登记收款</strong>：COD 工作台按运单查询订单，登记收取（支持部分收取）。</li>
+          <li><strong>创建结算单</strong>：COD 管理 → 创建结算（可结算上限 = 已收 − 已结算）。</li>
+          <li><strong>审批 → 付款</strong>：结算单审批后登记付款给发货人；不允许超额结算。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/cod.png" alt="COD 管理" /><div class="shot-caption">COD 管理：代收 ¥200 → 收取 → 结算 → 审批 → 付款</div></div>
+        <div class="warn">COD 付款必须经过审批；任何冲正保留原交易与反向交易记录。</div>
+      </section>
+
+      <section class="doc-section" id="reports">
+        <h2>10. 报表与导出</h2>
+        <ul>
+          <li><strong>经营看板</strong>：首页核心指标（可按月份筛选）。</li>
+          <li><strong>运营报表</strong>：网点 / 线路 / 客户三维度运单量与运费收入，按月统计，<strong>一键导出 Excel(CSV)</strong>。</li>
+          <li><strong>网点收款汇总</strong>：按运单始发网点聚合累计与当月收款。</li>
+          <li><strong>租户用量</strong>：运单数、用户数、文件数与存储字节。</li>
+        </ul>
+        <div class="doc-shot"><img src="images/reports.png" alt="运营报表" /><div class="shot-caption">运营报表：切换维度、选择月份、重新统计、导出</div></div>
+      </section>
+
+      <section class="doc-section" id="permission">
+        <h2>11. 组织与权限</h2>
+        <p>组织管理提供用户、角色与网点的组合授权：</p>
+        <ol>
+          <li><strong>角色</strong>：角色权限页「配置权限」按模块勾选权限点，保存后对已登录用户实时生效。</li>
+          <li><strong>用户</strong>：员工管理页「编辑」可改名、分配角色、设置网点数据范围；勾选租户级范围则可访问全部网点。</li>
+          <li><strong>安全边界</strong>：菜单隐藏只是展示控制，所有数据操作都由服务端重新校验租户与网点权限。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/organization-roles.png" alt="角色权限" /><div class="shot-caption">角色权限：按模块分组勾选，实时生效</div></div>
+      </section>
+
+      <section class="doc-section" id="mobile">
+        <h2>12. 移动作业</h2>
+        <p>现场人员使用移动作业端 <code>/m</code>（手机浏览器或企业微信内置浏览器打开）：</p>
+        <ul>
+          <li><strong>扫码查询</strong>：扫描运单条码快速查询，不便使用摄像头时可手动输入运单号。</li>
+          <li><strong>收货登记</strong>：核对实收件数、重量与体积。</li>
+          <li><strong>装车配载</strong>：选择批次，扫描运单装车。</li>
+          <li><strong>到货核验</strong>：按批次登记实收与破损。</li>
+        </ul>
+        <div class="doc-shot mobile"><img src="images/mobile.png" alt="移动作业端" /><div class="shot-caption">移动作业台：底部导航切换任务</div></div>
+        <div class="tip">移动端只改变操作形态——所有数据操作仍由服务端校验权限与网点数据范围。</div>
+      </section>
+
+      <section class="doc-section" id="track">
+        <h2>13. 客户查单</h2>
+        <p>发货客户无需账号，访问 <code>/track</code> 即可自助查单：</p>
+        <ol>
+          <li>输入<strong>承运方编码</strong>（开单成功弹窗中提供）+ <strong>运单号</strong> + <strong>查询码</strong>。</li>
+          <li>系统展示脱敏后的运单状态与轨迹（手机号掩码，不暴露内部数据）。</li>
+          <li>查询码可在运单详情由操作员重新生成，旧码立即失效。</li>
+        </ol>
+        <div class="doc-shot"><img src="images/track.png" alt="客户查单" /><div class="shot-caption">客户查单页：双因子校验，错误统一提示防枚举</div></div>
+      </section>
+
+      <section class="doc-section" id="notify">
+        <h2>14. 消息通知</h2>
+        <p>运单关键事件（<strong>收货登记、发车运输、到达目的网点、签收</strong>）会自动生成收货人通知，全部留痕可查（NOTIFY-001）：</p>
+        <ul>
+          <li>通知记录：系统 → 通知记录，按事件类型筛选。</li>
+          <li>接收人：运单收货人手机号；内容含运单号与事件说明。</li>
+          <li><strong>通道适配</strong>：短信 / 微信真实外发需在服务端配置服务商凭证；未配置时以日志通道落记录（状态已发送），接入服务商后无需改动业务代码。</li>
+          <li>通知为旁路能力：发送失败记录原因，不阻断运单主流程。</li>
+        </ul>
+        <div class="doc-shot"><img src="images/notifications.png" alt="通知记录" /><div class="shot-caption">通知记录：按事件筛选，通道与状态留痕</div></div>
+      </section>
+
+      <section class="doc-section" id="dispatch-gps">
+        <h2>15. 移动派单与 GPS 轨迹</h2>
+        <h3>派单（DELIVERY-002）</h3>
+        <ol>
+          <li>到货/交付页创建配送任务后，将任务<strong>派单给员工</strong>（记录指派人）。</li>
+          <li>员工在移动端「派单」页查看<strong>我的待办配送任务</strong>；完成签收后任务自动闭环（沿用既有签收流程）。</li>
+        </ol>
+        <h3>GPS 轨迹（GPS-001）</h3>
+        <ol>
+          <li>批次<strong>发车后</strong>，配送员在移动端「位置」页选择批次，点击「上报当前位置」（浏览器定位授权）。</li>
+          <li>轨迹点追加式写入批次轨迹（含精度），不可修改删除。</li>
+          <li>PC 端批次详情页查看完整轨迹点列表（时间 + 坐标 + 精度）。</li>
+        </ol>
+        <div class="doc-shot mobile"><img src="images/mobile-gps.png" alt="移动位置上报" /><div class="shot-caption">移动端位置上报：仅发车中批次可上报</div></div>
+        <div class="doc-shot mobile"><img src="images/mobile-dispatch.png" alt="我的配送任务" /><div class="shot-caption">移动端派单：我的待办配送任务</div></div>
+      </section>
+
+      <section class="doc-section" id="print-devices">
+        <h2>16. 打印设备对接</h2>
+        <p>面单页除浏览器 A5 打印外，支持 <strong>ESC/POS 热敏指令导出</strong>（PRINT-001）：</p>
+        <ol>
+          <li>运单详情 → 打印面单 → 「导出热敏指令 (.prn)」。</li>
+          <li>下载的 <code>.prn</code> 文件为 58mm 热敏小票风格指令（含运单号、收发货人、货量、费用、签字栏）。</li>
+          <li>通过本地打印代理 / 热敏打印机投递即可出单；真实设备通信由打印代理完成，本系统只负责协议指令生成。</li>
+        </ol>
+        <div class="tip">指令集包含 ESC @ 初始化、居中、倍高倍宽、走纸与切纸；UTF-8 编码。</div>
+      </section>
+
+      <section class="doc-section" id="quota">
+        <h2>17. 套餐配额</h2>
+        <p>租户可设置<strong>套餐与配额</strong>（TEN-002），超限时对应操作将被拒绝：</p>
+        <ul>
+          <li><strong>运单配额</strong>：开单前校验，超限返回明确提示。</li>
+          <li><strong>用户配额</strong>：创建员工前校验。</li>
+          <li><strong>存储配额</strong>：上传文件前校验（现有用量 + 新增 &gt; 上限 → 拒绝）。</li>
+          <li>配额项为空 = 不限制（默认）。</li>
+        </ul>
+        <p>租户用量页（报表 → 租户用量）展示当前套餐与各配项进度；配额由服务端设置端点维护（quota.manage 权限）。</p>
+        <div class="doc-shot"><img src="images/usage-quota.png" alt="租户用量与配额" /><div class="shot-caption">租户用量：配额进度与已满标识</div></div>
+      </section>
+
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span>LTL 零担物流 SaaS 使用文档 · <a href="../index.html">返回官网首页</a></span>
+      <span>截图来自开发环境演示数据 · 版本 2026-11-19</span>
+    </div>
+  </footer>
+</body>
+</html>
