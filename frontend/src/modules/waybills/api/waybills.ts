@@ -52,6 +52,44 @@ export interface WaybillDetail {
   packages: WaybillPackage[];
 }
 
+export interface WaybillPrintView {
+  waybillId: string;
+  waybillNo: string;
+  waybillStatus: string;
+  cargoStatus: string;
+  transportStatus: string;
+  deliveryStatus: string;
+  freightStatus: string;
+  codStatus: string;
+  paymentType: string;
+  senderName: string;
+  senderPhone: string;
+  senderAddress: string;
+  receiverName: string;
+  receiverPhone: string;
+  receiverAddress: string;
+  totalAmount: number | null;
+  codAmount: number | null;
+  packages: {
+    packageNo: number;
+    cargoName: string;
+    quantity: number;
+    weightKg: number;
+    volumeM3: number;
+    remark: string | null;
+  }[];
+  declaredPieces: number;
+  declaredWeightKg: number;
+  declaredVolumeM3: number;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+export async function getWaybillPrintView(id: string): Promise<WaybillPrintView> {
+  const response = await http.get<WaybillPrintView>(`/waybills/${id}/print`);
+  return response.data;
+}
+
 export interface WaybillEvent {
   id: string;
   eventType: string;
@@ -94,14 +132,37 @@ export async function createWaybill(payload: {
   declaredValue?: number;
   insuranceFee?: number;
   packages: { cargoName: string; quantity: number; weightKg: number; volumeM3: number }[];
-}): Promise<{ waybillId: string; waybillNo: string; totalAmount: number }> {
-  const response = await http.post<{ waybillId: string; waybillNo: string; totalAmount: number }>('/waybills', payload);
+}): Promise<{ waybillId: string; waybillNo: string; totalAmount: number; queryCode?: string }> {
+  const response = await http.post<{
+    waybillId: string;
+    waybillNo: string;
+    totalAmount: number;
+    queryCode?: string;
+  }>('/waybills', payload);
   return response.data;
 }
 
 export async function getWaybill(id: string): Promise<WaybillDetail> {
   const response = await http.get<WaybillDetail>(`/waybills/${id}`);
   return response.data;
+}
+
+/**
+ * 移动端按完整运单号定位单据。
+ * 列表接口是模糊查询，必须在前端核对完整单号，避免把首条相似单据用于现场作业。
+ */
+export async function getWaybillByNo(waybillNo: string): Promise<WaybillDetail | null> {
+  const normalized = waybillNo.trim();
+  if (!normalized) return null;
+  const page = await listWaybills(1, 100, normalized);
+  const exact = page.items.find((item) => item.waybillNo === normalized);
+  return exact ? getWaybill(exact.id) : null;
+}
+
+/** P10：重新生成客户查询码（waybill.read，换码作废旧码）。 */
+export async function resetQueryCode(id: string): Promise<string> {
+  const response = await http.post<{ queryCode: string }>(`/waybills/${id}/query-code`);
+  return response.data.queryCode;
 }
 
 export async function listWaybillEvents(id: string): Promise<WaybillEvent[]> {
@@ -118,8 +179,18 @@ export async function cancelWaybill(id: string, reason?: string): Promise<void> 
 }
 
 export interface CargoReceiptResult {
-  receipt: { id: string; receivedPieces: number; receivedWeightKg: number; receivedVolumeM3: number };
-  waybill: { waybillNo: string; declaredPieces: number; declaredWeightKg: number; declaredVolumeM3: number };
+  receipt: {
+    id: string;
+    receivedPieces: number;
+    receivedWeightKg: number;
+    receivedVolumeM3: number;
+  };
+  waybill: {
+    waybillNo: string;
+    declaredPieces: number;
+    declaredWeightKg: number;
+    declaredVolumeM3: number;
+  };
   pieceDifference: number;
   weightDifferenceKg: number;
   volumeDifferenceM3: number;
@@ -128,7 +199,12 @@ export interface CargoReceiptResult {
 export async function recordReceipt(
   waybillId: string,
   branchId: string,
-  payload: { receivedPieces: number; receivedWeightKg: number; receivedVolumeM3: number; note?: string },
+  payload: {
+    receivedPieces: number;
+    receivedWeightKg: number;
+    receivedVolumeM3: number;
+    note?: string;
+  },
 ): Promise<CargoReceiptResult> {
   const response = await http.post<CargoReceiptResult>('/warehouse/receipts', {
     waybillId,
@@ -138,7 +214,11 @@ export async function recordReceipt(
   return response.data;
 }
 
-export async function createSortingTask(waybillId: string, branchId: string, note?: string): Promise<void> {
+export async function createSortingTask(
+  waybillId: string,
+  branchId: string,
+  note?: string,
+): Promise<void> {
   await http.post('/warehouse/sorting-tasks', { waybillId, branchId, note });
 }
 
@@ -157,6 +237,8 @@ export interface SortingTask {
 }
 
 export async function listSortingTasks(waybillId: string): Promise<SortingTask[]> {
-  const response = await http.get<SortingTask[]>('/warehouse/sorting-tasks', { params: { waybillId } });
+  const response = await http.get<SortingTask[]>('/warehouse/sorting-tasks', {
+    params: { waybillId },
+  });
   return response.data;
 }

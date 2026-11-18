@@ -36,8 +36,14 @@ export interface Page<T> {
   pageSize: number;
 }
 
-export async function listRoutes(page: number, pageSize: number, keyword?: string): Promise<Page<RouteItem>> {
-  const response = await http.get<Page<RouteItem>>('/routes', { params: { page, pageSize, keyword } });
+export async function listRoutes(
+  page: number,
+  pageSize: number,
+  keyword?: string,
+): Promise<Page<RouteItem>> {
+  const response = await http.get<Page<RouteItem>>('/routes', {
+    params: { page, pageSize, keyword },
+  });
   return response.data;
 }
 
@@ -84,7 +90,10 @@ export async function listPlans(routeId: string): Promise<TransportPlan[]> {
 
 export async function createPlan(
   routeId: string,
-  payload: { name: string; segments: { fromBranchId: string; toBranchId: string; sequence: number }[] },
+  payload: {
+    name: string;
+    segments: { fromBranchId: string; toBranchId: string; sequence: number }[];
+  },
 ): Promise<TransportPlan> {
   const response = await http.post<TransportPlan>(`/routes/${routeId}/plans`, payload);
   return response.data;

@@ -10,8 +10,20 @@ export interface Customer {
 }
 
 export interface CustomerDetail extends Customer {
-  contacts: { id: string; name: string; phone: string; isPrimary: boolean; remark: string | null }[];
-  addresses: { id: string; address: string; label: string | null; isDefault: boolean; remark: string | null }[];
+  contacts: {
+    id: string;
+    name: string;
+    phone: string;
+    isPrimary: boolean;
+    remark: string | null;
+  }[];
+  addresses: {
+    id: string;
+    address: string;
+    label: string | null;
+    isDefault: boolean;
+    remark: string | null;
+  }[];
   servicedBranchIds: string[];
 }
 
@@ -38,7 +50,11 @@ export async function getCustomer(id: string): Promise<CustomerDetail> {
   return response.data;
 }
 
-export async function createCustomer(code: string, name: string, remark?: string): Promise<Customer> {
+export async function createCustomer(
+  code: string,
+  name: string,
+  remark?: string,
+): Promise<Customer> {
   const response = await http.post<Customer>('/customers', { code, name, remark });
   return response.data;
 }
@@ -64,8 +80,13 @@ export async function addContact(
   return response.data;
 }
 
-export async function removeContact(customerId: string, contactId: string): Promise<CustomerDetail> {
-  const response = await http.delete<CustomerDetail>(`/customers/${customerId}/contacts/${contactId}`);
+export async function removeContact(
+  customerId: string,
+  contactId: string,
+): Promise<CustomerDetail> {
+  const response = await http.delete<CustomerDetail>(
+    `/customers/${customerId}/contacts/${contactId}`,
+  );
   return response.data;
 }
 
@@ -77,17 +98,26 @@ export async function addAddress(
   return response.data;
 }
 
-export async function removeAddress(customerId: string, addressId: string): Promise<CustomerDetail> {
-  const response = await http.delete<CustomerDetail>(`/customers/${customerId}/addresses/${addressId}`);
+export async function removeAddress(
+  customerId: string,
+  addressId: string,
+): Promise<CustomerDetail> {
+  const response = await http.delete<CustomerDetail>(
+    `/customers/${customerId}/addresses/${addressId}`,
+  );
   return response.data;
 }
 
 export async function grantBranch(customerId: string, branchId: string): Promise<CustomerDetail> {
-  const response = await http.post<CustomerDetail>(`/customers/${customerId}/branches`, { branchId });
+  const response = await http.post<CustomerDetail>(`/customers/${customerId}/branches`, {
+    branchId,
+  });
   return response.data;
 }
 
 export async function revokeBranch(customerId: string, branchId: string): Promise<CustomerDetail> {
-  const response = await http.delete<CustomerDetail>(`/customers/${customerId}/branches/${branchId}`);
+  const response = await http.delete<CustomerDetail>(
+    `/customers/${customerId}/branches/${branchId}`,
+  );
   return response.data;
 }

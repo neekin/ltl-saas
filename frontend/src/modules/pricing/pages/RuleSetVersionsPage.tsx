@@ -98,7 +98,9 @@ export function RuleSetVersionsPage() {
     return (
       <div>
         <PageHeader title="规则版本" onBack={() => navigate('/pricing/rule-sets')} />
-        <Card><Spin tip="加载中…" /></Card>
+        <Card>
+          <Spin tip="加载中…" />
+        </Card>
       </div>
     );
   }
@@ -110,14 +112,20 @@ export function RuleSetVersionsPage() {
         description="编辑规则的声明式定义 JSON，校验通过后发布；已发布版本不可修改。"
         onBack={() => navigate('/pricing/rule-sets')}
         actions={
-          <Button type="primary" onClick={() => createMutation.mutate()} loading={createMutation.isPending}>
+          <Button
+            type="primary"
+            onClick={() => createMutation.mutate()}
+            loading={createMutation.isPending}
+          >
             新建草稿版本
           </Button>
         }
       />
 
       {(versionsQuery.data ?? []).length === 0 && (
-        <Card><EmptyState description="暂无版本，点击右上角「新建草稿版本」" /></Card>
+        <Card>
+          <EmptyState description="暂无版本，点击右上角「新建草稿版本」" />
+        </Card>
       )}
 
       {versionsQuery.data?.map((version) => (
@@ -151,10 +159,16 @@ export function RuleSetVersionsPage() {
                 <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
                   保存草稿
                 </Button>
-                <Button loading={validateMutation.isPending} onClick={() => validateMutation.mutate()}>
+                <Button
+                  loading={validateMutation.isPending}
+                  onClick={() => validateMutation.mutate()}
+                >
                   校验
                 </Button>
-                <Popconfirm title="发布后版本不可修改，确认？" onConfirm={() => publishMutation.mutate()}>
+                <Popconfirm
+                  title="发布后版本不可修改，确认？"
+                  onConfirm={() => publishMutation.mutate()}
+                >
                   <Button type="primary" loading={publishMutation.isPending}>
                     发布
                   </Button>

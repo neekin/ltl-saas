@@ -52,7 +52,9 @@ const STATUS_MAP: Record<string, StatusMeta> = {
 
   // ── 网单运输状态 (waybill transport) ──────────────────────
   NotShipped: { text: '未发车', tone: 'default' },
+  Shipped: { text: '运输中', tone: 'processing' },
   Dispatched: { text: '已发车', tone: 'processing' },
+  WaitingPickup: { text: '待提货', tone: 'warning' },
 
   // ── 调拨状态 (transfer) ───────────────────────────────────
   'transfer:Draft': { text: '草稿', tone: 'warning' },
@@ -84,6 +86,12 @@ export interface StatusTagProps {
   status?: string | null;
   /** 领域分类，用于消解同名状态（如 Received）。可省略，省略时取通用映射。 */
   category?: StatusCategory;
+}
+
+export function formatStatus(status?: string | null, category?: StatusCategory): string {
+  if (!status) return '—';
+  const meta = (category && STATUS_MAP[`${category}:${status}`]) || STATUS_MAP[status];
+  return meta?.text ?? status;
 }
 
 export function StatusTag({ status, category }: StatusTagProps) {

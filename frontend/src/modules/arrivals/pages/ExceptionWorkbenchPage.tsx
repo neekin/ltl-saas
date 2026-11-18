@@ -30,7 +30,12 @@ export function ExceptionWorkbenchPage() {
   });
 
   const columns: ColumnsType<ExceptionItem> = [
-    { title: '运单号', dataIndex: 'waybillNo', width: 180, render: (v: string) => <span className="ltl-code">{v}</span> },
+    {
+      title: '运单号',
+      dataIndex: 'waybillNo',
+      width: 180,
+      render: (v: string) => <span className="ltl-code">{v}</span>,
+    },
     {
       title: '交付状态',
       dataIndex: 'deliveryStatus',
@@ -47,7 +52,10 @@ export function ExceptionWorkbenchPage() {
 
   return (
     <div>
-      <PageHeader title="异常件工作台" description="列出拒收/异常运单，便于追踪责任网点与处理结果。" />
+      <PageHeader
+        title="异常件工作台"
+        description="列出拒收/异常运单，便于追踪责任网点与处理结果。"
+      />
       <Card styles={{ body: { padding: 0 } }}>
         <Table<ExceptionItem>
           rowKey="id"

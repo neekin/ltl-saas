@@ -27,7 +27,9 @@ export interface Page<T> {
 }
 
 export async function listVehicles(page = 1, pageSize = 50): Promise<Page<Vehicle>> {
-  const response = await http.get<Page<Vehicle>>('/transport/vehicles', { params: { page, pageSize } });
+  const response = await http.get<Page<Vehicle>>('/transport/vehicles', {
+    params: { page, pageSize },
+  });
   return response.data;
 }
 
@@ -51,11 +53,18 @@ export async function enableVehicle(id: string): Promise<void> {
 }
 
 export async function listDrivers(page = 1, pageSize = 50): Promise<Page<Driver>> {
-  const response = await http.get<Page<Driver>>('/transport/drivers', { params: { page, pageSize } });
+  const response = await http.get<Page<Driver>>('/transport/drivers', {
+    params: { page, pageSize },
+  });
   return response.data;
 }
 
-export async function createDriver(payload: { name: string; phone: string; licenseNo: string; note?: string }): Promise<Driver> {
+export async function createDriver(payload: {
+  name: string;
+  phone: string;
+  licenseNo: string;
+  note?: string;
+}): Promise<Driver> {
   const response = await http.post<Driver>('/transport/drivers', payload);
   return response.data;
 }

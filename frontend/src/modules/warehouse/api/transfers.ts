@@ -32,7 +32,9 @@ export interface Page<T> {
 }
 
 export async function listTransfers(page = 1, pageSize = 10): Promise<Page<BranchTransfer>> {
-  const response = await http.get<Page<BranchTransfer>>('/warehouse/transfers', { params: { page, pageSize } });
+  const response = await http.get<Page<BranchTransfer>>('/warehouse/transfers', {
+    params: { page, pageSize },
+  });
   return response.data;
 }
 

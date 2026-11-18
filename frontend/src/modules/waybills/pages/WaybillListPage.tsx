@@ -72,7 +72,9 @@ export function WaybillListPage() {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 170,
-      render: (v: string) => <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>,
+      render: (v: string) => (
+        <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>
+      ),
     },
     {
       title: '操作',
@@ -93,7 +95,11 @@ export function WaybillListPage() {
         title="运单查询"
         description="检索与管理全部运单，查看状态、费用与运输进度。"
         actions={
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/waybills/create')}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => navigate('/waybills/create')}
+          >
             开单
           </Button>
         }
@@ -133,7 +139,9 @@ export function WaybillListPage() {
           dataSource={listQuery.data?.items}
           columns={columns}
           scroll={{ x: 1100 }}
-          locale={{ emptyText: <EmptyState description="暂无运单，点击右上角「开单」创建第一张运单" /> }}
+          locale={{
+            emptyText: <EmptyState description="暂无运单，点击右上角「开单」创建第一张运单" />,
+          }}
           pagination={{
             current: page,
             pageSize: 10,

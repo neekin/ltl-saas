@@ -48,7 +48,10 @@ export function StatementPage() {
 
   return (
     <div>
-      <PageHeader title="月结账单" description="按客户与账期生成月结账单，确认后明细冻结，关闭为终态。" />
+      <PageHeader
+        title="月结账单"
+        description="按客户与账期生成月结账单，确认后明细冻结，关闭为终态。"
+      />
 
       <Card title="生成账单" style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical" onFinish={(values) => generateMutation.mutate(values)}>
@@ -59,7 +62,11 @@ export function StatementPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="period" label="账期" rules={[{ required: true, message: '格式 yyyyMM' }]}>
+              <Form.Item
+                name="period"
+                label="账期"
+                rules={[{ required: true, message: '格式 yyyyMM' }]}
+              >
                 <Input placeholder="yyyyMM" />
               </Form.Item>
             </Col>
@@ -74,7 +81,11 @@ export function StatementPage() {
         </Form>
       </Card>
 
-      {!statement && <Card><EmptyState description="生成账单后在此查看与确认" /></Card>}
+      {!statement && (
+        <Card>
+          <EmptyState description="生成账单后在此查看与确认" />
+        </Card>
+      )}
 
       {statement && (
         <Card
@@ -87,18 +98,27 @@ export function StatementPage() {
         >
           <div style={{ marginBottom: 16 }}>
             <div style={{ color: '#8c96a5', fontSize: 12 }}>账单总金额</div>
-            <div className="ltl-amount ltl-amount--strong" style={{ fontSize: 24, color: '#1D4FA0' }}>
+            <div
+              className="ltl-amount ltl-amount--strong"
+              style={{ fontSize: 24, color: '#1D4FA0' }}
+            >
               ¥ {statement.totalAmount.toFixed(2)}
             </div>
           </div>
           <Space wrap>
             {statement.status === 'Draft' && (
-              <Popconfirm title="确认后明细冻结不可修改" onConfirm={() => confirmMutation.mutate(statement.id)}>
+              <Popconfirm
+                title="确认后明细冻结不可修改"
+                onConfirm={() => confirmMutation.mutate(statement.id)}
+              >
                 <Button type="primary">确认账单</Button>
               </Popconfirm>
             )}
             {statement.status === 'Confirmed' && (
-              <Popconfirm title="关闭为终态，确认？" onConfirm={() => closeMutation.mutate(statement.id)}>
+              <Popconfirm
+                title="关闭为终态，确认？"
+                onConfirm={() => closeMutation.mutate(statement.id)}
+              >
                 <Button danger>关闭账单</Button>
               </Popconfirm>
             )}

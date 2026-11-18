@@ -108,12 +108,7 @@ export function DashboardPage() {
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card>
-            <Statistic
-              title="COD 已付"
-              value={data.totalCodPaidOut}
-              precision={2}
-              suffix="元"
-            />
+            <Statistic title="COD 已付" value={data.totalCodPaidOut} precision={2} suffix="元" />
           </Card>
         </Col>
       </Row>
@@ -121,11 +116,7 @@ export function DashboardPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={12} lg={6}>
           <Card>
-            <Statistic
-              title="启用网点"
-              value={data.activeBranchCount}
-              prefix={<ShopOutlined />}
-            />
+            <Statistic title="启用网点" value={data.activeBranchCount} prefix={<ShopOutlined />} />
           </Card>
         </Col>
         <Col xs={12} lg={6}>
@@ -139,22 +130,12 @@ export function DashboardPage() {
         </Col>
         <Col xs={12} lg={6}>
           <Card>
-            <Statistic
-              title="COD 已收"
-              value={data.totalCodCollected}
-              precision={2}
-              suffix="元"
-            />
+            <Statistic title="COD 已收" value={data.totalCodCollected} precision={2} suffix="元" />
           </Card>
         </Col>
         <Col xs={12} lg={6}>
           <Card>
-            <Statistic
-              title="COD 已付"
-              value={data.totalCodPaidOut}
-              precision={2}
-              suffix="元"
-            />
+            <Statistic title="COD 已付" value={data.totalCodPaidOut} precision={2} suffix="元" />
           </Card>
         </Col>
       </Row>

@@ -74,7 +74,6 @@ export function RouteEditPage() {
     setStops(routeQuery.data.stops.map((s) => ({ branchId: s.branchId, sequence: s.sequence })));
   }
 
-
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['routes'] });
     queryClient.invalidateQueries({ queryKey: ['route', id] });
@@ -143,13 +142,18 @@ export function RouteEditPage() {
     <div>
       <PageHeader
         title={isNew ? '新建线路' : '线路编辑'}
-        description={isNew ? '创建线路后继续配置站点与运输方案。' : '维护线路基本信息、站点序列与运输方案。'}
+        description={
+          isNew ? '创建线路后继续配置站点与运输方案。' : '维护线路基本信息、站点序列与运输方案。'
+        }
         onBack={() => navigate('/routes')}
         actions={
           !isNew && route ? (
             <Space>
               <StatusTag status={route.status} />
-              <Button danger={route.status === 'Active'} onClick={() => statusMutation.mutate(route.status === 'Active')}>
+              <Button
+                danger={route.status === 'Active'}
+                onClick={() => statusMutation.mutate(route.status === 'Active')}
+              >
                 {route.status === 'Active' ? '停用' : '启用'}
               </Button>
             </Space>
@@ -165,7 +169,11 @@ export function RouteEditPage() {
         >
           <Row gutter={[16, 0]} align="bottom">
             <Col xs={24} md={5}>
-              <Form.Item name="code" label="编码" rules={[{ required: isNew, message: '编码必填' }]}>
+              <Form.Item
+                name="code"
+                label="编码"
+                rules={[{ required: isNew, message: '编码必填' }]}
+              >
                 <Input disabled={!isNew} placeholder="线路编码" />
               </Form.Item>
             </Col>
@@ -228,7 +236,9 @@ export function RouteEditPage() {
               </Space>
             }
           >
-            {sortedStops.length === 0 && <EmptyState simple description="暂无站点，点击「添加站点」开始配置" />}
+            {sortedStops.length === 0 && (
+              <EmptyState simple description="暂无站点，点击「添加站点」开始配置" />
+            )}
             {sortedStops.map((stop, index) => (
               <Space key={index} style={{ display: 'flex', marginBottom: 8 }}>
                 <Typography.Text type="secondary">{index}</Typography.Text>
@@ -238,7 +248,10 @@ export function RouteEditPage() {
                   showSearch
                   optionFilterProp="label"
                   style={{ width: 220 }}
-                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                  options={branchOptions.map((b) => ({
+                    value: b.id,
+                    label: `${b.code} ${b.name}`,
+                  }))}
                   onChange={(branchId) => {
                     const next = [...stops];
                     next[stops.indexOf(stop)] = { ...stop, branchId };
@@ -251,9 +264,7 @@ export function RouteEditPage() {
                   disabled={stops.length <= 2}
                   onClick={() => {
                     setStops(
-                      stops
-                        .filter((s) => s !== stop)
-                        .map((s, i) => ({ ...s, sequence: i })),
+                      stops.filter((s) => s !== stop).map((s, i) => ({ ...s, sequence: i })),
                     );
                     setStopsTouched(true);
                   }}
@@ -262,7 +273,13 @@ export function RouteEditPage() {
             ))}
           </Card>
 
-          <PlanSection routeId={id!} plans={plansQuery.data ?? []} branchOptions={branchQuery.data ?? []} onCreate={planMutation.mutate} creating={planMutation.isPending} />
+          <PlanSection
+            routeId={id!}
+            plans={plansQuery.data ?? []}
+            branchOptions={branchQuery.data ?? []}
+            onCreate={planMutation.mutate}
+            creating={planMutation.isPending}
+          />
         </>
       )}
     </div>
@@ -297,7 +314,8 @@ function PlanSection({
           <div style={{ paddingLeft: 16 }}>
             {plan.segments.map((segment) => (
               <Typography.Text key={segment.id} type="secondary" style={{ marginRight: 12 }}>
-                {segment.sequence}. {branchOptions.find((b) => b.id === segment.fromBranchId)?.name ?? '?'} →{' '}
+                {segment.sequence}.{' '}
+                {branchOptions.find((b) => b.id === segment.fromBranchId)?.name ?? '?'} →{' '}
                 {branchOptions.find((b) => b.id === segment.toBranchId)?.name ?? '?'}
               </Typography.Text>
             ))}
@@ -345,7 +363,11 @@ function PlanSection({
           <Button
             icon={<DeleteOutlined />}
             disabled={segments.length <= 1}
-            onClick={() => setSegments(segments.filter((_, i) => i !== index).map((s, i) => ({ ...s, sequence: i + 1 })))}
+            onClick={() =>
+              setSegments(
+                segments.filter((_, i) => i !== index).map((s, i) => ({ ...s, sequence: i + 1 })),
+              )
+            }
           />
         </Space>
       ))}
@@ -354,7 +376,14 @@ function PlanSection({
           icon={<PlusOutlined />}
           onClick={() => {
             const last = segments[segments.length - 1];
-            setSegments([...segments, { fromBranchId: last?.toBranchId ?? '', toBranchId: '', sequence: segments.length + 1 }]);
+            setSegments([
+              ...segments,
+              {
+                fromBranchId: last?.toBranchId ?? '',
+                toBranchId: '',
+                sequence: segments.length + 1,
+              },
+            ]);
           }}
         >
           添加区段
@@ -366,7 +395,11 @@ function PlanSection({
           onClick={() =>
             onCreate({
               name: planName.trim(),
-              segments: segments.map((s, i) => ({ fromBranchId: s.fromBranchId, toBranchId: s.toBranchId, sequence: i + 1 })),
+              segments: segments.map((s, i) => ({
+                fromBranchId: s.fromBranchId,
+                toBranchId: s.toBranchId,
+                sequence: i + 1,
+              })),
             })
           }
         >

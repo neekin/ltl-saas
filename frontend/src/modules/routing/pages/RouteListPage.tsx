@@ -19,7 +19,13 @@ export function RouteListPage() {
   });
 
   const columns: ColumnsType<RouteItem> = [
-    { title: '编码', dataIndex: 'code', key: 'code', width: 130, render: (v: string) => <span className="ltl-code">{v}</span> },
+    {
+      title: '编码',
+      dataIndex: 'code',
+      key: 'code',
+      width: 130,
+      render: (v: string) => <span className="ltl-code">{v}</span>,
+    },
     { title: '名称', dataIndex: 'name', key: 'name' },
     {
       title: '状态',

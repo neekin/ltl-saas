@@ -21,7 +21,10 @@ export function ArrivalDifferencePage() {
 
   return (
     <div>
-      <PageHeader title="到货差异处理" description="按运输批次查看到货记录，核对装车与实收件数差异。" />
+      <PageHeader
+        title="到货差异处理"
+        description="按运输批次查看到货记录，核对装车与实收件数差异。"
+      />
 
       <div className="ltl-filter-bar">
         <Flex gap={12} wrap>
@@ -36,7 +39,11 @@ export function ArrivalDifferencePage() {
         </Flex>
       </div>
 
-      {searched && !arrival && <Card><EmptyState description="该批次无到货记录" /></Card>}
+      {searched && !arrival && (
+        <Card>
+          <EmptyState description="该批次无到货记录" />
+        </Card>
+      )}
       {arrival && (
         <Card title={`到货记录（到达网点 ${arrival.branchId}）`}>
           <Table
@@ -47,7 +54,12 @@ export function ArrivalDifferencePage() {
             scroll={{ x: 800 }}
             locale={{ emptyText: <EmptyState simple description="暂无到货明细" /> }}
             columns={[
-              { title: '运单 ID', dataIndex: 'waybillId', ellipsis: true, render: (v: string) => <span className="ltl-code">{v}</span> },
+              {
+                title: '运单 ID',
+                dataIndex: 'waybillId',
+                ellipsis: true,
+                render: (v: string) => <span className="ltl-code">{v}</span>,
+              },
               { title: '装车件数', dataIndex: 'loadedPieces', width: 110, align: 'right' },
               { title: '实收件数', dataIndex: 'receivedPieces', width: 110, align: 'right' },
               { title: '破损', dataIndex: 'brokenPieces', width: 90, align: 'right' },
@@ -55,9 +67,16 @@ export function ArrivalDifferencePage() {
                 title: '差异',
                 key: 'diff',
                 width: 120,
-                render: (_: unknown, record: { waybillId: string; receivedPieces: number; loadedPieces: number }) => {
+                render: (
+                  _: unknown,
+                  record: { waybillId: string; receivedPieces: number; loadedPieces: number },
+                ) => {
                   const diff = record.receivedPieces - record.loadedPieces;
-                  return diff === 0 ? <Tag color="success">无差异</Tag> : <Tag color="error">短少 {-diff} 件</Tag>;
+                  return diff === 0 ? (
+                    <Tag color="success">无差异</Tag>
+                  ) : (
+                    <Tag color="error">短少 {-diff} 件</Tag>
+                  );
                 },
               },
               { title: '备注', dataIndex: 'remark', render: (v: string | null) => v ?? '—' },
@@ -65,7 +84,11 @@ export function ArrivalDifferencePage() {
           />
         </Card>
       )}
-      {!searched && <Card><EmptyState description="请输入运输批次 ID 查询到货差异" /></Card>}
+      {!searched && (
+        <Card>
+          <EmptyState description="请输入运输批次 ID 查询到货差异" />
+        </Card>
+      )}
     </div>
   );
 }

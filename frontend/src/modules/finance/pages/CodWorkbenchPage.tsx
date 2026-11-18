@@ -44,26 +44,38 @@ export function CodWorkbenchPage() {
             onPressEnter={search}
             style={{ width: 360 }}
           />
-          <Button type="primary" onClick={search}>查询</Button>
+          <Button type="primary" onClick={search}>
+            查询
+          </Button>
         </Flex>
       </div>
 
-      {!codOrder && <Card><EmptyState description="输入运单 ID 查询 COD 订单" /></Card>}
+      {!codOrder && (
+        <Card>
+          <EmptyState description="输入运单 ID 查询 COD 订单" />
+        </Card>
+      )}
 
       {codOrder && (
         <Card title="COD 订单">
           <Row gutter={[16, 16]} style={{ marginBottom: 8 }}>
             <Col xs={12} md={6}>
               <div style={{ color: '#8c96a5', fontSize: 12 }}>代收金额</div>
-              <div className="ltl-amount ltl-amount--strong" style={{ fontSize: 22 }}>¥ {codOrder.amount.toFixed(2)}</div>
+              <div className="ltl-amount ltl-amount--strong" style={{ fontSize: 22 }}>
+                ¥ {codOrder.amount.toFixed(2)}
+              </div>
             </Col>
             <Col xs={12} md={6}>
               <div style={{ color: '#8c96a5', fontSize: 12 }}>已收</div>
-              <div className="ltl-amount" style={{ fontSize: 22 }}>¥ {codOrder.collectedAmount.toFixed(2)}</div>
+              <div className="ltl-amount" style={{ fontSize: 22 }}>
+                ¥ {codOrder.collectedAmount.toFixed(2)}
+              </div>
             </Col>
             <Col xs={12} md={6}>
               <div style={{ color: '#8c96a5', fontSize: 12 }}>未收</div>
-              <div className="ltl-amount" style={{ fontSize: 22, color: '#C0392B' }}>¥ {(codOrder.amount - codOrder.collectedAmount).toFixed(2)}</div>
+              <div className="ltl-amount" style={{ fontSize: 22, color: '#C0392B' }}>
+                ¥ {(codOrder.amount - codOrder.collectedAmount).toFixed(2)}
+              </div>
             </Col>
             <Col xs={12} md={6}>
               <div style={{ color: '#8c96a5', fontSize: 12, marginBottom: 4 }}>状态</div>
@@ -75,8 +87,19 @@ export function CodWorkbenchPage() {
           </Typography.Paragraph>
           {codOrder.collectedAmount < codOrder.amount && (
             <Space style={{ marginTop: 4 }}>
-              <InputNumber min={0.01} precision={2} value={collectAmount} onChange={(v) => setCollectAmount(v ?? 0)} addonBefore="收款（元）" style={{ width: 190 }} />
-              <Button type="primary" onClick={() => collectMutation.mutate()} loading={collectMutation.isPending}>
+              <InputNumber
+                min={0.01}
+                precision={2}
+                value={collectAmount}
+                onChange={(v) => setCollectAmount(v ?? 0)}
+                addonBefore="收款（元）"
+                style={{ width: 190 }}
+              />
+              <Button
+                type="primary"
+                onClick={() => collectMutation.mutate()}
+                loading={collectMutation.isPending}
+              >
                 登记收款
               </Button>
             </Space>

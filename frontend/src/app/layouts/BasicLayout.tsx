@@ -35,7 +35,11 @@ const menuSections: MenuSection[] = [
     key: 'dashboard',
     label: '概览',
     icon: <DashboardOutlined />,
-    items: [{ key: '/', label: '工作台', permission: '' }],
+    items: [
+      { key: '/', label: '工作台', permission: '' },
+      { key: '/reports/dimension', label: '运营报表', permission: 'finance.read' },
+      { key: '/reports/usage', label: '租户用量', permission: 'finance.read' },
+    ],
   },
   {
     key: 'master',
@@ -155,7 +159,10 @@ function resolveNav(pathname: string): NavResolution {
           pageLabel: item.label,
         };
       }
-      if (pathname.startsWith(`${item.key}/`) && (!matched || item.key.length > matched.item.key.length)) {
+      if (
+        pathname.startsWith(`${item.key}/`) &&
+        (!matched || item.key.length > matched.item.key.length)
+      ) {
         matched = { section, item };
       }
     }
@@ -194,7 +201,9 @@ export function BasicLayout() {
   const visibleSections = menuSections
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => !item.permission || user?.permissions.includes(item.permission)),
+      items: section.items.filter(
+        (item) => !item.permission || user?.permissions.includes(item.permission),
+      ),
     }))
     .filter((section) => section.items.length > 0);
 
@@ -208,10 +217,7 @@ export function BasicLayout() {
   const breadcrumbItems =
     location.pathname === '/'
       ? [{ title: '工作台' }]
-      : [
-          { title: nav.sectionLabel },
-          { title: nav.pageLabel },
-        ];
+      : [{ title: nav.sectionLabel }, { title: nav.pageLabel }];
 
   const onLogout = async () => {
     if (refreshToken) {
@@ -264,8 +270,12 @@ export function BasicLayout() {
           </div>
           {!collapsed && (
             <div style={{ minWidth: 0 }}>
-              <div style={{ color: '#fff', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap' }}>LTL 零担物流</div>
-              <div style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 11, whiteSpace: 'nowrap' }}>
+              <div style={{ color: '#fff', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                LTL 零担物流
+              </div>
+              <div
+                style={{ color: 'rgba(255, 255, 255, 0.45)', fontSize: 11, whiteSpace: 'nowrap' }}
+              >
                 专线运营管理平台
               </div>
             </div>
@@ -295,7 +305,9 @@ export function BasicLayout() {
           <Breadcrumb items={breadcrumbItems} />
           <Dropdown
             menu={{
-              items: [{ key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: onLogout }],
+              items: [
+                { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: onLogout },
+              ],
             }}
           >
             <span style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>

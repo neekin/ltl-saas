@@ -14,7 +14,8 @@ export function DriverListPage() {
   const listQuery = useQuery({ queryKey: ['drivers'], queryFn: () => listDrivers() });
 
   const createMutation = useMutation({
-    mutationFn: (values: { name: string; phone: string; licenseNo: string }) => createDriver(values),
+    mutationFn: (values: { name: string; phone: string; licenseNo: string }) =>
+      createDriver(values),
     onSuccess: () => {
       message.success('司机已创建');
       form.resetFields();
@@ -36,7 +37,11 @@ export function DriverListPage() {
   const columns: ColumnsType<Driver> = [
     { title: '姓名', dataIndex: 'name', width: 130 },
     { title: '电话', dataIndex: 'phone', width: 150 },
-    { title: '驾驶证号', dataIndex: 'licenseNo', render: (v: string) => <span className="ltl-code">{v}</span> },
+    {
+      title: '驾驶证号',
+      dataIndex: 'licenseNo',
+      render: (v: string) => <span className="ltl-code">{v}</span>,
+    },
     {
       title: '状态',
       dataIndex: 'status',
@@ -50,7 +55,9 @@ export function DriverListPage() {
       render: (_: unknown, record: Driver) => (
         <Popconfirm
           title={record.status === 'Active' ? '确认停用？' : '确认启用？'}
-          onConfirm={() => toggleMutation.mutate({ driver: record, disable: record.status === 'Active' })}
+          onConfirm={() =>
+            toggleMutation.mutate({ driver: record, disable: record.status === 'Active' })
+          }
         >
           <Button type="link" size="small" danger={record.status === 'Active'}>
             {record.status === 'Active' ? '停用' : '启用'}
@@ -67,16 +74,36 @@ export function DriverListPage() {
       <Card title="添加司机" style={{ marginBottom: 16 }}>
         <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
           <Flex gap={12} align="flex-end" wrap>
-            <Form.Item name="name" label="姓名" rules={[{ required: true, message: '姓名必填' }]} style={{ marginBottom: 0 }}>
+            <Form.Item
+              name="name"
+              label="姓名"
+              rules={[{ required: true, message: '姓名必填' }]}
+              style={{ marginBottom: 0 }}
+            >
               <Input placeholder="姓名" style={{ width: 130 }} />
             </Form.Item>
-            <Form.Item name="phone" label="电话" rules={[{ required: true, message: '电话必填' }]} style={{ marginBottom: 0 }}>
+            <Form.Item
+              name="phone"
+              label="电话"
+              rules={[{ required: true, message: '电话必填' }]}
+              style={{ marginBottom: 0 }}
+            >
               <Input placeholder="电话" style={{ width: 150 }} />
             </Form.Item>
-            <Form.Item name="licenseNo" label="驾驶证号" rules={[{ required: true, message: '证号必填' }]} style={{ marginBottom: 0 }}>
+            <Form.Item
+              name="licenseNo"
+              label="驾驶证号"
+              rules={[{ required: true, message: '证号必填' }]}
+              style={{ marginBottom: 0 }}
+            >
               <Input placeholder="驾驶证号" style={{ width: 170 }} />
             </Form.Item>
-            <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={createMutation.isPending}>
+            <Button
+              type="primary"
+              htmlType="submit"
+              icon={<PlusOutlined />}
+              loading={createMutation.isPending}
+            >
               添加
             </Button>
           </Flex>

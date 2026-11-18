@@ -1,4 +1,4 @@
-export { StatusTag, OnBoardTag } from './StatusTag';
+export { StatusTag, OnBoardTag, formatStatus } from './StatusTag';
 export type { StatusTagProps, StatusCategory } from './StatusTag';
 export { PageHeader } from './PageHeader';
 export type { PageHeaderProps } from './PageHeader';

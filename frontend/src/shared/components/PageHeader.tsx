@@ -23,7 +23,9 @@ export function PageHeader({ title, description, actions, onBack }: PageHeaderPr
       <Flex align="flex-start" justify="space-between" gap={16} wrap="wrap">
         <div style={{ minWidth: 0 }}>
           <Space align="center" size={12}>
-            {onBack && <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label="返回" />}
+            {onBack && (
+              <Button type="text" icon={<ArrowLeftOutlined />} onClick={onBack} aria-label="返回" />
+            )}
             <Typography.Title level={4} style={{ margin: 0 }}>
               {title}
             </Typography.Title>

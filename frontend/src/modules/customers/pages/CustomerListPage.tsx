@@ -1,7 +1,21 @@
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Checkbox } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Card, Drawer, Flex, Form, Input, Popconfirm, Select, Space, Table, Tag, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Drawer,
+  Flex,
+  Form,
+  Input,
+  Popconfirm,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
@@ -71,7 +85,8 @@ export function CustomerListPage() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (values: { code: string; name: string; remark?: string }) => createCustomer(values.code, values.name, values.remark),
+    mutationFn: (values: { code: string; name: string; remark?: string }) =>
+      createCustomer(values.code, values.name, values.remark),
     onSuccess: (customer) => {
       message.success('客户创建成功');
       setCreateOpen(false);
@@ -82,7 +97,8 @@ export function CustomerListPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, name, remark }: { id: string; name: string; remark?: string }) => updateCustomer(id, name, remark),
+    mutationFn: ({ id, name, remark }: { id: string; name: string; remark?: string }) =>
+      updateCustomer(id, name, remark),
     onSuccess: () => {
       message.success('已更新');
       invalidate();
@@ -100,7 +116,10 @@ export function CustomerListPage() {
     onError: (e: Error) => message.error(e.message),
   });
 
-  const detailMutationWrapper = async (action: () => Promise<CustomerDetail>, successText: string) => {
+  const detailMutationWrapper = async (
+    action: () => Promise<CustomerDetail>,
+    successText: string,
+  ) => {
     try {
       await action();
       message.success(successText);
@@ -113,7 +132,13 @@ export function CustomerListPage() {
   const detail = detailQuery.data;
 
   const columns = [
-    { title: '编码', dataIndex: 'code', key: 'code', width: 130, render: (v: string) => <span className="ltl-code">{v}</span> },
+    {
+      title: '编码',
+      dataIndex: 'code',
+      key: 'code',
+      width: 130,
+      render: (v: string) => <span className="ltl-code">{v}</span>,
+    },
     { title: '名称', dataIndex: 'name', key: 'name' },
     {
       title: '状态',
@@ -139,7 +164,9 @@ export function CustomerListPage() {
           </Button>
           <Popconfirm
             title={record.status === 'Active' ? '确认停用？' : '确认启用？'}
-            onConfirm={() => toggleMutation.mutate({ id: record.id, active: record.status === 'Active' })}
+            onConfirm={() =>
+              toggleMutation.mutate({ id: record.id, active: record.status === 'Active' })
+            }
           >
             <Button type="link" size="small" danger={record.status === 'Active'}>
               {record.status === 'Active' ? '停用' : '启用'}
@@ -223,12 +250,24 @@ export function CustomerListPage() {
             detail={detail}
             branchOptions={branchQuery.data ?? []}
             onUpdate={(values) => updateMutation.mutate({ id: detail.id, ...values })}
-            onContactAdd={(values) => detailMutationWrapper(() => addContact(detail.id, values), '联系人已添加')}
-            onContactRemove={(contactId) => detailMutationWrapper(() => removeContact(detail.id, contactId), '联系人已移除')}
-            onAddressAdd={(values) => detailMutationWrapper(() => addAddress(detail.id, values), '地址已添加')}
-            onAddressRemove={(addressId) => detailMutationWrapper(() => removeAddress(detail.id, addressId), '地址已移除')}
-            onBranchGrant={(branchId) => detailMutationWrapper(() => grantBranch(detail.id, branchId), '已授权')}
-            onBranchRevoke={(branchId) => detailMutationWrapper(() => revokeBranch(detail.id, branchId), '已收回')}
+            onContactAdd={(values) =>
+              detailMutationWrapper(() => addContact(detail.id, values), '联系人已添加')
+            }
+            onContactRemove={(contactId) =>
+              detailMutationWrapper(() => removeContact(detail.id, contactId), '联系人已移除')
+            }
+            onAddressAdd={(values) =>
+              detailMutationWrapper(() => addAddress(detail.id, values), '地址已添加')
+            }
+            onAddressRemove={(addressId) =>
+              detailMutationWrapper(() => removeAddress(detail.id, addressId), '地址已移除')
+            }
+            onBranchGrant={(branchId) =>
+              detailMutationWrapper(() => grantBranch(detail.id, branchId), '已授权')
+            }
+            onBranchRevoke={(branchId) =>
+              detailMutationWrapper(() => revokeBranch(detail.id, branchId), '已收回')
+            }
           />
         )}
       </Drawer>
@@ -257,11 +296,7 @@ function CreateCustomerDrawer({
       onClose={onClose}
       destroyOnClose
       extra={
-        <Button
-          type="primary"
-          loading={submitting}
-          onClick={() => form.submit()}
-        >
+        <Button type="primary" loading={submitting} onClick={() => form.submit()}>
           保存
         </Button>
       }
@@ -295,9 +330,19 @@ function CustomerDetailBody({
   detail: CustomerDetail;
   branchOptions: BranchOption[];
   onUpdate: (values: { name: string; remark?: string }) => void;
-  onContactAdd: (values: { name: string; phone: string; isPrimary: boolean; remark?: string }) => void;
+  onContactAdd: (values: {
+    name: string;
+    phone: string;
+    isPrimary: boolean;
+    remark?: string;
+  }) => void;
   onContactRemove: (contactId: string) => void;
-  onAddressAdd: (values: { address: string; label?: string; isDefault: boolean; remark?: string }) => void;
+  onAddressAdd: (values: {
+    address: string;
+    label?: string;
+    isDefault: boolean;
+    remark?: string;
+  }) => void;
   onAddressRemove: (addressId: string) => void;
   onBranchGrant: (branchId: string) => void;
   onBranchRevoke: (branchId: string) => void;
@@ -311,7 +356,8 @@ function CustomerDetailBody({
   return (
     <div>
       <Typography.Paragraph>
-        编码 <Typography.Text code>{detail.code}</Typography.Text> <StatusTag status={detail.status} />
+        编码 <Typography.Text code>{detail.code}</Typography.Text>{' '}
+        <StatusTag status={detail.status} />
       </Typography.Paragraph>
 
       <Typography.Title level={5}>基本信息</Typography.Title>
@@ -343,7 +389,9 @@ function CustomerDetailBody({
             </Button>
           </li>
         ))}
-        {detail.contacts.length === 0 && <Typography.Text type="secondary">暂无联系人</Typography.Text>}
+        {detail.contacts.length === 0 && (
+          <Typography.Text type="secondary">暂无联系人</Typography.Text>
+        )}
       </ul>
       <Form
         form={contactForm}
@@ -378,7 +426,9 @@ function CustomerDetailBody({
             </Button>
           </li>
         ))}
-        {detail.addresses.length === 0 && <Typography.Text type="secondary">暂无地址</Typography.Text>}
+        {detail.addresses.length === 0 && (
+          <Typography.Text type="secondary">暂无地址</Typography.Text>
+        )}
       </ul>
       <Form
         form={addressForm}
@@ -406,11 +456,7 @@ function CustomerDetailBody({
         {detail.servicedBranchIds.map((branchId) => {
           const option = branchOptions.find((b) => b.id === branchId);
           return (
-            <Tag
-              key={branchId}
-              closable
-              onClose={() => onBranchRevoke(branchId)}
-            >
+            <Tag key={branchId} closable onClose={() => onBranchRevoke(branchId)}>
               {option?.name ?? branchId}
             </Tag>
           );

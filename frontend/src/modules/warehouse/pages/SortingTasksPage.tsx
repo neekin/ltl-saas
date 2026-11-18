@@ -4,7 +4,11 @@ import { App, Button, Card, Flex, Input, Table, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { useState } from 'react';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
-import { completeSortingTask, listSortingTasks, type SortingTask } from '../../waybills/api/waybills';
+import {
+  completeSortingTask,
+  listSortingTasks,
+  type SortingTask,
+} from '../../waybills/api/waybills';
 
 /** 分拣作业页（P4 前端）：按运单号查询任务并完成分拣。 */
 export function SortingTasksPage() {
@@ -38,14 +42,20 @@ export function SortingTasksPage() {
       title: '创建时间',
       dataIndex: 'createdAt',
       width: 180,
-      render: (v: string) => <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>,
+      render: (v: string) => (
+        <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>
+      ),
     },
     {
       title: '完成时间',
       dataIndex: 'completedAt',
       width: 180,
       render: (v: string | null) =>
-        v ? <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text> : '—',
+        v ? (
+          <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>
+        ) : (
+          '—'
+        ),
     },
     { title: '备注', dataIndex: 'note', render: (v: string | null) => v ?? '—' },
     {
@@ -54,7 +64,12 @@ export function SortingTasksPage() {
       width: 120,
       render: (_: unknown, record: SortingTask) =>
         record.status === 'Pending' ? (
-          <Button type="primary" size="small" loading={completeMutation.isPending} onClick={() => completeMutation.mutate(record.id)}>
+          <Button
+            type="primary"
+            size="small"
+            loading={completeMutation.isPending}
+            onClick={() => completeMutation.mutate(record.id)}
+          >
             完成分拣
           </Button>
         ) : (

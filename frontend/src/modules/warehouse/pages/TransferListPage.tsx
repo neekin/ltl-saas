@@ -38,10 +38,18 @@ export function TransferListPage() {
     },
   });
 
-  const listQuery = useQuery({ queryKey: ['transfers', page], queryFn: () => listTransfers(page, 10) });
+  const listQuery = useQuery({
+    queryKey: ['transfers', page],
+    queryFn: () => listTransfers(page, 10),
+  });
 
   const columns: ColumnsType<BranchTransfer> = [
-    { title: '调拨单号', dataIndex: 'transferNo', width: 180, render: (v: string) => <span className="ltl-code">{v}</span> },
+    {
+      title: '调拨单号',
+      dataIndex: 'transferNo',
+      width: 180,
+      render: (v: string) => <span className="ltl-code">{v}</span>,
+    },
     {
       title: '状态',
       dataIndex: 'status',
@@ -51,7 +59,8 @@ export function TransferListPage() {
     {
       title: '清单',
       key: 'items',
-      render: (_, record) => record.items.map((i) => `${i.cargoName}×${i.declaredQuantity}`).join('、'),
+      render: (_, record) =>
+        record.items.map((i) => `${i.cargoName}×${i.declaredQuantity}`).join('、'),
     },
     {
       title: '操作',
@@ -67,7 +76,12 @@ export function TransferListPage() {
   ];
 
   const createMutation = useMutation({
-    mutationFn: (values: { fromBranchId: string; toBranchId: string; cargoName: string; quantity: number }) =>
+    mutationFn: (values: {
+      fromBranchId: string;
+      toBranchId: string;
+      cargoName: string;
+      quantity: number;
+    }) =>
       createTransfer({
         fromBranchId: values.fromBranchId,
         toBranchId: values.toBranchId,
@@ -100,28 +114,55 @@ export function TransferListPage() {
         <Card title="新建调拨单" style={{ marginBottom: 16 }}>
           <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
             <Space align="end" size={12} wrap style={{ width: '100%' }}>
-              <Form.Item name="fromBranchId" label="调出网点" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+              <Form.Item
+                name="fromBranchId"
+                label="调出网点"
+                rules={[{ required: true }]}
+                style={{ marginBottom: 0 }}
+              >
                 <Select
                   showSearch
                   optionFilterProp="label"
                   style={{ width: 180 }}
                   placeholder="选择调出网点"
-                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                  options={branchOptions.map((b) => ({
+                    value: b.id,
+                    label: `${b.code} ${b.name}`,
+                  }))}
                 />
               </Form.Item>
-              <Form.Item name="toBranchId" label="调入网点" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+              <Form.Item
+                name="toBranchId"
+                label="调入网点"
+                rules={[{ required: true }]}
+                style={{ marginBottom: 0 }}
+              >
                 <Select
                   showSearch
                   optionFilterProp="label"
                   style={{ width: 180 }}
                   placeholder="选择调入网点"
-                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                  options={branchOptions.map((b) => ({
+                    value: b.id,
+                    label: `${b.code} ${b.name}`,
+                  }))}
                 />
               </Form.Item>
-              <Form.Item name="cargoName" label="货物" rules={[{ required: true }]} style={{ marginBottom: 0 }}>
+              <Form.Item
+                name="cargoName"
+                label="货物"
+                rules={[{ required: true }]}
+                style={{ marginBottom: 0 }}
+              >
                 <Input placeholder="货物名称" style={{ width: 160 }} />
               </Form.Item>
-              <Form.Item name="quantity" label="数量" rules={[{ required: true }]} initialValue={1} style={{ marginBottom: 0 }}>
+              <Form.Item
+                name="quantity"
+                label="数量"
+                rules={[{ required: true }]}
+                initialValue={1}
+                style={{ marginBottom: 0 }}
+              >
                 <InputNumber min={1} precision={0} style={{ width: 110 }} />
               </Form.Item>
               <Button type="primary" htmlType="submit" loading={createMutation.isPending}>

@@ -39,7 +39,9 @@ export function TripListPage() {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 180,
-      render: (v: string) => <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>,
+      render: (v: string) => (
+        <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>
+      ),
     },
     {
       title: '操作',
@@ -56,7 +58,10 @@ export function TripListPage() {
 
   return (
     <div>
-      <PageHeader title="运输批次" description="管理发车批次与配载运单，进入工作台完成装车、发车与到达登记。" />
+      <PageHeader
+        title="运输批次"
+        description="管理发车批次与配载运单，进入工作台完成装车、发车与到达登记。"
+      />
       <Card styles={{ body: { padding: 0 } }}>
         <Table<Trip>
           rowKey="id"

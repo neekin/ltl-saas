@@ -1,6 +1,19 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Card, Flex, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Flex,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Table,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { EmptyState, OnBoardTag, PageHeader, StatusTag } from '../../../shared/components';
@@ -90,7 +103,8 @@ export function TripDetailPage() {
   });
 
   const feeMutation = useMutation({
-    mutationFn: () => recordTripFee(id!, feeForm.feeType, feeForm.amount, feeForm.note || undefined),
+    mutationFn: () =>
+      recordTripFee(id!, feeForm.feeType, feeForm.amount, feeForm.note || undefined),
     onSuccess: () => {
       message.success('费用已登记');
       setFeeForm({ feeType: 'fuel', amount: 0, note: '' });
@@ -108,7 +122,14 @@ export function TripDetailPage() {
         title={
           <Space size={12} wrap>
             <span>配载工作台</span>
-            {trip && <span className="ltl-code" style={{ fontSize: 16, color: '#5b6573', fontWeight: 400 }}>{trip.tripNo}</span>}
+            {trip && (
+              <span
+                className="ltl-code"
+                style={{ fontSize: 16, color: '#5b6573', fontWeight: 400 }}
+              >
+                {trip.tripNo}
+              </span>
+            )}
             {trip && <StatusTag status={trip.status} category="trip" />}
           </Space>
         }
@@ -117,12 +138,20 @@ export function TripDetailPage() {
         actions={
           <Space wrap>
             {trip?.status === 'Planned' && (
-              <Button type="primary" onClick={() => departMutation.mutate()} loading={departMutation.isPending}>
+              <Button
+                type="primary"
+                onClick={() => departMutation.mutate()}
+                loading={departMutation.isPending}
+              >
                 发车
               </Button>
             )}
             {trip?.status === 'Departed' && (
-              <Button type="primary" onClick={() => arriveMutation.mutate()} loading={arriveMutation.isPending}>
+              <Button
+                type="primary"
+                onClick={() => arriveMutation.mutate()}
+                loading={arriveMutation.isPending}
+              >
                 到达
               </Button>
             )}
@@ -142,7 +171,12 @@ export function TripDetailPage() {
                 onPressEnter={() => loadWaybillNo.trim() && loadMutation.mutate()}
                 style={{ width: 240 }}
               />
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => loadMutation.mutate()} loading={loadMutation.isPending}>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => loadMutation.mutate()}
+                loading={loadMutation.isPending}
+              >
                 装车确认
               </Button>
             </Flex>
@@ -157,7 +191,12 @@ export function TripDetailPage() {
           scroll={{ x: 700 }}
           locale={{ emptyText: <EmptyState simple description="尚未配载运单" /> }}
           columns={[
-            { title: '运单 ID', dataIndex: 'waybillId', ellipsis: true, render: (v: string) => <span className="ltl-code">{v}</span> },
+            {
+              title: '运单 ID',
+              dataIndex: 'waybillId',
+              ellipsis: true,
+              render: (v: string) => <span className="ltl-code">{v}</span>,
+            },
             {
               title: '在车',
               dataIndex: 'active',
@@ -168,7 +207,11 @@ export function TripDetailPage() {
               title: '装车时间',
               dataIndex: 'loadedAt',
               width: 180,
-              render: (v: string) => <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>,
+              render: (v: string) => (
+                <Typography.Text type="secondary">
+                  {new Date(v).toLocaleString('zh-CN')}
+                </Typography.Text>
+              ),
             },
             {
               title: '操作',
@@ -224,7 +267,11 @@ export function TripDetailPage() {
               title: '时间',
               dataIndex: 'occurredAt',
               width: 180,
-              render: (v: string) => <Typography.Text type="secondary">{new Date(v).toLocaleString('zh-CN')}</Typography.Text>,
+              render: (v: string) => (
+                <Typography.Text type="secondary">
+                  {new Date(v).toLocaleString('zh-CN')}
+                </Typography.Text>
+              ),
             },
           ]}
         />

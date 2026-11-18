@@ -125,7 +125,9 @@ export function TransferDetailPage() {
       key: 'diff',
       width: 100,
       render: (_, record) =>
-        record.receivedQuantity === null ? '—' : `${record.receivedQuantity - record.declaredQuantity}`,
+        record.receivedQuantity === null
+          ? '—'
+          : `${record.receivedQuantity - record.declaredQuantity}`,
     },
     {
       title: '验收备注',
@@ -150,7 +152,10 @@ export function TransferDetailPage() {
           <Space size={12} wrap>
             <span>调拨单详情</span>
             {detailQuery.data && (
-              <span className="ltl-code" style={{ fontSize: 16, color: '#5b6573', fontWeight: 400 }}>
+              <span
+                className="ltl-code"
+                style={{ fontSize: 16, color: '#5b6573', fontWeight: 400 }}
+              >
                 {detailQuery.data.transferNo}
               </span>
             )}
@@ -193,7 +198,8 @@ export function TransferDetailPage() {
           locale={{ emptyText: <EmptyState simple description="暂无货物清单" /> }}
         />
         <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>
-          验收一次性写入、不可覆盖（AGENTS §6.3：原始交接记录不可覆盖）；破损计入实收；调拨不产生对外销售收入。
+          验收一次性写入、不可覆盖（AGENTS
+          §6.3：原始交接记录不可覆盖）；破损计入实收；调拨不产生对外销售收入。
         </Typography.Paragraph>
       </Card>
     </div>

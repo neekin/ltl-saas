@@ -83,21 +83,27 @@ body {
   }
 }
 
-/* 打印运单详情：隐藏导航与操作区，内容铺满纸张（WaybillDetailPage 使用 window.print） */
+/* A5 电子面单打印：仅输出 .ltl-label，隐藏其余全部界面元素 */
 @media print {
-  .ant-layout-sider,
-  .ant-layout-header,
-  .ltl-no-print {
-    display: none !important;
+  body * {
+    visibility: hidden !important;
   }
 
-  .ant-layout-content {
-    margin: 0 !important;
-    padding: 0 !important;
+  .ltl-label,
+  .ltl-label * {
+    visibility: visible !important;
   }
 
-  .ant-card {
-    break-inside: avoid;
+  .ltl-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    border: none !important;
     box-shadow: none !important;
+  }
+
+  @page {
+    size: A5 portrait;
+    margin: 0;
   }
 }

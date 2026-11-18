@@ -4,7 +4,13 @@ import { App, Button, Card, Form, Input, Modal, Popconfirm, Space, Table } from 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
-import { createRuleSet, disableRuleSet, enableRuleSet, listRuleSets, type PricingRuleSet } from '../api/pricing';
+import {
+  createRuleSet,
+  disableRuleSet,
+  enableRuleSet,
+  listRuleSets,
+  type PricingRuleSet,
+} from '../api/pricing';
 
 /** 计价规则集列表页（P3 前端）。 */
 export function RuleSetListPage() {
@@ -59,7 +65,13 @@ export function RuleSetListPage() {
           scroll={{ x: 700 }}
           locale={{ emptyText: <EmptyState description="暂无规则集，点击右上角新建" /> }}
           columns={[
-            { title: '编码', dataIndex: 'code', key: 'code', width: 160, render: (v: string) => <span className="ltl-code">{v}</span> },
+            {
+              title: '编码',
+              dataIndex: 'code',
+              key: 'code',
+              width: 160,
+              render: (v: string) => <span className="ltl-code">{v}</span>,
+            },
             { title: '名称', dataIndex: 'name', key: 'name' },
             {
               title: '状态',
@@ -75,12 +87,25 @@ export function RuleSetListPage() {
               fixed: 'right',
               render: (_: unknown, record: PricingRuleSet) => (
                 <Space>
-                  <Button type="link" size="small" onClick={() => navigate(`/pricing/rule-sets/${record.id}/versions`)}>
+                  <Button
+                    type="link"
+                    size="small"
+                    onClick={() => navigate(`/pricing/rule-sets/${record.id}/versions`)}
+                  >
                     版本管理
                   </Button>
                   <Popconfirm
-                    title={record.status === 'Active' ? '停用后该价卡全部版本停止匹配，确认？' : '确认启用？'}
-                    onConfirm={() => toggleMutation.mutate({ ruleSet: record, disable: record.status === 'Active' })}
+                    title={
+                      record.status === 'Active'
+                        ? '停用后该价卡全部版本停止匹配，确认？'
+                        : '确认启用？'
+                    }
+                    onConfirm={() =>
+                      toggleMutation.mutate({
+                        ruleSet: record,
+                        disable: record.status === 'Active',
+                      })
+                    }
                   >
                     <Button type="link" size="small" danger={record.status === 'Active'}>
                       {record.status === 'Active' ? '停用' : '启用'}

@@ -35,7 +35,10 @@ export async function getReceivable(waybillId: string): Promise<Receivable | nul
 }
 
 export async function recordPayment(payload: {
-  waybillId: string; amount: number; method: string; note?: string;
+  waybillId: string;
+  amount: number;
+  method: string;
+  note?: string;
 }): Promise<void> {
   await http.post('/finance/payments', payload);
 }
@@ -45,7 +48,11 @@ export async function listPayments(waybillId: string): Promise<PaymentRecord[]> 
   return response.data;
 }
 
-export async function refundPayment(paymentId: string, amount: number, reason: string): Promise<void> {
+export async function refundPayment(
+  paymentId: string,
+  amount: number,
+  reason: string,
+): Promise<void> {
   await http.post('/finance/refunds', { paymentId, amount, reason });
 }
 
@@ -54,7 +61,11 @@ export async function getCodOrder(waybillId: string): Promise<CodOrder | null> {
   return response.data;
 }
 
-export async function recordCodCollection(waybillId: string, amount: number, note?: string): Promise<void> {
+export async function recordCodCollection(
+  waybillId: string,
+  amount: number,
+  note?: string,
+): Promise<void> {
   await http.post('/finance/cod/collections', { waybillId, amount, note });
 }
 

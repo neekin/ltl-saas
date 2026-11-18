@@ -21,8 +21,7 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       user: null,
-      setSession: (accessToken, refreshToken, user) =>
-        set({ accessToken, refreshToken, user }),
+      setSession: (accessToken, refreshToken, user) => set({ accessToken, refreshToken, user }),
       setAccessToken: (accessToken) => set({ accessToken }),
       clear: () => set({ accessToken: null, refreshToken: null, user: null }),
     }),

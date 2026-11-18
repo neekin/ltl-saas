@@ -1,6 +1,19 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { App, Button, Card, Col, Form, Input, InputNumber, Row, Select, Space, Table, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Select,
+  Space,
+  Table,
+  Typography,
+} from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../shared/components';
@@ -36,7 +49,7 @@ interface PackageRow {
 /** 开单页（P4 前端）：客户/线路/收发货人/货物件 + 实时计价试算（P4 验收）。 */
 export function WaybillCreatePage() {
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const [form] = Form.useForm();
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [trialResult, setTrialResult] = useState<TrialResult | null>(null);
@@ -65,7 +78,8 @@ export function WaybillCreatePage() {
   const ruleSetQuery = useQuery({
     queryKey: ['pricing-rule-sets'],
     queryFn: async () => {
-      const response = await http.get<{ id: string; code: string; status: string }[]>('/pricing/rule-sets');
+      const response =
+        await http.get<{ id: string; code: string; status: string }[]>('/pricing/rule-sets');
       return response.data.filter((s) => s.status === 'Active');
     },
   });
@@ -160,8 +174,32 @@ export function WaybillCreatePage() {
           volumeM3: p.volumeM3,
         })),
       });
-      message.success(`开单成功：${result.waybillNo}`);
-      navigate(`/waybills/${result.waybillId}`);
+      if (result.queryCode) {
+        // P10：把查询码交给内部用户转告客户；客户凭 租户编码+运单号+查询码 匿名查单。
+        modal.confirm({
+          title: `开单成功：${result.waybillNo}`,
+          content: (
+            <div>
+              <Typography.Paragraph>
+                请保存以下客户查询码并转告客户（关闭后仍可在运单详情重新生成）：
+              </Typography.Paragraph>
+              <Typography.Text
+                code
+                copyable
+                style={{ fontSize: 20, fontWeight: 600, letterSpacing: 2 }}
+              >
+                {result.queryCode}
+              </Typography.Text>
+            </div>
+          ),
+          okText: '查看运单详情',
+          cancelText: '关闭',
+          onOk: () => navigate(`/waybills/${result.waybillId}`),
+        });
+      } else {
+        message.success(`开单成功：${result.waybillNo}`);
+        navigate(`/waybills/${result.waybillId}`);
+      }
     } catch (e) {
       message.error(e instanceof Error ? e.message : '开单失败');
     }
@@ -173,43 +211,71 @@ export function WaybillCreatePage() {
 
   return (
     <div>
-      <PageHeader title="新建运单" description="填写业务信息、收发货人与货物件，运费将按价卡规则实时试算并在开单时固化。" />
+      <PageHeader
+        title="新建运单"
+        description="填写业务信息、收发货人与货物件，运费将按价卡规则实时试算并在开单时固化。"
+      />
 
       <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
         <Card title="业务信息" style={{ marginBottom: 16 }}>
           <Row gutter={[16, 0]}>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="originBranchId" label="始发网点" rules={[{ required: true, message: '必选' }]}>
+              <Form.Item
+                name="originBranchId"
+                label="始发网点"
+                rules={[{ required: true, message: '必选' }]}
+              >
                 <Select
                   showSearch
                   optionFilterProp="label"
                   placeholder="选择始发网点"
-                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                  options={branchOptions.map((b) => ({
+                    value: b.id,
+                    label: `${b.code} ${b.name}`,
+                  }))}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="destBranchId" label="目的网点" rules={[{ required: true, message: '必选' }]}>
+              <Form.Item
+                name="destBranchId"
+                label="目的网点"
+                rules={[{ required: true, message: '必选' }]}
+              >
                 <Select
                   showSearch
                   optionFilterProp="label"
                   placeholder="选择目的网点"
-                  options={branchOptions.map((b) => ({ value: b.id, label: `${b.code} ${b.name}` }))}
+                  options={branchOptions.map((b) => ({
+                    value: b.id,
+                    label: `${b.code} ${b.name}`,
+                  }))}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="customerId" label="客户" rules={[{ required: true, message: '必选' }]}>
+              <Form.Item
+                name="customerId"
+                label="客户"
+                rules={[{ required: true, message: '必选' }]}
+              >
                 <Select
                   showSearch
                   optionFilterProp="label"
                   placeholder="选择客户"
-                  options={customerOptions.map((c) => ({ value: c.id, label: `${c.code} ${c.name}` }))}
+                  options={customerOptions.map((c) => ({
+                    value: c.id,
+                    label: `${c.code} ${c.name}`,
+                  }))}
                 />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="ruleSetId" label="价卡" rules={[{ required: true, message: '必选' }]}>
+              <Form.Item
+                name="ruleSetId"
+                label="价卡"
+                rules={[{ required: true, message: '必选' }]}
+              >
                 <Select
                   showSearch
                   optionFilterProp="label"
@@ -219,7 +285,12 @@ export function WaybillCreatePage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="paymentType" label="支付方式" rules={[{ required: true, message: '必选' }]} initialValue="Cash">
+              <Form.Item
+                name="paymentType"
+                label="支付方式"
+                rules={[{ required: true, message: '必选' }]}
+                initialValue="Cash"
+              >
                 <Select
                   options={[
                     { value: 'Cash', label: '现付' },
@@ -235,32 +306,56 @@ export function WaybillCreatePage() {
         <Card title="收发货人" style={{ marginBottom: 16 }}>
           <Row gutter={[16, 0]}>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="senderName" label="发货人" rules={[{ required: true, message: '必填' }]}>
+              <Form.Item
+                name="senderName"
+                label="发货人"
+                rules={[{ required: true, message: '必填' }]}
+              >
                 <Input placeholder="发货人姓名" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="senderPhone" label="发货人电话" rules={[{ required: true, message: '必填' }]}>
+              <Form.Item
+                name="senderPhone"
+                label="发货人电话"
+                rules={[{ required: true, message: '必填' }]}
+              >
                 <Input placeholder="联系电话" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="senderAddress" label="发货地址" rules={[{ required: true, message: '必填' }]}>
+              <Form.Item
+                name="senderAddress"
+                label="发货地址"
+                rules={[{ required: true, message: '必填' }]}
+              >
                 <Input placeholder="详细发货地址" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="receiverName" label="收货人" rules={[{ required: true, message: '必填' }]}>
+              <Form.Item
+                name="receiverName"
+                label="收货人"
+                rules={[{ required: true, message: '必填' }]}
+              >
                 <Input placeholder="收货人姓名" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="receiverPhone" label="收货人电话" rules={[{ required: true, message: '必填' }]}>
+              <Form.Item
+                name="receiverPhone"
+                label="收货人电话"
+                rules={[{ required: true, message: '必填' }]}
+              >
                 <Input placeholder="联系电话" />
               </Form.Item>
             </Col>
             <Col xs={24} md={12} lg={8}>
-              <Form.Item name="receiverAddress" label="收货地址" rules={[{ required: true, message: '必填' }]}>
+              <Form.Item
+                name="receiverAddress"
+                label="收货地址"
+                rules={[{ required: true, message: '必填' }]}
+              >
                 <Input placeholder="详细收货地址" />
               </Form.Item>
             </Col>
@@ -300,7 +395,13 @@ export function WaybillCreatePage() {
             size="small"
             pagination={false}
             dataSource={packages}
-            locale={{ emptyText: <Typography.Text type="secondary">尚未添加货物件，点击右上角「添加货物件」开始录入</Typography.Text> }}
+            locale={{
+              emptyText: (
+                <Typography.Text type="secondary">
+                  尚未添加货物件，点击右上角「添加货物件」开始录入
+                </Typography.Text>
+              ),
+            }}
             columns={[
               {
                 title: '货名',
@@ -310,7 +411,11 @@ export function WaybillCreatePage() {
                     placeholder="货物名称"
                     value={value}
                     onChange={(e) => {
-                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, cargoName: e.target.value } : p)));
+                      setPackages(
+                        packages.map((p) =>
+                          p.key === record.key ? { ...p, cargoName: e.target.value } : p,
+                        ),
+                      );
                     }}
                   />
                 ),
@@ -325,7 +430,11 @@ export function WaybillCreatePage() {
                     precision={0}
                     value={value}
                     onChange={(v) => {
-                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, quantity: v ?? 1 } : p)));
+                      setPackages(
+                        packages.map((p) =>
+                          p.key === record.key ? { ...p, quantity: v ?? 1 } : p,
+                        ),
+                      );
                     }}
                     style={{ width: '100%' }}
                   />
@@ -342,7 +451,11 @@ export function WaybillCreatePage() {
                     precision={3}
                     value={value}
                     onChange={(v) => {
-                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, weightKg: v ?? 0 } : p)));
+                      setPackages(
+                        packages.map((p) =>
+                          p.key === record.key ? { ...p, weightKg: v ?? 0 } : p,
+                        ),
+                      );
                     }}
                     style={{ width: '100%' }}
                   />
@@ -359,7 +472,11 @@ export function WaybillCreatePage() {
                     precision={4}
                     value={value}
                     onChange={(v) => {
-                      setPackages(packages.map((p) => (p.key === record.key ? { ...p, volumeM3: v ?? 0 } : p)));
+                      setPackages(
+                        packages.map((p) =>
+                          p.key === record.key ? { ...p, volumeM3: v ?? 0 } : p,
+                        ),
+                      );
                     }}
                     style={{ width: '100%' }}
                   />
@@ -399,22 +516,33 @@ export function WaybillCreatePage() {
                   dataIndex: 'amount',
                   width: 140,
                   align: 'right',
-                  render: (amount: number) => <span className="ltl-amount">¥ {amount.toFixed(2)}</span>,
+                  render: (amount: number) => (
+                    <span className="ltl-amount">¥ {amount.toFixed(2)}</span>
+                  ),
                 },
                 { title: '计算过程', dataIndex: 'detail' },
               ]}
             />
             <div style={{ marginTop: 12, textAlign: 'right' }}>
               <Typography.Text type="secondary">应收合计 </Typography.Text>
-              <Typography.Text strong className="ltl-amount" style={{ fontSize: 20, color: '#1D4FA0' }}>
+              <Typography.Text
+                strong
+                className="ltl-amount"
+                style={{ fontSize: 20, color: '#1D4FA0' }}
+              >
                 ¥ {trialResult.quote.total.toFixed(2)}
               </Typography.Text>
-              <Typography.Text type="secondary" style={{ marginLeft: 8 }}>（开单后按此金额固化）</Typography.Text>
+              <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
+                （开单后按此金额固化）
+              </Typography.Text>
             </div>
           </Card>
         )}
 
-        <div className="ltl-no-print" style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+        <div
+          className="ltl-no-print"
+          style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}
+        >
           <Button onClick={() => navigate('/waybills')}>取消</Button>
           <Button type="primary" size="large" htmlType="submit" loading={createMutation.isPending}>
             开单并固化费用

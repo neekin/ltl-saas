@@ -117,7 +117,12 @@ export function ArrivalPage() {
             </Col>
           </Row>
         ))}
-        <Button icon={<PlusOutlined />} onClick={() => setItems([...items, { waybillId: '', receivedPieces: 1, brokenPieces: 0, remark: '' }])}>
+        <Button
+          icon={<PlusOutlined />}
+          onClick={() =>
+            setItems([...items, { waybillId: '', receivedPieces: 1, brokenPieces: 0, remark: '' }])
+          }
+        >
           添加运单
         </Button>
       </Card>

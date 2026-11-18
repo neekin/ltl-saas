@@ -6,6 +6,8 @@ export interface AuthUser {
   displayName: string;
   tenantId: string;
   permissions: string[];
+  /** 登录时填写的公开租户编码，仅用于生成客户查询入口，不作为授权依据。 */
+  tenantCode?: string;
 }
 
 export interface LoginResult {
@@ -15,7 +17,11 @@ export interface LoginResult {
   user: AuthUser;
 }
 
-export async function login(tenantCode: string, username: string, password: string): Promise<LoginResult> {
+export async function login(
+  tenantCode: string,
+  username: string,
+  password: string,
+): Promise<LoginResult> {
   const response = await http.post<LoginResult>('/auth/login', {
     tenant_code: tenantCode,
     username,

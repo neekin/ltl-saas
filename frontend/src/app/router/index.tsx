@@ -1,9 +1,18 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { BasicLayout } from '../layouts/BasicLayout';
 import { DashboardPage } from '../../modules/reports/pages/DashboardPage';
+import { DimensionReportPage } from '../../modules/reports/pages/DimensionReportPage';
+import { TenantUsagePage } from '../../modules/reports/pages/TenantUsagePage';
 import { SystemStatusPage } from '../../modules/system/pages/SystemStatusPage';
 import { LoginPage } from '../../modules/auth/pages/LoginPage';
+import { CustomerQueryPage } from '../../modules/waybills/pages/CustomerQueryPage';
 import { RequireAuth } from './RequireAuth';
+import { MobileLayout } from '../mobile/MobileLayout';
+import { MobileHomePage } from '../../modules/mobile/pages/MobileHomePage';
+import { MobileScanPage } from '../../modules/mobile/pages/MobileScanPage';
+import { MobileReceivePage } from '../../modules/mobile/pages/MobileReceivePage';
+import { MobileLoadPage } from '../../modules/mobile/pages/MobileLoadPage';
+import { MobileArrivalPage } from '../../modules/mobile/pages/MobileArrivalPage';
 import { CustomerListPage } from '../../modules/customers/pages/CustomerListPage';
 import { RouteListPage } from '../../modules/routing/pages/RouteListPage';
 import { RouteEditPage } from '../../modules/routing/pages/RouteEditPage';
@@ -13,6 +22,7 @@ import { TrialPage } from '../../modules/pricing/pages/TrialPage';
 import { WaybillListPage } from '../../modules/waybills/pages/WaybillListPage';
 import { WaybillCreatePage } from '../../modules/waybills/pages/WaybillCreatePage';
 import { WaybillDetailPage } from '../../modules/waybills/pages/WaybillDetailPage';
+import { WaybillLabelPage } from '../../modules/waybills/pages/WaybillLabelPage';
 import { VehicleListPage } from '../../modules/transport/pages/VehicleListPage';
 import { DriverListPage } from '../../modules/transport/pages/DriverListPage';
 import { TripListPage } from '../../modules/transport/pages/TripListPage';
@@ -34,6 +44,25 @@ import { SortingTasksPage } from '../../modules/warehouse/pages/SortingTasksPage
 /** 路由表：登录页匿名；业务页面统一经 RequireAuth 守卫（会话由 Zustand 持久化）。 */
 export const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
+  { path: '/track', element: <CustomerQueryPage /> },
+  // P10：独立移动作业应用，与 PC 后台 (/) 路由与布局隔离。
+  {
+    path: '/m',
+    element: <RequireAuth />,
+    children: [
+      {
+        path: '/m',
+        element: <MobileLayout />,
+        children: [
+          { index: true, element: <MobileHomePage /> },
+          { path: 'scan', element: <MobileScanPage /> },
+          { path: 'receive', element: <MobileReceivePage /> },
+          { path: 'load', element: <MobileLoadPage /> },
+          { path: 'arrival', element: <MobileArrivalPage /> },
+        ],
+      },
+    ],
+  },
   {
     path: '/',
     element: <RequireAuth />,
@@ -43,6 +72,8 @@ export const router = createBrowserRouter([
         element: <BasicLayout />,
         children: [
           { index: true, element: <DashboardPage /> },
+          { path: 'reports/dimension', element: <DimensionReportPage /> },
+          { path: 'reports/usage', element: <TenantUsagePage /> },
           { path: 'system/status', element: <SystemStatusPage /> },
 
           // P2：经营基础资料
@@ -60,6 +91,7 @@ export const router = createBrowserRouter([
           { path: 'waybills', element: <WaybillListPage /> },
           { path: 'waybills/create', element: <WaybillCreatePage /> },
           { path: 'waybills/:id', element: <WaybillDetailPage /> },
+          { path: 'waybills/:id/label', element: <WaybillLabelPage /> },
           { path: 'warehouse/sorting', element: <SortingTasksPage /> },
 
           // P5：调拨与运输

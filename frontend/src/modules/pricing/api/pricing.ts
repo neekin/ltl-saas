@@ -98,12 +98,17 @@ export async function createDraftVersion(
   return response.data;
 }
 
-export async function updateDraftVersion(versionId: string, definition: PricingDefinition): Promise<void> {
+export async function updateDraftVersion(
+  versionId: string,
+  definition: PricingDefinition,
+): Promise<void> {
   await http.put(`/pricing/rule-sets/versions/${versionId}`, { definition });
 }
 
 export async function validateVersion(versionId: string): Promise<string[]> {
-  const response = await http.get<{ errors: string[] }>(`/pricing/rule-sets/versions/${versionId}/validate`);
+  const response = await http.get<{ errors: string[] }>(
+    `/pricing/rule-sets/versions/${versionId}/validate`,
+  );
   return response.data.errors;
 }
 

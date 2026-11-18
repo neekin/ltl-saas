@@ -25,6 +25,7 @@ import {
   getWaybill,
   listWaybillEvents,
   recordReceipt,
+  resetQueryCode,
 } from '../api/waybills';
 
 const eventTypeText: Record<string, string> = {
@@ -41,7 +42,7 @@ const eventTypeText: Record<string, string> = {
 export function WaybillDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { message } = App.useApp();
+  const { message, modal } = App.useApp();
   const queryClient = useQueryClient();
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptForm, setReceiptForm] = useState({ pieces: 1, weight: 0, volume: 0, note: '' });
@@ -107,13 +108,37 @@ export function WaybillDetailPage() {
     onError: (e: Error) => message.error(e.message),
   });
 
+  const queryCodeMutation = useMutation({
+    mutationFn: () => resetQueryCode(id!),
+    onSuccess: (code) => {
+      modal.info({
+        title: '客户查询码已重置',
+        content: (
+          <div>
+            <Typography.Paragraph>请将新查询码转告客户，旧码立即失效：</Typography.Paragraph>
+            <Typography.Text
+              code
+              copyable
+              style={{ fontSize: 18, fontWeight: 600, letterSpacing: 2 }}
+            >
+              {code}
+            </Typography.Text>
+          </div>
+        ),
+      });
+    },
+    onError: (e: Error) => message.error(e.message),
+  });
+
   if (detailQuery.isLoading || !detailQuery.data) {
     return <EmptyState simple description="加载中…" />;
   }
 
   const waybill = detailQuery.data;
   const canConfirm = waybill.status === 'Draft';
-  const canCancel = waybill.status === 'Draft' || (waybill.status === 'Confirmed' && waybill.transportStatus === 'NotShipped');
+  const canCancel =
+    waybill.status === 'Draft' ||
+    (waybill.status === 'Confirmed' && waybill.transportStatus === 'NotShipped');
   const canReceive = waybill.status === 'Confirmed' && waybill.cargoStatus === 'PendingReceive';
   const canSort = waybill.status === 'Confirmed' && waybill.cargoStatus === 'Received';
 
@@ -134,7 +159,11 @@ export function WaybillDetailPage() {
         actions={
           <Space wrap>
             {canConfirm && (
-              <Button type="primary" onClick={() => confirmMutation.mutate()} loading={confirmMutation.isPending}>
+              <Button
+                type="primary"
+                onClick={() => confirmMutation.mutate()}
+                loading={confirmMutation.isPending}
+              >
                 确认运单
               </Button>
             )}
@@ -149,11 +178,20 @@ export function WaybillDetailPage() {
               </Button>
             )}
             {canCancel && (
-              <Popconfirm title="确认取消该运单？" onConfirm={() => cancelMutation.mutate('页面取消')}>
+              <Popconfirm
+                title="确认取消该运单？"
+                onConfirm={() => cancelMutation.mutate('页面取消')}
+              >
                 <Button danger>取消运单</Button>
               </Popconfirm>
             )}
-            <Button onClick={() => window.print()}>打印</Button>
+            <Button
+              onClick={() => queryCodeMutation.mutate()}
+              loading={queryCodeMutation.isPending}
+            >
+              重置查询码
+            </Button>
+            <Button onClick={() => navigate(`/waybills/${id}/label`)}>打印面单</Button>
           </Space>
         }
       />
@@ -179,14 +217,18 @@ export function WaybillDetailPage() {
                 {waybill.totalAmount === null ? (
                   <Typography.Text type="secondary">未固化</Typography.Text>
                 ) : (
-                  <span className="ltl-amount ltl-amount--strong">¥ {waybill.totalAmount.toFixed(2)}</span>
+                  <span className="ltl-amount ltl-amount--strong">
+                    ¥ {waybill.totalAmount.toFixed(2)}
+                  </span>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="COD 代收" span={2}>
                 {waybill.codAmount === null ? (
                   <Typography.Text type="secondary">—</Typography.Text>
                 ) : (
-                  <span className="ltl-amount">¥ {waybill.codAmount.toFixed(2)}（独立资金，不计入运费）</span>
+                  <span className="ltl-amount">
+                    ¥ {waybill.codAmount.toFixed(2)}（独立资金，不计入运费）
+                  </span>
                 )}
               </Descriptions.Item>
             </Descriptions>
@@ -248,8 +290,12 @@ export function WaybillDetailPage() {
               color: event.eventType === 'Cancelled' ? 'red' : 'blue',
               children: (
                 <>
-                  <Typography.Text strong>{eventTypeText[event.eventType] ?? event.eventType}</Typography.Text>
-                  {event.detail && <Typography.Text type="secondary"> — {event.detail}</Typography.Text>}
+                  <Typography.Text strong>
+                    {eventTypeText[event.eventType] ?? event.eventType}
+                  </Typography.Text>
+                  {event.detail && (
+                    <Typography.Text type="secondary"> — {event.detail}</Typography.Text>
+                  )}
                   <br />
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {new Date(event.occurredAt).toLocaleString('zh-CN')}

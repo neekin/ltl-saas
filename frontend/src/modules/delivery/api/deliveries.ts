@@ -13,7 +13,10 @@ export interface DeliveryOrder {
 }
 
 export async function createDelivery(payload: {
-  waybillId: string; branchId: string; deliveryType: string; driverId?: string;
+  waybillId: string;
+  branchId: string;
+  deliveryType: string;
+  driverId?: string;
 }): Promise<DeliveryOrder> {
   const response = await http.post<DeliveryOrder>('/deliveries', payload);
   return response.data;
@@ -24,9 +27,14 @@ export async function getDeliveryByWaybill(waybillId: string): Promise<DeliveryO
   return response.data;
 }
 
-export async function completeDelivery(id: string, receiverName: string, photoFileId?: string): Promise<DeliveryOrder> {
+export async function completeDelivery(
+  id: string,
+  receiverName: string,
+  photoFileId?: string,
+): Promise<DeliveryOrder> {
   const response = await http.post<DeliveryOrder>(`/deliveries/${id}/complete`, {
-    receiverName, photoFileId,
+    receiverName,
+    photoFileId,
   });
   return response.data;
 }

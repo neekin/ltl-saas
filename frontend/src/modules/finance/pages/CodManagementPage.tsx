@@ -1,9 +1,27 @@
 import { SearchOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
-import { App, Button, Card, Col, Flex, Input, InputNumber, Popconfirm, Row, Space, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Col,
+  Flex,
+  Input,
+  InputNumber,
+  Popconfirm,
+  Row,
+  Space,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
-import { approveCodSettlement, createCodSettlement, getCodOrder, payCodSettlement, type CodOrder } from '../api/finance';
+import {
+  approveCodSettlement,
+  createCodSettlement,
+  getCodOrder,
+  payCodSettlement,
+  type CodOrder,
+} from '../api/finance';
 
 /** COD 管理页（P8 前端）：COD 收款 + 结算审批 + 付款。 */
 export function CodManagementPage() {
@@ -61,11 +79,17 @@ export function CodManagementPage() {
             onPressEnter={search}
             style={{ width: 360 }}
           />
-          <Button type="primary" onClick={search}>查询</Button>
+          <Button type="primary" onClick={search}>
+            查询
+          </Button>
         </Flex>
       </div>
 
-      {!codOrder && <Card><EmptyState description="输入运单 ID 查询 COD 订单" /></Card>}
+      {!codOrder && (
+        <Card>
+          <EmptyState description="输入运单 ID 查询 COD 订单" />
+        </Card>
+      )}
 
       {codOrder && (
         <>
@@ -73,19 +97,27 @@ export function CodManagementPage() {
             <Row gutter={[16, 16]}>
               <Col xs={12} md={6}>
                 <div style={{ color: '#8c96a5', fontSize: 12 }}>代收金额</div>
-                <div className="ltl-amount ltl-amount--strong" style={{ fontSize: 22 }}>¥ {codOrder.amount.toFixed(2)}</div>
+                <div className="ltl-amount ltl-amount--strong" style={{ fontSize: 22 }}>
+                  ¥ {codOrder.amount.toFixed(2)}
+                </div>
               </Col>
               <Col xs={12} md={6}>
                 <div style={{ color: '#8c96a5', fontSize: 12 }}>已收</div>
-                <div className="ltl-amount" style={{ fontSize: 22 }}>¥ {codOrder.collectedAmount.toFixed(2)}</div>
+                <div className="ltl-amount" style={{ fontSize: 22 }}>
+                  ¥ {codOrder.collectedAmount.toFixed(2)}
+                </div>
               </Col>
               <Col xs={12} md={6}>
                 <div style={{ color: '#8c96a5', fontSize: 12 }}>已结算</div>
-                <div className="ltl-amount" style={{ fontSize: 22 }}>¥ {codOrder.settledAmount.toFixed(2)}</div>
+                <div className="ltl-amount" style={{ fontSize: 22 }}>
+                  ¥ {codOrder.settledAmount.toFixed(2)}
+                </div>
               </Col>
               <Col xs={12} md={6}>
                 <div style={{ color: '#8c96a5', fontSize: 12 }}>已付</div>
-                <div className="ltl-amount" style={{ fontSize: 22 }}>¥ {codOrder.paidAmount.toFixed(2)}</div>
+                <div className="ltl-amount" style={{ fontSize: 22 }}>
+                  ¥ {codOrder.paidAmount.toFixed(2)}
+                </div>
               </Col>
               <Col xs={24}>
                 <StatusTag status={codOrder.status} />
@@ -96,7 +128,9 @@ export function CodManagementPage() {
           {codOrder.collectedAmount > 0 && codOrder.settledAmount < codOrder.collectedAmount && (
             <Card title="创建结算单" style={{ marginBottom: 16 }}>
               <Space wrap>
-                <Typography.Text type="secondary">可结算上限 ¥ {(codOrder.collectedAmount - codOrder.settledAmount).toFixed(2)}</Typography.Text>
+                <Typography.Text type="secondary">
+                  可结算上限 ¥ {(codOrder.collectedAmount - codOrder.settledAmount).toFixed(2)}
+                </Typography.Text>
                 <InputNumber
                   min={0.01}
                   max={codOrder.collectedAmount - codOrder.settledAmount}
@@ -106,7 +140,11 @@ export function CodManagementPage() {
                   addonBefore="结算金额"
                   style={{ width: 190 }}
                 />
-                <Button type="primary" onClick={() => settleMutation.mutate()} loading={settleMutation.isPending}>
+                <Button
+                  type="primary"
+                  onClick={() => settleMutation.mutate()}
+                  loading={settleMutation.isPending}
+                >
                   创建结算
                 </Button>
               </Space>
@@ -119,10 +157,16 @@ export function CodManagementPage() {
                 结算单已创建并计入已结算金额；审批和付款操作由 COD 管理员执行。
               </Typography.Paragraph>
               <Space wrap>
-                <Popconfirm title="确认审批该结算单？" onConfirm={() => approveMutation.mutate(codOrder.id)}>
+                <Popconfirm
+                  title="确认审批该结算单？"
+                  onConfirm={() => approveMutation.mutate(codOrder.id)}
+                >
                   <Button type="primary">审批</Button>
                 </Popconfirm>
-                <Popconfirm title="确认付款给发货人？" onConfirm={() => payMutation.mutate(codOrder.id)}>
+                <Popconfirm
+                  title="确认付款给发货人？"
+                  onConfirm={() => payMutation.mutate(codOrder.id)}
+                >
                   <Button danger loading={payMutation.isPending}>
                     付款 ¥ {codOrder.settledAmount.toFixed(2)}
                   </Button>

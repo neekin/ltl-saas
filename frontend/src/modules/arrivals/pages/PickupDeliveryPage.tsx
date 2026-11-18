@@ -33,7 +33,10 @@ export function PickupDeliveryPage() {
 
   return (
     <div>
-      <PageHeader title="待自提 / 配送任务" description="已到货但尚未交付的运单。创建交付单请前往交付确认页。" />
+      <PageHeader
+        title="待自提 / 配送任务"
+        description="已到货但尚未交付的运单。创建交付单请前往交付确认页。"
+      />
       <Card styles={{ body: { padding: 0 } }}>
         <Table<WaybillItem>
           rowKey="id"
@@ -50,7 +53,12 @@ export function PickupDeliveryPage() {
             showTotal: (total) => `共 ${total} 条`,
           }}
           columns={[
-            { title: '运单号', dataIndex: 'waybillNo', width: 180, render: (v: string) => <span className="ltl-code">{v}</span> },
+            {
+              title: '运单号',
+              dataIndex: 'waybillNo',
+              width: 180,
+              render: (v: string) => <span className="ltl-code">{v}</span>,
+            },
             {
               title: '货物状态',
               dataIndex: 'cargoStatus',
