@@ -36,17 +36,9 @@ export interface DimensionMetric {
 export type ReportDimension = 'branches' | 'routes' | 'customers';
 
 /** 租户用量（P10：仅供展示，无配额强制）。 */
-export interface TenantUsage {
-  waybillCount: number;
-  userCount: number;
-  fileCount: number;
-  storageBytes: number;
-}
 
-export async function getTenantUsage(): Promise<TenantUsage> {
-  const response = await http.get<TenantUsage>('/reports/usage');
-  return response.data;
-}
+
+
 
 /** 按维度查询运营报表，month 为 yyyyMM 可选。 */
 export async function getDimensionReport(
@@ -57,4 +49,33 @@ export async function getDimensionReport(
     params: { month },
   });
   return response.data;
+}
+
+// ===== P11：租户配额（TEN-002） =====
+export interface TenantUsageWithQuota {
+  waybillCount: number;
+  userCount: number;
+  fileCount: number;
+  storageBytes: number;
+  planName: string | null;
+  maxWaybills: number | null;
+  maxUsers: number | null;
+  maxStorageBytes: number | null;
+}
+
+/** 租户用量（含套餐配额；Max 为 null = 不限制）。 */
+export async function getTenantUsage(): Promise<TenantUsageWithQuota> {
+  const response = await http.get<TenantUsageWithQuota>('/reports/usage');
+  return response.data;
+}
+
+/** 设置租户套餐配额（quota.manage）。 */
+export async function setTenantQuota(payload: {
+  tenantId: string;
+  planName?: string | null;
+  maxWaybills?: number | null;
+  maxUsers?: number | null;
+  maxStorageBytes?: number | null;
+}): Promise<void> {
+  await http.put('/tenancy/quota', payload);
 }

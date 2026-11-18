@@ -30,12 +30,16 @@ public sealed record DimensionMetric(
     decimal TotalWeightKg,
     decimal TotalVolumeM3);
 
-/// <summary>租户用量（P10：仅统计展示，不做套餐与配额强制）。</summary>
+/// <summary>租户用量与配额（TEN-002：Max 为 null = 不限制）。</summary>
 public sealed record TenantUsage(
     int WaybillCount,
     int UserCount,
     int FileCount,
-    long StorageBytes);
+    long StorageBytes,
+    string? PlanName,
+    int? MaxWaybills,
+    int? MaxUsers,
+    long? MaxStorageBytes);
 
 public interface IReportingService
 {
@@ -123,12 +127,17 @@ public sealed class ReportingService(
                     (SELECT COUNT(*) FROM waybills WHERE tenant_id = {tenantId}) AS "waybill_count",
                     (SELECT COUNT(*) FROM users WHERE tenant_id = {tenantId}) AS "user_count",
                     (SELECT COUNT(*) FROM file_objects WHERE tenant_id = {tenantId}) AS "file_count",
-                    (SELECT COALESCE(SUM(size_bytes), 0) FROM file_objects WHERE tenant_id = {tenantId}) AS "storage_bytes"
+                    (SELECT COALESCE(SUM(size_bytes), 0) FROM file_objects WHERE tenant_id = {tenantId}) AS "storage_bytes",
+                    (SELECT plan_name FROM tenants WHERE id = {tenantId}) AS "plan_name",
+                    (SELECT max_waybills FROM tenants WHERE id = {tenantId}) AS "max_waybills",
+                    (SELECT max_users FROM tenants WHERE id = {tenantId}) AS "max_users",
+                    (SELECT max_storage_bytes FROM tenants WHERE id = {tenantId}) AS "max_storage_bytes"
                 """)
             .ToListAsync())
-            .SingleOrDefault() ?? new UsageRawRow(0, 0, 0, 0);
+            .SingleOrDefault() ?? new UsageRawRow(0, 0, 0, 0, null, null, null, null);
 
-        return new TenantUsage((int)row.WaybillCount, (int)row.UserCount, (int)row.FileCount, row.StorageBytes);
+        return new TenantUsage((int)row.WaybillCount, (int)row.UserCount, (int)row.FileCount, row.StorageBytes,
+            row.PlanName, row.MaxWaybills, row.MaxUsers, row.MaxStorageBytes);
     }
 
     public async Task<IReadOnlyList<DimensionMetric>> GetBranchReportAsync(Guid operatorUserId, string? month)
@@ -241,7 +250,8 @@ public sealed class ReportingService(
     }
 
     private sealed record UsageRawRow(
-        long WaybillCount, long UserCount, long FileCount, long StorageBytes);
+        long WaybillCount, long UserCount, long FileCount, long StorageBytes,
+        string? PlanName, int? MaxWaybills, int? MaxUsers, long? MaxStorageBytes);
 
     private sealed record DashboardRawRow(
         long TotalWaybills,

@@ -1,8 +1,10 @@
 import {
   AppOutline,
   GlobalOutline,
+  LocationOutline,
   ReceiptOutline,
   ScanCodeOutline,
+  SetOutline,
   TruckOutline,
   UnorderedListOutline,
   UserCircleOutline,
@@ -18,6 +20,8 @@ const tabs = [
   { key: '/m/receive', title: '收货', icon: <ReceiptOutline /> },
   { key: '/m/load', title: '装车', icon: <TruckOutline /> },
   { key: '/m/arrival', title: '到货', icon: <UnorderedListOutline /> },
+  { key: '/m/dispatch', title: '派单', icon: <SetOutline /> },
+  { key: '/m/gps', title: '位置', icon: <LocationOutline /> },
 ];
 
 /** 移动作业应用布局（P10）：独立 /m 路由组，固定标题栏与底部 TabBar。 */

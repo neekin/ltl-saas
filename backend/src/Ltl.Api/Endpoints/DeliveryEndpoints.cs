@@ -20,6 +20,12 @@ public static class DeliveryEndpoints
             var result = await service.GetByWaybillAsync(RequireUserId(user), waybillId);
             return result is null ? Results.NotFound() : Results.Ok(result);
         });
+        deliveries.MapPost("/{id:guid}/assign", async (
+            Guid id, AssignDeliveryRequest request, ClaimsPrincipal user, IDeliveryService service) =>
+            Results.Ok(await service.AssignAsync(RequireUserId(user), id, request)));
+        deliveries.MapGet("/mine", async (
+            ClaimsPrincipal user, IDeliveryService service) =>
+            Results.Ok(await service.ListMineAsync(RequireUserId(user))));
         deliveries.MapPost("/{id:guid}/complete", async (
             Guid id, CompleteDeliveryRequest request, ClaimsPrincipal user, IDeliveryService service) =>
             Results.Ok(await service.CompleteAsync(RequireUserId(user), id, request)));

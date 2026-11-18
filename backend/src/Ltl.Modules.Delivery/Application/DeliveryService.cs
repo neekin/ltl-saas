@@ -9,10 +9,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Ltl.Modules.Delivery.Application;
 
+public sealed record AssignDeliveryRequest(Guid AssigneeUserId);
+
 public sealed record DeliveryOrderDto(
     Guid Id, Guid WaybillId, Guid BranchId, string DeliveryType, string Status,
     Guid? DriverId, string? ReceiverName, Guid? OperatorUserId,
-    DateTime? CompletedAt, DateTime CreatedAt);
+    DateTime? CompletedAt, DateTime CreatedAt,
+    Guid? AssigneeUserId, DateTime? AssignedAt);
 
 public sealed record CreateDeliveryRequest(
     Guid WaybillId, Guid BranchId, string DeliveryType, Guid? DriverId);
@@ -25,6 +28,12 @@ public interface IDeliveryService
     Task<DeliveryOrderDto> CompleteAsync(Guid operatorUserId, Guid deliveryOrderId, CompleteDeliveryRequest request);
     Task<DeliveryOrderDto> RejectAsync(Guid operatorUserId, Guid deliveryOrderId);
     Task<DeliveryOrderDto?> GetByWaybillAsync(Guid operatorUserId, Guid waybillId);
+
+    /// <summary>派单（DELIVERY-002）：分配员工执行配送；可重复派单覆盖。</summary>
+    Task<DeliveryOrderDto> AssignAsync(Guid operatorUserId, Guid deliveryOrderId, AssignDeliveryRequest request);
+
+    /// <summary>我的配送任务（DELIVERY-002：移动端按当前用户查询待办）。</summary>
+    Task<IReadOnlyList<DeliveryOrderDto>> ListMineAsync(Guid operatorUserId);
 }
 
 /// <summary>
@@ -157,6 +166,43 @@ public sealed class DeliveryService(
         return ToDto(order);
     }
 
+    /// <inheritdoc cref="IDeliveryService.AssignAsync"/>
+    public async Task<DeliveryOrderDto> AssignAsync(
+        Guid operatorUserId, Guid deliveryOrderId, AssignDeliveryRequest request)
+    {
+        if (!await authorization.HasPermissionAsync(operatorUserId, DeliveryPermissionCodes.DeliveryManage))
+        {
+            throw new PermissionDeniedException(DeliveryPermissionCodes.DeliveryManage);
+        }
+
+        var order = await db.Orders
+            .SingleOrDefaultAsync(o => o.Id == deliveryOrderId)
+            ?? throw new EntityNotFoundException("交付单", deliveryOrderId);
+
+        order.Assign(request.AssigneeUserId, DateTime.UtcNow, operatorUserId);
+        await db.SaveChangesAsync();
+        await audit.RecordAsync(
+            "delivery.assign", "delivery_order", order.Id, operatorUserId,
+            new { assigneeUserId = request.AssigneeUserId });
+        return ToDto(order);
+    }
+
+    /// <inheritdoc cref="IDeliveryService.ListMineAsync"/>
+    public async Task<IReadOnlyList<DeliveryOrderDto>> ListMineAsync(Guid operatorUserId)
+    {
+        if (!await authorization.HasPermissionAsync(operatorUserId, DeliveryPermissionCodes.DeliveryRead))
+        {
+            throw new PermissionDeniedException(DeliveryPermissionCodes.DeliveryRead);
+        }
+
+        var orders = await db.Orders
+            .AsNoTracking()
+            .Where(o => o.AssigneeUserId == operatorUserId && o.Status == DeliveryOrderStatus.Pending)
+            .OrderBy(o => o.CreatedAt)
+            .ToListAsync();
+        return orders.Select(ToDto).ToList();
+    }
+
     public async Task<DeliveryOrderDto?> GetByWaybillAsync(Guid operatorUserId, Guid waybillId)
     {
         if (db.CurrentTenantId is null)
@@ -173,5 +219,6 @@ public sealed class DeliveryService(
     private static DeliveryOrderDto ToDto(DeliveryOrder order) => new(
         order.Id, order.WaybillId, order.BranchId, order.DeliveryType.ToString(),
         order.Status.ToString(), order.DriverId, order.ReceiverName,
-        order.OperatorUserId, order.CompletedAt, order.CreatedAt);
+        order.OperatorUserId, order.CompletedAt, order.CreatedAt,
+        order.AssigneeUserId, order.AssignedAt);
 }

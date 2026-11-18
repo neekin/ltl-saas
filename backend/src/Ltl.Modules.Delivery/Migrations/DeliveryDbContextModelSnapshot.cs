@@ -75,6 +75,18 @@ namespace Ltl.Modules.Delivery.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTime?>("AssignedAt")
+                        .HasColumnType("timestamptz")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<Guid?>("AssignedBy")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_by");
+
+                    b.Property<Guid?>("AssigneeUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignee_user_id");
+
                     b.Property<Guid>("BranchId")
                         .HasColumnType("uuid")
                         .HasColumnName("branch_id");
@@ -149,6 +161,9 @@ namespace Ltl.Modules.Delivery.Migrations
                         .IsUnique()
                         .HasDatabaseName("ux_delivery_orders_active_waybill")
                         .HasFilter("status = 1");
+
+                    b.HasIndex("TenantId", "AssigneeUserId", "Status")
+                        .HasDatabaseName("ix_delivery_orders_assignee");
 
                     b.ToTable("delivery_orders", null, t =>
                         {

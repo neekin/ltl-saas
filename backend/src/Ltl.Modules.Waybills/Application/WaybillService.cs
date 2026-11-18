@@ -61,6 +61,9 @@ public sealed class WaybillService(
         };
         var trial = await pricingTrialService.TrialCalculateAsync(command.RuleSetId, input);
 
+        // 套餐配额前置校验（TEN-002）：原生 SQL 读租户配额（同一物理库，AGENTS §5.1 模式）
+        await EnsureWaybillQuotaAsync(tenantId);
+
         // 信用额度检查（月结客户；ROADMAP P7 逾期和信用额度检查）
         if (command.PaymentType == Ltl.Modules.Waybills.Domain.WaybillPaymentType.Monthly)
         {
@@ -200,6 +203,26 @@ public sealed class WaybillService(
     private sealed record BranchInfoRow(string Code, short Status);
 
     private sealed record StatusRow(short Status);
+
+    private sealed record TenantQuotaRow(int? MaxWaybills);
+
+    /// <summary>运单配额前置校验（TEN-002）：max_waybills 非空且已达上限 → 409。</summary>
+    private async Task EnsureWaybillQuotaAsync(Guid tenantId)
+    {
+        var rows = await db.Database
+            .SqlQuery<TenantQuotaRow>(
+                $"SELECT max_waybills AS \"MaxWaybills\" FROM tenants WHERE id = {tenantId}")
+            .ToListAsync();
+        var max = rows.SingleOrDefault()?.MaxWaybills;
+        if (max is { } limit)
+        {
+            var current = await db.Waybills.IgnoreQueryFilters().CountAsync(w => w.TenantId == tenantId);
+            if (current >= limit)
+            {
+                throw new ConflictException($"套餐运单配额已用满（{current}/{limit}），请升级套餐后重试。");
+            }
+        }
+    }
 
     private sealed record CreditLimitRow(decimal? CreditLimit);
 

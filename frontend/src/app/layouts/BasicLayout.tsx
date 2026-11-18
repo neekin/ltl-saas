@@ -125,7 +125,10 @@ const menuSections: MenuSection[] = [
     key: 'system',
     label: '系统',
     icon: <ToolOutlined />,
-    items: [{ key: '/system/status', label: '系统状态', permission: '' }],
+    items: [
+      { key: '/system/status', label: '系统状态', permission: '' },
+      { key: '/system/notifications', label: '通知记录', permission: 'notification.read' },
+    ],
   },
 ];
 

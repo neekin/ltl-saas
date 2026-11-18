@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Waybills.Application;
+using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.Modules.Waybills.Domain;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -16,6 +17,16 @@ public static class WaybillEndpoints
         app.MapGet("/api/waybills/{id:guid}/print", async (
             Guid id, ClaimsPrincipal user, IWaybillPrintService service) =>
             Results.Ok(await service.GetPrintViewAsync(RequireUserId(user), id)));
+
+        // PRINT-001：ESC/POS 热敏指令导出（.prn 下载，打印代理/热敏打印机对接）
+        app.MapGet("/api/waybills/{id:guid}/print/escpos", async (
+            Guid id, ClaimsPrincipal user, IWaybillPrintService service) =>
+        {
+            var view = await service.GetPrintViewAsync(RequireUserId(user), id);
+            var bytes = EscPosLabelBuilder.Build(view);
+            return Results.File(bytes, "application/octet-stream",
+                $"waybill-{view.WaybillNo}.prn");
+        });
 
         // WB-002：开单（补暴露服务层能力）。幂等：Idempotency-Key header（AGENTS §8）
         app.MapPost("/api/waybills", async (

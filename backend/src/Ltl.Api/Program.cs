@@ -12,7 +12,7 @@ using Ltl.Modules.Pricing.Application;
 using Ltl.Modules.Pricing.Infrastructure;
 using Ltl.Api.Endpoints;
 using Ltl.Modules.Platform.Application;
-using Ltl.Modules.Platform.Application;
+using Ltl.Modules.Tenancy.Application;
 using Ltl.Modules.Platform.Infrastructure;
 using Ltl.Modules.Routing.Application;
 using Ltl.Modules.Routing.Infrastructure;
@@ -127,6 +127,20 @@ builder.Services.AddDbContext<PlatformDbContext>(options =>
         .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IBranchSequenceService, BranchSequenceService>();
 builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+// NOTIFY-001：通知记录服务 + log 通道发送器（短信/微信服务商接入时按配置替换 Sender）+ 授权适配（依赖倒置）
+builder.Services.AddScoped<INotificationSender, LogNotificationSender>();
+builder.Services.AddScoped<INotificationAuthorizer>((sp) =>
+{
+    var authorization = sp.GetRequiredService<IAuthorizationService>();
+    return new NotificationAuthorizerAdapter(authorization);
+});
+builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<ITenantQuotaService, TenantQuotaService>();
+builder.Services.AddScoped<IQuotaAuthorizer>((sp) =>
+{
+    var authorization = sp.GetRequiredService<IAuthorizationService>();
+    return new QuotaAuthorizerAdapter(authorization);
+});
 // 文件存储（FILE-001）：抽象接口 + 本地开发实现；生产 S3 适配器随 P9 接入
 builder.Services.Configure<FileStorageOptions>(builder.Configuration.GetSection(FileStorageOptions.SectionName));
 builder.Services.AddSingleton<IFileStorage, LocalFileStorage>();
@@ -275,6 +289,9 @@ app.MapPricingEndpoints();
 app.MapPricingTrialEndpoint();
 app.MapWarehouseEndpoints();
 app.MapWaybillEndpoints();
+app.MapNotificationEndpoints();
+app.MapTenancyEndpoints();
+app.MapGpsEndpoints();
 app.MapTransportEndpoints();
 app.MapArrivalEndpoints();
 app.MapDeliveryEndpoints();
@@ -286,6 +303,21 @@ app.MapReportingEndpoints();
 // 现受 FallbackPolicy 保护：未认证 → 401（认证后返回 claim 解析的租户）
 app.MapGet("/api/tenancy/current", (ITenantContext tenantContext) =>
     Results.Ok(new { tenantId = tenantContext.RequireTenant() }));
+
+// 权限点增量同步（幂等）：迁移 seed 之后的权限点追加来源（AGENTS：权限单一数据源 PermissionCodes.All）
+using (var scope = app.Services.CreateScope())
+{
+    var orgDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Organization.Infrastructure.OrganizationDbContext>();
+    var existingCodes = await orgDb.Permissions.Select(p => p.Code).ToListAsync();
+    var missing = Ltl.Modules.Organization.Domain.PermissionCodes.All
+        .Where(p => !existingCodes.Contains(p.Code)).ToList();
+    if (missing.Count > 0)
+    {
+        orgDb.Permissions.AddRange(missing);
+        await orgDb.SaveChangesAsync();
+        Console.WriteLine($"[Permissions] 同步新增权限点：{string.Join("、", missing.Select(p => p.Code))}");
+    }
+}
 
 if (app.Environment.IsDevelopment())
 {
@@ -525,6 +557,22 @@ static void SeedDevelopmentData(IServiceProvider services)
 
 // 供 WebApplicationFactory 集成测试作为入口类型
 public partial class Program;
+
+/// <summary>配额授权适配：Organization 授权实现 → Tenancy 回调接口（依赖倒置）。</summary>
+public sealed class QuotaAuthorizerAdapter(IAuthorizationService authorization)
+    : IQuotaAuthorizer
+{
+    public Task<bool> HasPermissionAsync(Guid operatorUserId, string permissionCode) =>
+        authorization.HasPermissionAsync(operatorUserId, permissionCode);
+}
+
+/// <summary>通知授权适配：Organization 授权实现 → Platform 回调接口（依赖倒置）。</summary>
+public sealed class NotificationAuthorizerAdapter(IAuthorizationService authorization)
+    : INotificationAuthorizer
+{
+    public Task<bool> HasPermissionAsync(Guid operatorUserId, string permissionCode) =>
+        authorization.HasPermissionAsync(operatorUserId, permissionCode);
+}
 
 /// <summary>
 /// 认证请求契约采用 OAuth 惯例 snake_case（显式 JsonPropertyName，避免 camelCase 匹配歧义）。

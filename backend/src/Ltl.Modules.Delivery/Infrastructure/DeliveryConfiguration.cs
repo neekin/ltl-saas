@@ -28,6 +28,10 @@ public sealed class DeliveryOrderConfiguration : IEntityTypeConfiguration<Delive
             .HasDatabaseName("ux_delivery_orders_active_waybill");
         builder.HasIndex(x => new { x.TenantId, x.Id }).IsUnique().HasDatabaseName("ux_delivery_orders_tenant_id");
         builder.Property<uint>("xmin").IsRowVersion();
+        builder.Property(x => x.AssigneeUserId);
+        builder.Property(x => x.AssignedAt).HasColumnType("timestamptz");
+        builder.HasIndex(x => new { x.TenantId, x.AssigneeUserId, x.Status }).HasDatabaseName("ix_delivery_orders_assignee");
+
     }
 }
 

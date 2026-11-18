@@ -16,6 +16,20 @@ public sealed class Tenant
 
     public TenantStatus Status { get; private set; }
 
+    // ===== 套餐与配额（TEN-002）：null = 不限制（无配额约束） =====
+
+    /// <summary>套餐名称（展示口径，如 Free/Pro/Enterprise）。</summary>
+    public string? PlanName { get; private set; }
+
+    /// <summary>运单数量上限。</summary>
+    public int? MaxWaybills { get; private set; }
+
+    /// <summary>用户数量上限。</summary>
+    public int? MaxUsers { get; private set; }
+
+    /// <summary>文件存储字节上限。</summary>
+    public long? MaxStorageBytes { get; private set; }
+
     public DateTime CreatedAt { get; private set; }
 
     public Guid? CreatedBy { get; private set; }
@@ -54,6 +68,36 @@ public sealed class Tenant
         }
 
         Status = TenantStatus.Disabled;
+        Touch(nowUtc, updatedBy);
+    }
+
+    /// <summary>
+    /// 设置套餐与配额（TEN-002）。负数拒绝；全部 null 表示不限制。
+    /// </summary>
+    /// <exception cref="ArgumentException">套餐名超长或配额为负时抛出。</exception>
+    public void SetQuota(string? planName, int? maxWaybills, int? maxUsers, long? maxStorageBytes, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        if (planName is { Length: > 64 })
+        {
+            throw new ArgumentException("套餐名称长度 ≤64。", nameof(planName));
+        }
+        if (maxWaybills is < 0)
+        {
+            throw new ArgumentException("运单配额不能为负数。", nameof(maxWaybills));
+        }
+        if (maxUsers is < 0)
+        {
+            throw new ArgumentException("用户配额不能为负数。", nameof(maxUsers));
+        }
+        if (maxStorageBytes is < 0)
+        {
+            throw new ArgumentException("存储配额不能为负数。", nameof(maxStorageBytes));
+        }
+
+        PlanName = string.IsNullOrWhiteSpace(planName) ? null : planName.Trim();
+        MaxWaybills = maxWaybills;
+        MaxUsers = maxUsers;
+        MaxStorageBytes = maxStorageBytes;
         Touch(nowUtc, updatedBy);
     }
 

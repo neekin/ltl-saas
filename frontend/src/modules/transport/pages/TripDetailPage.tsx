@@ -22,6 +22,7 @@ import {
   arriveTrip,
   departTrip,
   getTrip,
+  listGps,
   listTripFees,
   loadWaybill,
   recordTripFee,
@@ -46,6 +47,10 @@ export function TripDetailPage() {
 
   const tripQuery = useQuery({ queryKey: ['trip', id], queryFn: () => getTrip(id!) });
   const feesQuery = useQuery({ queryKey: ['trip-fees', id], queryFn: () => listTripFees(id!) });
+  const gpsQuery = useQuery({
+    queryKey: ['trip-gps', id],
+    queryFn: () => listGps(id!),
+  });
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['trip', id] });
@@ -229,6 +234,58 @@ export function TripDetailPage() {
           ]}
         />
       </Card>
+
+      {trip?.status !== 'Planned' && (
+        <Card
+          title="GPS 轨迹（GPS-001）"
+          style={{ marginTop: 16 }}
+          extra={
+            <Typography.Text type="secondary">
+              {gpsQuery.data?.length ?? 0} 个轨迹点；移动端「位置」页上报
+            </Typography.Text>
+          }
+        >
+          <Table
+            rowKey="id"
+            size="small"
+            loading={gpsQuery.isLoading}
+            dataSource={gpsQuery.data}
+            pagination={false}
+            scroll={{ x: 600 }}
+            locale={{ emptyText: <EmptyState simple description="暂无轨迹点" /> }}
+            columns={[
+              {
+                title: '时间',
+                dataIndex: 'recordedAt',
+                width: 180,
+                render: (v: string) => (
+                  <Typography.Text type="secondary">
+                    {new Date(v).toLocaleString('zh-CN')}
+                  </Typography.Text>
+                ),
+              },
+              {
+                title: '纬度',
+                dataIndex: 'latitude',
+                width: 130,
+                render: (v: number) => <span className="ltl-code">{v.toFixed(6)}</span>,
+              },
+              {
+                title: '经度',
+                dataIndex: 'longitude',
+                width: 130,
+                render: (v: number) => <span className="ltl-code">{v.toFixed(6)}</span>,
+              },
+              {
+                title: '精度 (m)',
+                dataIndex: 'accuracyMeters',
+                width: 110,
+                render: (v: number | null) => v?.toFixed(1) ?? '—',
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       <Card
         title={

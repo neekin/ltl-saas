@@ -73,6 +73,9 @@ public sealed class UserAdminService(
 
     public async Task<UserDto> CreateAsync(Guid operatorUserId, CreateUserRequest request)
     {
+        // 套餐配额前置校验（TEN-002）：原生 SQL 读租户配额（同一物理库，AGENTS §5.1 模式）
+        await EnsureUserQuotaAsync();
+
         await RequirePermissionAsync(operatorUserId, PermissionCodes.UserManage, "organization.user.create");
         var tenantId = RequireTenantId();
 
@@ -310,4 +313,25 @@ public sealed class UserAdminService(
 
     private static UserDto Map(User user) => new(
         user.Id, user.Username, user.DisplayName, user.Status.ToString(), user.TenantWideScope);
+
+    /// <summary>用户配额前置校验（TEN-002）。</summary>
+    private async Task EnsureUserQuotaAsync()
+    {
+        var tenantId = db.CurrentTenantId
+            ?? throw new TenantContextMissingException();
+        var rows = await db.Database
+            .SqlQuery<TenantQuotaRow>(
+                $"SELECT max_users AS \"MaxUsers\" FROM tenants WHERE id = {tenantId}")
+            .ToListAsync();
+        var max = rows.SingleOrDefault()?.MaxUsers;
+        if (max is { } limit)
+        {
+            var current = await db.Users.IgnoreQueryFilters().CountAsync(u => u.TenantId == tenantId);
+            if (current >= limit)
+            {
+                throw new ConflictException($"套餐用户配额已用满（{current}/{limit}），请升级套餐后重试。");
+            }
+        }
+    }
+    private sealed record TenantQuotaRow(int? MaxUsers);
 }

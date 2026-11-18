@@ -28,6 +28,8 @@ public sealed class PlatformDbContext(
     /// <summary>文件对象元数据（FILE-001；内容在对象存储）。</summary>
     public DbSet<FileObject> FileObjects => Set<FileObject>();
 
+    public DbSet<NotificationRecord> NotificationRecords => Set<NotificationRecord>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(PlatformDbContext).Assembly);

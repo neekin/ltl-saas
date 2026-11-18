@@ -87,3 +87,28 @@ export async function listTripFees(tripId: string): Promise<TripFee[]> {
   const response = await http.get<TripFee[]>(`/transport/trips/${tripId}/fees`);
   return response.data;
 }
+
+// ===== P11：GPS 轨迹（GPS-001） =====
+export interface GpsPoint {
+  id: string;
+  tripId: string;
+  latitude: number;
+  longitude: number;
+  accuracyMeters: number | null;
+  recordedAt: string;
+}
+
+/** 上报批次位置（仅 Departed 批次）。 */
+export async function reportGps(
+  tripId: string,
+  payload: { latitude: number; longitude: number; accuracyMeters?: number | null },
+): Promise<GpsPoint> {
+  const response = await http.post<GpsPoint>(`/transport/trips/${tripId}/gps`, payload);
+  return response.data;
+}
+
+/** 批次轨迹点（时间正序）。 */
+export async function listGps(tripId: string): Promise<GpsPoint[]> {
+  const response = await http.get<GpsPoint[]>(`/transport/trips/${tripId}/gps`);
+  return response.data;
+}

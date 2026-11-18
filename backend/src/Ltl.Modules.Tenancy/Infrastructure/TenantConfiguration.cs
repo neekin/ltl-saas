@@ -40,5 +40,10 @@ public sealed class TenantConfiguration : IEntityTypeConfiguration<Tenant>
 
         // PostgreSQL xmin 系统列作为乐观并发令牌（AGENTS.md §8：并发更新用乐观并发控制）
         builder.Property<uint>("xmin").IsRowVersion();
+        builder.Property(x => x.PlanName).HasMaxLength(64);
+        builder.Property(x => x.MaxWaybills);
+        builder.Property(x => x.MaxUsers);
+        builder.Property(x => x.MaxStorageBytes);
+
     }
 }

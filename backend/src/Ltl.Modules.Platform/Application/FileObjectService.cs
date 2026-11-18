@@ -52,6 +52,23 @@ public sealed class FileObjectService(
                 $"文件大小超过上限（{options.Value.MaxUploadBytes / 1024 / 1024}MB）。", nameof(content));
         }
 
+        // 套餐存储配额前置校验（TEN-002）：原生 SQL 读租户配额（同一物理库，AGENTS §5.1 模式）
+        var rows = await db.Database
+            .SqlQuery<TenantStorageQuotaRow>(
+                $"SELECT max_storage_bytes AS \"MaxStorageBytes\" FROM tenants WHERE id = {tenantId}")
+            .ToListAsync();
+        if (rows.SingleOrDefault()?.MaxStorageBytes is { } maxStorage)
+        {
+            var currentBytes = await db.FileObjects.IgnoreQueryFilters()
+                .Where(f => f.TenantId == tenantId)
+                .SumAsync(f => (long?)f.SizeBytes) ?? 0;
+            if (currentBytes + sizeBytes > maxStorage)
+            {
+                throw new ConflictException(
+                    $"套餐存储配额不足（现有 {currentBytes} 字节 + 新增 {sizeBytes} 字节 > 上限 {maxStorage} 字节），请升级套餐或清理文件。");
+            }
+        }
+
         var extension = ExtractSafeExtension(fileName);
         var now = DateTime.UtcNow;
         var storageKey = $"{tenantId:N}/{now:yyyyMM}/{Guid.NewGuid():N}{extension}";
@@ -96,6 +113,8 @@ public sealed class FileObjectService(
             ? string.Empty
             : extension.ToLowerInvariant();
     }
+
+    private sealed record TenantStorageQuotaRow(long? MaxStorageBytes);
 
     private static FileObjectDto Map(FileObject fileObject) => new(
         fileObject.Id, fileObject.FileName, fileObject.ContentType,

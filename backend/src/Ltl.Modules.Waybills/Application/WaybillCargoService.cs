@@ -1,3 +1,4 @@
+using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Waybills.Domain;
 using Ltl.Modules.Waybills.Infrastructure;
 using Ltl.SharedKernel.Application;
@@ -50,12 +51,16 @@ public interface IWaybillCargoService
     Task MarkRejectedAsync(Guid waybillId, Guid? operatorUserId, string detail);
 }
 
-public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoService
+public sealed class WaybillCargoService(
+    WaybillsDbContext db,
+    INotificationService notificationService) : IWaybillCargoService
 {
     public async Task<WaybillCargoSnapshot> MarkCargoReceivedAsync(
         Guid waybillId, Guid? operatorUserId, string detail)
     {
         var waybill = await RequireWaybillAsync(waybillId);
+        await EnqueueWaybillNotificationAsync(waybill, "waybill.received",
+            $"您的运单 {waybill.WaybillNo} 已完成到货收货登记。");
         waybill.MarkCargoReceived(DateTime.UtcNow, operatorUserId);
         AppendEvent(waybill, WaybillEventType.Received, operatorUserId, detail);
         await db.SaveChangesAsync();
@@ -85,6 +90,8 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
         }
         AppendEvent(waybill, WaybillEventType.Departed, operatorUserId, detail);
         await db.SaveChangesAsync();
+        await EnqueueWaybillNotificationAsync(waybill, "waybill.departed",
+            $"您的运单 {waybill.WaybillNo} 已发车运输。");
     }
 
     public async Task MarkTransportArrivedAsync(Guid waybillId, Guid? operatorUserId, string detail)
@@ -100,6 +107,8 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
         waybill.MarkArrivedAtDestination(DateTime.UtcNow, operatorUserId);
         AppendEvent(waybill, WaybillEventType.Arrived, operatorUserId, detail);
         await db.SaveChangesAsync();
+        await EnqueueWaybillNotificationAsync(waybill, "waybill.arrived",
+            $"您的运单 {waybill.WaybillNo} 已到达目的网点，可提货或等待配送。");
         return Snapshot(waybill);
     }
 
@@ -109,6 +118,8 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
         waybill.MarkDelivered(DateTime.UtcNow, operatorUserId);
         AppendEvent(waybill, WaybillEventType.Delivered, operatorUserId, detail);
         await db.SaveChangesAsync();
+        await EnqueueWaybillNotificationAsync(waybill, "waybill.delivered",
+            $"您的运单 {waybill.WaybillNo} 已签收。");
     }
 
     public async Task MarkRejectedAsync(Guid waybillId, Guid? operatorUserId, string detail)
@@ -117,6 +128,21 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
         waybill.MarkRejected(DateTime.UtcNow, operatorUserId);
         AppendEvent(waybill, WaybillEventType.RejectedDelivery, operatorUserId, detail);
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>运单关键事件通知（NOTIFY-001）：接收人为收货人手机号；通知失败不影响主流程。</summary>
+    private async Task EnqueueWaybillNotificationAsync(
+        Waybill waybill, string eventType, string content)
+    {
+        try
+        {
+            await notificationService.EnqueueAsync(new NotificationEnvelope(
+                eventType, waybill.Id, waybill.ReceiverPhone, content));
+        }
+        catch (Exception)
+        {
+            // 通知为旁路能力：不阻断运单主流程（失败记录已落库可查）
+        }
     }
 
     private async Task<Waybill> RequireWaybillAsync(Guid waybillId)

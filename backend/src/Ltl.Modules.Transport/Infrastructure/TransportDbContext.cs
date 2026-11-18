@@ -30,6 +30,8 @@ public sealed class TransportDbContext(
 
     public DbSet<TransportTripEvent> TripEvents => Set<TransportTripEvent>();
 
+    public DbSet<TripGpsPoint> TripGpsPoints => Set<TripGpsPoint>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(TransportDbContext).Assembly);

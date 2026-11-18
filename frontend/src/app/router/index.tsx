@@ -44,6 +44,9 @@ import { PickupDeliveryPage } from '../../modules/arrivals/pages/PickupDeliveryP
 import { StatementPage } from '../../modules/finance/pages/StatementPage';
 import { PaymentAllocationPage } from '../../modules/finance/pages/PaymentAllocationPage';
 import { SortingTasksPage } from '../../modules/warehouse/pages/SortingTasksPage';
+import { NotificationListPage } from '../../modules/system/pages/NotificationListPage';
+import { MobileGpsPage } from '../../modules/mobile/pages/MobileGpsPage';
+import { MobileDispatchPage } from '../../modules/mobile/pages/MobileDispatchPage';
 
 /** 路由表：登录页匿名；业务页面统一经 RequireAuth 守卫（会话由 Zustand 持久化）。 */
 export const router = createBrowserRouter([
@@ -63,6 +66,8 @@ export const router = createBrowserRouter([
           { path: 'receive', element: <MobileReceivePage /> },
           { path: 'load', element: <MobileLoadPage /> },
           { path: 'arrival', element: <MobileArrivalPage /> },
+          { path: 'gps', element: <MobileGpsPage /> },
+          { path: 'dispatch', element: <MobileDispatchPage /> },
         ],
       },
     ],
@@ -79,6 +84,7 @@ export const router = createBrowserRouter([
           { path: 'reports/dimension', element: <DimensionReportPage /> },
           { path: 'reports/usage', element: <TenantUsagePage /> },
           { path: 'system/status', element: <SystemStatusPage /> },
+          { path: 'system/notifications', element: <NotificationListPage /> },
 
           // P2：经营基础资料
           { path: 'customers', element: <CustomerListPage /> },

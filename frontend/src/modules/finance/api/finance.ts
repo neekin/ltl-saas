@@ -133,3 +133,28 @@ export async function listCodSettlements(waybillId: string): Promise<CodSettleme
   });
   return response.data;
 }
+
+// ===== P11：移动派单（DELIVERY-002） =====
+export interface DeliveryTask {
+  id: string;
+  waybillId: string;
+  branchId: string;
+  deliveryType: string;
+  status: string;
+  driverId: string | null;
+  assigneeUserId: string | null;
+  assignedAt: string | null;
+  createdAt: string;
+}
+
+/** 派单：分配员工执行配送。 */
+export async function assignDelivery(id: string, assigneeUserId: string): Promise<DeliveryTask> {
+  const response = await http.post<DeliveryTask>(`/deliveries/${id}/assign`, { assigneeUserId });
+  return response.data;
+}
+
+/** 我的配送任务（移动端按当前用户查询待办）。 */
+export async function listMyDeliveryTasks(): Promise<DeliveryTask[]> {
+  const response = await http.get<DeliveryTask[]>('/deliveries/mine');
+  return response.data;
+}

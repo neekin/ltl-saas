@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Button, QRCode, Space, Spin, Typography } from 'antd';
 import { useNavigate, useParams } from 'react-router-dom';
+import { http } from '../../../shared/api/http';
 import { PageHeader, formatStatus } from '../../../shared/components';
 import { useAuthStore } from '../../auth/store/authStore';
 import { getWaybillPrintView } from '../api/waybills';
@@ -27,6 +28,26 @@ export function WaybillLabelPage() {
     <Space>
       <Button onClick={() => window.print()} type="primary" disabled={!printQuery.data}>
         打印面单
+      </Button>
+      <Button
+        disabled={!printQuery.data}
+        onClick={async () => {
+          try {
+            const response = await http.get(`/waybills/${id}/print/escpos`, {
+              responseType: 'blob',
+            });
+            const url = URL.createObjectURL(response.data as Blob);
+            const anchor = document.createElement('a');
+            anchor.href = url;
+            anchor.download = `waybill-${printQuery.data?.waybillNo ?? id}.prn`;
+            anchor.click();
+            URL.revokeObjectURL(url);
+          } catch (e) {
+            console.error(e);
+          }
+        }}
+      >
+        导出热敏指令 (.prn)
       </Button>
       <Button onClick={backToDetail}>返回运单详情</Button>
     </Space>

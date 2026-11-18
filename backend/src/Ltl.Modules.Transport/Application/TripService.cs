@@ -49,7 +49,20 @@ public interface ITripService
 
     /// <summary>批次费用列表。</summary>
     Task<IReadOnlyList<TripFeeDto>> ListFeesAsync(Guid operatorUserId, Guid tripId);
+
+    /// <summary>上报批次 GPS 轨迹点（GPS-001；仅 Departed 批次可上报）。</summary>
+    Task<GpsPointDto> ReportGpsAsync(Guid operatorUserId, Guid tripId, ReportGpsRequest request);
+
+    /// <summary>批次轨迹点（时间正序；GPS-001）。权限：trip.read。</summary>
+    Task<IReadOnlyList<GpsPointDto>> ListGpsAsync(Guid operatorUserId, Guid tripId);
 }
+
+/// <summary>GPS 轨迹点（GPS-001）。</summary>
+public sealed record GpsPointDto(
+    Guid Id, Guid TripId, decimal Latitude, decimal Longitude,
+    decimal? AccuracyMeters, DateTime RecordedAt);
+
+public sealed record ReportGpsRequest(decimal Latitude, decimal Longitude, decimal? AccuracyMeters);
 
 public sealed record PageResultTrips(
     IReadOnlyList<TransportTripDto> Items, int Total, int Page, int PageSize);
@@ -277,6 +290,45 @@ public sealed class TripService(
         return new PageResultTrips(
             trips.Select(t => ToDto(t, assignments.Where(a => a.TripId == t.Id).ToList())).ToList(),
             total, page, pageSize);
+    }
+
+    /// <summary>
+    /// GPS 上报（GPS-001）：批次 Departed 才可上报（未发车/已到达轨迹无运输意义）；
+    /// 追加式记录，P11 上报频率由客户端控制（建议 ≥30s/次）。
+    /// </summary>
+    public async Task<GpsPointDto> ReportGpsAsync(Guid operatorUserId, Guid tripId, ReportGpsRequest request)
+    {
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tripId);
+        if (trip.Status != TransportTripStatus.Departed)
+        {
+            throw new TransportDomainException(
+                $"批次 {trip.TripNo} 状态为 {trip.Status}，仅发车后（Departed）可上报位置。");
+        }
+
+        var point = TripGpsPoint.Create(
+            tenantId, tripId, request.Latitude, request.Longitude,
+            request.AccuracyMeters, DateTime.UtcNow, operatorUserId);
+        db.TripGpsPoints.Add(point);
+        await db.SaveChangesAsync();
+
+        return new GpsPointDto(
+            point.Id, point.TripId, point.Latitude, point.Longitude,
+            point.AccuracyMeters, point.RecordedAt);
+    }
+
+    /// <inheritdoc cref="ITripService.ListGpsAsync"/>
+    public async Task<IReadOnlyList<GpsPointDto>> ListGpsAsync(Guid operatorUserId, Guid tripId)
+    {
+        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
+        await RequireTripAsync(tripId);
+        var points = await db.TripGpsPoints
+            .AsNoTracking()
+            .Where(p => p.TripId == tripId)
+            .OrderBy(p => p.RecordedAt)
+            .ToListAsync();
+        return points.Select(p => new GpsPointDto(
+            p.Id, p.TripId, p.Latitude, p.Longitude, p.AccuracyMeters, p.RecordedAt)).ToList();
     }
 
     // ---------- 辅助 ----------

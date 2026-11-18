@@ -1,4 +1,6 @@
 using Ltl.Modules.Organization.Application.Authorization;
+using Ltl.Modules.Platform.Domain;
+using Ltl.Modules.Tenancy.Application;
 using Ltl.Modules.Pricing.Domain;
 using Ltl.Modules.Transport.Domain;
 using Ltl.Modules.Warehouse.Domain;
@@ -54,6 +56,21 @@ public abstract class ApiExceptionHandler<T> : IExceptionHandler where T : Excep
 
 /// <summary>无权限点 → 403（已认证但权限实时校验失败，禁用即时生效）。</summary>
 public sealed class PermissionDeniedExceptionHandler : ApiExceptionHandler<PermissionDeniedException>
+{
+    protected override int StatusCode => StatusCodes.Status403Forbidden;
+}
+
+public sealed class PlatformPermissionDeniedExceptionHandler : ApiExceptionHandler<PlatformPermissionDeniedException>
+{
+    protected override int StatusCode => StatusCodes.Status403Forbidden;
+}
+
+public sealed class QuotaExceededExceptionHandler : ApiExceptionHandler<QuotaExceededException>
+{
+    protected override int StatusCode => StatusCodes.Status409Conflict;
+}
+
+public sealed class QuotaPermissionDeniedExceptionHandler : ApiExceptionHandler<QuotaPermissionDeniedException>
 {
     protected override int StatusCode => StatusCodes.Status403Forbidden;
 }

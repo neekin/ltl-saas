@@ -41,6 +41,13 @@ public sealed class DeliveryOrder : TenantScopedEntity
     /// <summary>配送司机（仅 Delivery 类型可选）。</summary>
     public Guid? DriverId { get; private set; }
 
+    /// <summary>派单对象（员工用户，DELIVERY-002：移动端"我的配送任务"按此查询）。</summary>
+    public Guid? AssigneeUserId { get; private set; }
+
+    public DateTime? AssignedAt { get; private set; }
+
+    public Guid? AssignedBy { get; private set; }
+
     public string? ReceiverName { get; private set; }
 
     public Guid? OperatorUserId { get; private set; }
@@ -55,7 +62,7 @@ public sealed class DeliveryOrder : TenantScopedEntity
 
     public static DeliveryOrder Create(
         Guid tenantId, Guid waybillId, Guid branchId, DeliveryType deliveryType,
-        Guid? driverId, Guid? operatorUserId, DateTime createdAtUtc, Guid? createdBy = null)
+        Guid? driverId, Guid? operatorUserId, DateTime createdAtUtc, Guid? createdBy = null, Guid? assigneeUserId = null)
     {
         if (createdAtUtc.Kind != DateTimeKind.Utc)
             throw new ArgumentException("时间必须为 UTC。", nameof(createdAtUtc));
@@ -74,6 +81,9 @@ public sealed class DeliveryOrder : TenantScopedEntity
             OperatorUserId = operatorUserId,
             CreatedAt = createdAtUtc,
             CreatedBy = createdBy,
+            AssigneeUserId = assigneeUserId,
+            AssignedAt = assigneeUserId is null ? null : EnsureUtc(createdAtUtc),
+            AssignedBy = assigneeUserId is null ? null : createdBy,
         };
     }
 
@@ -105,4 +115,27 @@ public sealed class DeliveryOrder : TenantScopedEntity
         CompletedAt = rejectedAtUtc;
         CompletedBy = rejectedBy;
     }
+
+    /// <summary>
+    /// 派单（DELIVERY-002）：分配员工执行配送。幂等：重复派单覆盖为最新指派（记录留痕）。
+    /// </summary>
+    /// <exception cref="InvalidOperationException">已完成的交付单不可派单。</exception>
+    public void Assign(Guid assigneeUserId, DateTime nowUtc, Guid? assignedBy)
+    {
+        if (Status == DeliveryOrderStatus.Completed || Status == DeliveryOrderStatus.Rejected)
+        {
+            throw new InvalidOperationException($"交付单已终态（{Status}），不可派单。");
+        }
+
+        AssigneeUserId = assigneeUserId;
+        AssignedAt = EnsureUtc(nowUtc);
+        AssignedBy = assignedBy;
+    }
+
+    private static DateTime EnsureUtc(DateTime value) =>
+        value.Kind == DateTimeKind.Utc
+            ? value
+            : value.Kind == DateTimeKind.Local
+                ? value.ToUniversalTime()
+                : throw new ArgumentException("时间必须携带 UTC 或本地时区信息，禁止 Unspecified。", nameof(value));
 }

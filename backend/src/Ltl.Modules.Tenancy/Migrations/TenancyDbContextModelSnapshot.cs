@@ -43,11 +43,28 @@ namespace Ltl.Modules.Tenancy.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<long?>("MaxStorageBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("max_storage_bytes");
+
+                    b.Property<int?>("MaxUsers")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_users");
+
+                    b.Property<int?>("MaxWaybills")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_waybills");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
+
+                    b.Property<string>("PlanName")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("plan_name");
 
                     b.Property<short>("Status")
                         .HasColumnType("smallint")
