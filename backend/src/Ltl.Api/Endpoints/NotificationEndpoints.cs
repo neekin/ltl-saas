@@ -16,7 +16,10 @@ public static class NotificationEndpoints
         notifications.MapGet("/", async (
             int? page, int? pageSize, string? eventType,
             ClaimsPrincipal user, INotificationService service) =>
-            Results.Ok(await service.ListAsync(RequireUserId(user), page ?? 1, pageSize ?? 20, eventType)));
+            (await service.ListAsync(RequireUserId(user), page ?? 1, pageSize ?? 20, eventType))
+                is { } result
+                    ? Results.Ok(new { items = result.Items, total = result.Total })
+                    : Results.Ok(new { items = Array.Empty<object>(), total = 0 }));
     }
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
