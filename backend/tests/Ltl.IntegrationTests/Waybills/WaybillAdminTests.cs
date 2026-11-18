@@ -185,4 +185,38 @@ public class WaybillAdminTests : IClassFixture<PostgreSqlFixture>
         Assert.Contains("客户取消", (await verification.Events.AsNoTracking()
             .SingleAsync(e => e.WaybillId == draft.WaybillId && e.EventType == WaybillEventType.Cancelled)).Detail);
     }
+    [Fact]
+    public async Task CreateWaybill_WithIdempotencyKeyHeader_ShouldReturnSameWaybill()
+    {
+        var seed = await SeedAsync();
+        using var client = await AdminClientAsync(seed.TenantCode);
+        var idempotencyKey = Guid.NewGuid();
+
+        var request = new
+        {
+            originBranchId = seed.OriginBranchId,
+            destBranchId = seed.DestBranchId,
+            customerId = seed.CustomerId,
+            ruleSetId = seed.RuleSetId,
+            paymentType = "Cash",
+            senderName = "张三", senderPhone = "138", senderAddress = "广州",
+            receiverName = "李四", receiverPhone = "139", receiverAddress = "武汉",
+            packages = new object[] { new { cargoName = "纸箱", quantity = 1, weightKg = 10m, volumeM3 = 0.1m } },
+        };
+
+        client.DefaultRequestHeaders.Add("Idempotency-Key", idempotencyKey.ToString());
+        var first = await client.PostAsJsonAsync("/api/waybills", request);
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var firstBody = await JsonDocument.ParseAsync(await first.Content.ReadAsStreamAsync());
+        var waybillId = firstBody.RootElement.GetProperty("waybillId").GetGuid();
+
+        // 同键重复提交（网络重试/双击）→ 返回原单，不产生第二条
+        var second = await client.PostAsJsonAsync("/api/waybills", request);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        var secondBody = await JsonDocument.ParseAsync(await second.Content.ReadAsStreamAsync());
+        Assert.Equal(waybillId, secondBody.RootElement.GetProperty("waybillId").GetGuid());
+
+        await using var verification = _fixture.CreateWaybillsContext(seed.TenantId);
+        Assert.Equal(1, await verification.Waybills.CountAsync(w => w.IdempotencyKey == idempotencyKey));
+    }
 }

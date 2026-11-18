@@ -134,13 +134,21 @@ export async function createWaybill(payload: {
   /** COD 代收金额（独立资金业务，不计入运费应收）；不传 = 无 COD */
   codAmount?: number;
   packages: { cargoName: string; quantity: number; weightKg: number; volumeM3: number }[];
-}): Promise<{ waybillId: string; waybillNo: string; totalAmount: number; queryCode?: string }> {
+}, options?: { idempotencyKey?: string }): Promise<{
+  waybillId: string;
+  waybillNo: string;
+  totalAmount: number;
+  queryCode?: string;
+}> {
   const response = await http.post<{
     waybillId: string;
     waybillNo: string;
     totalAmount: number;
     queryCode?: string;
-  }>('/waybills', payload);
+  }>('/waybills', payload, {
+    // 幂等（AGENTS §8）：同一逻辑开单操作重试携带同一键，服务端返回原单
+    headers: options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : undefined,
+  });
   return response.data;
 }
 

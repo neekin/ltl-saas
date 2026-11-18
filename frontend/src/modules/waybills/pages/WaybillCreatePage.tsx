@@ -15,7 +15,7 @@ import {
   Table,
   Typography,
 } from 'antd';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
@@ -57,6 +57,8 @@ export function WaybillCreatePage() {
   const [packages, setPackages] = useState<PackageRow[]>([]);
   const [trialRecord, setTrialRecord] = useState<{ key: string; result: TrialResult } | null>(null);
   const [trialing, setTrialing] = useState(false);
+  // 幂等键：整个开单会话固定一个，重试同一提交时服务端返回原单（AGENTS §8）
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
 
   const branchQuery = useQuery({
     queryKey: ['branch-options'],
@@ -205,7 +207,7 @@ export function WaybillCreatePage() {
           weightKg: p.weightKg,
           volumeM3: p.volumeM3,
         })),
-      });
+      }, { idempotencyKey: idempotencyKeyRef.current });
       if (result.queryCode) {
         // 明确成功终态：不允许关闭弹窗后回到仍可重复提交的旧表单。
         const trackUrl = `${window.location.origin}/track`;

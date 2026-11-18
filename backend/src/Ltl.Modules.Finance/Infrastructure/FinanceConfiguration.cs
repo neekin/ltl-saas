@@ -42,6 +42,12 @@ public sealed class PaymentRecordConfiguration : IEntityTypeConfiguration<Paymen
         builder.Property(x => x.OccurredAt).HasColumnType("timestamptz").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.WaybillId }).HasDatabaseName("ix_payment_records_waybill");
+        // 命令幂等（AGENTS §8）：同租户同幂等键唯一；NULL 不参与唯一约束
+        builder.Property(x => x.IdempotencyKey);
+        builder.HasIndex(x => new { x.TenantId, x.IdempotencyKey })
+            .HasDatabaseName("ux_payment_records_idempotency")
+            .IsUnique()
+            .HasFilter("idempotency_key IS NOT NULL");
         builder.Property<uint>("xmin").IsRowVersion();
     }
 }
@@ -116,6 +122,11 @@ public sealed class CodCollectionConfiguration : IEntityTypeConfiguration<CodCol
         builder.Property(x => x.OccurredAt).HasColumnType("timestamptz").IsRequired();
         builder.Property(x => x.CreatedAt).HasColumnType("timestamptz").IsRequired();
         builder.HasIndex(x => new { x.TenantId, x.CodOrderId }).HasDatabaseName("ix_cod_collections_order");
+        builder.Property(x => x.IdempotencyKey);
+        builder.HasIndex(x => new { x.TenantId, x.IdempotencyKey })
+            .HasDatabaseName("ux_cod_collections_idempotency")
+            .IsUnique()
+            .HasFilter("idempotency_key IS NOT NULL");
     }
 }
 

@@ -12,11 +12,14 @@ public sealed class CodCollection
     public DateTime OccurredAt { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
+    /// <summary>幂等键（AGENTS §8；同键重复提交返回原记录）。</summary>
+    public Guid? IdempotencyKey { get; private set; }
+
     private CodCollection() { }
 
     public static CodCollection Create(
         Guid tenantId, Guid codOrderId, decimal amount,
-        Guid? operatorUserId, string? note, DateTime occurredAtUtc)
+        Guid? operatorUserId, string? note, DateTime occurredAtUtc, Guid? idempotencyKey = null)
     {
         if (amount <= 0) throw new ArgumentException("COD 收款金额必须 >0。", nameof(amount));
         if (occurredAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("时间必须为 UTC。", nameof(occurredAtUtc));
@@ -27,6 +30,7 @@ public sealed class CodCollection
             Amount = amount, OperatorUserId = operatorUserId,
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
             OccurredAt = occurredAtUtc, CreatedAt = occurredAtUtc,
+            IdempotencyKey = idempotencyKey,
         };
     }
 }

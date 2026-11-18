@@ -32,10 +32,13 @@ public static class CodEndpoints
             return Results.Ok(await service.EnsureCodOrderForOperatorAsync(RequireUserId(user), waybillId));
         });
         cod.MapPost("/collections", async (
-            RecordCodCollectionRequest request, ClaimsPrincipal user, ICodService service) =>
+            RecordCodCollectionRequest request,
+            [Microsoft.AspNetCore.Mvc.FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
+            ClaimsPrincipal user, ICodService service) =>
         {
             Require(user, "cod.manage");
-            return Results.Ok(await service.RecordCollectionAsync(RequireUserId(user), request));
+            return Results.Ok(await service.RecordCollectionAsync(RequireUserId(user),
+                request with { IdempotencyKey = idempotencyKey ?? request.IdempotencyKey }));
         });
         cod.MapPost("/settlements", async (
             CreateCodSettlementRequest request, ClaimsPrincipal user, ICodService service) =>

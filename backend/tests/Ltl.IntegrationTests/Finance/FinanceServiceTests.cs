@@ -205,6 +205,38 @@ public class FinanceServiceTests : IClassFixture<PostgreSqlFixture>
     }
 
     [Fact]
+    public async Task Payment_WithSameIdempotencyKey_ShouldReturnSameRecordAndChargeOnce()
+    {
+        var seed = await SeedAsync();
+        using var client = await AdminClientAsync(seed.TenantCode);
+        var idempotencyKey = Guid.NewGuid();
+
+        // 首笔收款（带幂等键）
+        client.DefaultRequestHeaders.Add("Idempotency-Key", idempotencyKey.ToString());
+        var first = await client.PostAsJsonAsync("/api/finance/payments", new
+        {
+            waybillId = seed.WaybillId, amount = seed.TotalAmount, method = "cash", note = (string?)null,
+        });
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        var paymentId = (await JsonDocument.ParseAsync(await first.Content.ReadAsStreamAsync()))
+            .RootElement.GetProperty("id").GetGuid();
+
+        // 同键重试（网络重试/双击）→ 返回原记录，不重复入账
+        var second = await client.PostAsJsonAsync("/api/finance/payments", new
+        {
+            waybillId = seed.WaybillId, amount = seed.TotalAmount, method = "cash", note = (string?)null,
+        });
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        var secondBody = await JsonDocument.ParseAsync(await second.Content.ReadAsStreamAsync());
+        Assert.Equal(paymentId, secondBody.RootElement.GetProperty("id").GetGuid());
+
+        var rv = await client.GetAsync($"/api/finance/receivables?waybillId={seed.WaybillId}");
+        var rvBody = await JsonDocument.ParseAsync(await rv.Content.ReadAsStreamAsync());
+        Assert.Equal("Settled", rvBody.RootElement.GetProperty("status").GetString());
+        Assert.Equal(seed.TotalAmount, rvBody.RootElement.GetProperty("settledAmount").GetDecimal());
+    }
+
+    [Fact]
     public async Task Overpayment_ShouldReturn409()
     {
         var seed = await SeedAsync();

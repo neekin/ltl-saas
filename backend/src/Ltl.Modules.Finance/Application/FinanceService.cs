@@ -25,7 +25,7 @@ public sealed record BranchPaymentSummary(
     decimal MonthCollected, int MonthPaymentCount);
 
 public record RecordPaymentRequest(
-    Guid WaybillId, decimal Amount, string Method, string? Note);
+    Guid WaybillId, decimal Amount, string Method, string? Note, Guid? IdempotencyKey = null);
 
 public record RefundPaymentRequest(Guid PaymentId, decimal Amount, string Reason);
 
@@ -134,6 +134,21 @@ public sealed class FinanceService(
         if (db.CurrentTenantId is null)
             throw new TenantContextMissingException();
 
+        // 幂等（AGENTS §8）：同租户同幂等键已存在 → 返回原收款记录，不再入账
+        if (request.IdempotencyKey is { } paymentKey)
+        {
+            var existingPayment = await db.Payments
+                .AsNoTracking()
+                .SingleOrDefaultAsync(p => p.IdempotencyKey == paymentKey);
+            if (existingPayment is not null)
+            {
+                return new PaymentRecordDto(
+                    existingPayment.Id, existingPayment.WaybillId, existingPayment.Amount,
+                    existingPayment.Method.ToString(), existingPayment.Note,
+                    existingPayment.OperatorUserId, existingPayment.OccurredAt);
+            }
+        }
+
         // 懒创建应收（运单确认后首次收款时生成）
         var receivable = await db.Receivables
             .SingleOrDefaultAsync(r => r.WaybillId == request.WaybillId);
@@ -172,7 +187,7 @@ public sealed class FinanceService(
 
         var payment = PaymentRecord.Create(
             db.CurrentTenantId.Value, request.WaybillId, request.Amount, method,
-            operatorUserId, request.Note, DateTime.UtcNow, operatorUserId);
+            operatorUserId, request.Note, DateTime.UtcNow, operatorUserId, request.IdempotencyKey);
         db.Payments.Add(payment);
         await db.SaveChangesAsync();
 

@@ -17,9 +17,11 @@ public static class WaybillEndpoints
             Guid id, ClaimsPrincipal user, IWaybillPrintService service) =>
             Results.Ok(await service.GetPrintViewAsync(RequireUserId(user), id)));
 
-        // WB-002：开单（补暴露服务层能力）
+        // WB-002：开单（补暴露服务层能力）。幂等：Idempotency-Key header（AGENTS §8）
         app.MapPost("/api/waybills", async (
-            CreateWaybillRequest request, ClaimsPrincipal user, IWaybillService service) =>
+            CreateWaybillRequest request,
+            [Microsoft.AspNetCore.Mvc.FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
+            ClaimsPrincipal user, IWaybillService service) =>
             Results.Ok(await service.CreateWaybillAsync(new CreateWaybillCommand(
                 request.OriginBranchId, request.DestBranchId, request.CustomerId,
                 request.PaymentType, request.SenderName, request.SenderPhone, request.SenderAddress,
@@ -30,7 +32,7 @@ public static class WaybillEndpoints
                 CodAmount: request.CodAmount,
                 Remark: request.Remark, DeclaredValue: request.DeclaredValue,
                 InsuranceFee: request.InsuranceFee, BranchId: request.OriginBranchId,
-                OperatorId: RequireUserId(user)))));
+                OperatorId: RequireUserId(user), IdempotencyKey: idempotencyKey))));
 
         // WB-003：查询/详情/草稿修改/确认/取消
         var waybills = app.MapGroup("/api/waybills");

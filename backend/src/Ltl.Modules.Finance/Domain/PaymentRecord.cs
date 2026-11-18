@@ -16,11 +16,15 @@ public sealed class PaymentRecord : TenantScopedEntity
     public string? Note { get; private set; }
     public DateTime OccurredAt { get; private set; }
 
+    /// <summary>幂等键（AGENTS §8；同键重复提交返回原记录）。</summary>
+    public Guid? IdempotencyKey { get; private set; }
+
     private PaymentRecord() { }
 
     public static PaymentRecord Create(
         Guid tenantId, Guid waybillId, decimal amount, PaymentMethod method,
-        Guid? operatorUserId, string? note, DateTime occurredAtUtc, Guid? createdBy = null)
+        Guid? operatorUserId, string? note, DateTime occurredAtUtc,
+        Guid? createdBy = null, Guid? idempotencyKey = null)
     {
         if (amount <= 0) throw new ArgumentException("收款金额必须 >0。", nameof(amount));
         if (occurredAtUtc.Kind != DateTimeKind.Utc) throw new ArgumentException("时间必须为 UTC。", nameof(occurredAtUtc));
@@ -31,6 +35,7 @@ public sealed class PaymentRecord : TenantScopedEntity
             Amount = amount, Method = method, OperatorUserId = operatorUserId,
             Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
             OccurredAt = occurredAtUtc, CreatedAt = occurredAtUtc, CreatedBy = createdBy,
+            IdempotencyKey = idempotencyKey,
         };
     }
 }

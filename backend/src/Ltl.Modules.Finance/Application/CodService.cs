@@ -19,7 +19,7 @@ public sealed record CodSettlementDto(
     Guid Id, Guid CodOrderId, decimal Amount, string Status,
     Guid? ApprovedBy, DateTime? ApprovedAt, Guid? PaidBy, DateTime? PaidAt);
 
-public record RecordCodCollectionRequest(Guid WaybillId, decimal Amount, string? Note);
+public record RecordCodCollectionRequest(Guid WaybillId, decimal Amount, string? Note, Guid? IdempotencyKey = null);
 
 public record CreateCodSettlementRequest(Guid WaybillId, decimal Amount);
 
@@ -119,6 +119,20 @@ public sealed class CodService(
         if (db.CurrentTenantId is null)
             throw new TenantContextMissingException();
 
+        // 幂等（AGENTS §8）：同租户同幂等键已存在 → 返回原收款记录
+        if (request.IdempotencyKey is { } collectionKey)
+        {
+            var existingCollection = await db.CodCollections
+                .AsNoTracking()
+                .SingleOrDefaultAsync(c => c.IdempotencyKey == collectionKey);
+            if (existingCollection is not null)
+            {
+                return new CodCollectionDto(
+                    existingCollection.Id, existingCollection.CodOrderId, existingCollection.Amount,
+                    existingCollection.OperatorUserId, existingCollection.Note, existingCollection.OccurredAt);
+            }
+        }
+
         var codOrder = await db.CodOrders
             .SingleOrDefaultAsync(o => o.WaybillId == request.WaybillId)
             ?? throw new EntityNotFoundException("COD 订单", request.WaybillId);
@@ -127,7 +141,7 @@ public sealed class CodService(
 
         var collection = CodCollection.Create(
             db.CurrentTenantId.Value, codOrder.Id, request.Amount,
-            operatorUserId, request.Note, DateTime.UtcNow);
+            operatorUserId, request.Note, DateTime.UtcNow, request.IdempotencyKey);
         db.CodCollections.Add(collection);
 
         codOrder.ApplyCollection(request.Amount);

@@ -41,6 +41,10 @@ namespace Ltl.Modules.Finance.Migrations
                         .HasColumnType("timestamptz")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("uuid")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<string>("Note")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -63,6 +67,11 @@ namespace Ltl.Modules.Finance.Migrations
 
                     b.HasIndex("TenantId", "CodOrderId")
                         .HasDatabaseName("ix_cod_collections_order");
+
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_cod_collections_idempotency")
+                        .HasFilter("idempotency_key IS NOT NULL");
 
                     b.ToTable("cod_collections", null, t =>
                         {
@@ -457,6 +466,10 @@ namespace Ltl.Modules.Finance.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("created_by");
 
+                    b.Property<Guid?>("IdempotencyKey")
+                        .HasColumnType("uuid")
+                        .HasColumnName("idempotency_key");
+
                     b.Property<short>("Method")
                         .HasColumnType("smallint")
                         .HasColumnName("method");
@@ -498,6 +511,11 @@ namespace Ltl.Modules.Finance.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_payment_records");
+
+                    b.HasIndex("TenantId", "IdempotencyKey")
+                        .IsUnique()
+                        .HasDatabaseName("ux_payment_records_idempotency")
+                        .HasFilter("idempotency_key IS NOT NULL");
 
                     b.HasIndex("TenantId", "WaybillId")
                         .HasDatabaseName("ix_payment_records_waybill");

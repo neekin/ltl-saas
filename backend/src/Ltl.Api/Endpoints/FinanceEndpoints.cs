@@ -27,10 +27,14 @@ public static class FinanceEndpoints
             RequireManage(user);
             return Results.Ok(await service.EnsureReceivableForOperatorAsync(RequireUserId(user), waybillId));
         });
-        finance.MapPost("/payments", async (RecordPaymentRequest request, ClaimsPrincipal user, IFinanceService service) =>
+        finance.MapPost("/payments", async (
+            RecordPaymentRequest request,
+            [Microsoft.AspNetCore.Mvc.FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
+            ClaimsPrincipal user, IFinanceService service) =>
         {
             RequireManage(user);
-            return Results.Ok(await service.RecordPaymentAsync(RequireUserId(user), request));
+            return Results.Ok(await service.RecordPaymentAsync(RequireUserId(user),
+                request with { IdempotencyKey = idempotencyKey ?? request.IdempotencyKey }));
         });
         finance.MapGet("/payments", async (Guid waybillId, ClaimsPrincipal user, IFinanceService service) =>
         {
