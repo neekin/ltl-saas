@@ -33,6 +33,10 @@
       <a href="#permission">11. 组织与权限</a>
       <a href="#mobile">12. 移动作业</a>
       <a href="#track">13. 客户查单</a>
+      <a href="#notify">14. 消息通知</a>
+      <a href="#dispatch-gps">15. 移动派单与 GPS 轨迹</a>
+      <a href="#print-devices">16. 打印设备对接</a>
+      <a href="#quota">17. 套餐配额</a>
     </aside>
 
     <main class="docs-main">
@@ -199,6 +203,59 @@
           <li>查询码可在运单详情由操作员重新生成，旧码立即失效。</li>
         </ol>
         <div class="doc-shot"><img src="images/track.png" alt="客户查单" /><div class="shot-caption">客户查单页：双因子校验，错误统一提示防枚举</div></div>
+      </section>
+
+      <section class="doc-section" id="notify">
+        <h2>14. 消息通知</h2>
+        <p>运单关键事件（<strong>收货登记、发车运输、到达目的网点、签收</strong>）会自动生成收货人通知，全部留痕可查（NOTIFY-001）：</p>
+        <ul>
+          <li>通知记录：系统 → 通知记录，按事件类型筛选。</li>
+          <li>接收人：运单收货人手机号；内容含运单号与事件说明。</li>
+          <li><strong>通道适配</strong>：短信 / 微信真实外发需在服务端配置服务商凭证；未配置时以日志通道落记录（状态已发送），接入服务商后无需改动业务代码。</li>
+          <li>通知为旁路能力：发送失败记录原因，不阻断运单主流程。</li>
+        </ul>
+        <div class="doc-shot"><img src="images/notifications.png" alt="通知记录" /><div class="shot-caption">通知记录：按事件筛选，通道与状态留痕</div></div>
+      </section>
+
+      <section class="doc-section" id="dispatch-gps">
+        <h2>15. 移动派单与 GPS 轨迹</h2>
+        <h3>派单（DELIVERY-002）</h3>
+        <ol>
+          <li>到货/交付页创建配送任务后，将任务<strong>派单给员工</strong>（记录指派人）。</li>
+          <li>员工在移动端「派单」页查看<strong>我的待办配送任务</strong>；完成签收后任务自动闭环（沿用既有签收流程）。</li>
+        </ol>
+        <h3>GPS 轨迹（GPS-001）</h3>
+        <ol>
+          <li>批次<strong>发车后</strong>，配送员在移动端「位置」页选择批次，点击「上报当前位置」（浏览器定位授权）。</li>
+          <li>轨迹点追加式写入批次轨迹（含精度），不可修改删除。</li>
+          <li>PC 端批次详情页查看完整轨迹点列表（时间 + 坐标 + 精度）。</li>
+        </ol>
+        <div class="doc-shot mobile"><img src="images/mobile-gps.png" alt="移动位置上报" /><div class="shot-caption">移动端位置上报：仅发车中批次可上报</div></div>
+        <div class="doc-shot mobile"><img src="images/mobile-dispatch.png" alt="我的配送任务" /><div class="shot-caption">移动端派单：我的待办配送任务</div></div>
+      </section>
+
+      <section class="doc-section" id="print-devices">
+        <h2>16. 打印设备对接</h2>
+        <p>面单页除浏览器 A5 打印外，支持 <strong>ESC/POS 热敏指令导出</strong>（PRINT-001）：</p>
+        <ol>
+          <li>运单详情 → 打印面单 → 「导出热敏指令 (.prn)」。</li>
+          <li>下载的 <code>.prn</code> 文件为 58mm 热敏小票风格指令（含运单号、收发货人、货量、费用、签字栏）。</li>
+          <li>通过本地打印代理 / 热敏打印机投递即可出单；真实设备通信由打印代理完成，本系统只负责协议指令生成。</li>
+        </ol>
+        <div class="tip">指令集包含 ESC @ 初始化、居中、倍高倍宽、走纸与切纸；UTF-8 编码。</div>
+      </section>
+
+      <section class="doc-section" id="quota">
+        <h2>17. 套餐配额</h2>
+        <p>租户可设置<strong>套餐与配额</strong>（TEN-002），超限时对应操作将被拒绝：</p>
+        <ul>
+          <li><strong>运单配额</strong>：开单前校验，超限返回明确提示。</li>
+          <li><strong>用户配额</strong>：创建员工前校验。</li>
+          <li><strong>存储配额</strong>：上传文件前校验（现有用量 + 新增 &gt; 上限 → 拒绝）。</li>
+          <li>配额项为空 = 不限制（默认）。</li>
+        </ul>
+        <p>租户用量页（报表 → 租户用量）展示当前套餐与各配项进度；配额由服务端设置端点维护（quota.manage 权限）。</p>
+        <div class="doc-shot"><img src="images/usage-quota.png" alt="租户用量与配额" /><div class="shot-caption">租户用量：配额进度与已满标识</div></div>
       </section>
 
     </main>
