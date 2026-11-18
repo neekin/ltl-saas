@@ -141,9 +141,7 @@ export function MobileReceivePage() {
         </Card>
       )}
 
-      {lookupError && (
-        <ErrorBlock status="empty" title="无法继续登记" description={lookupError} />
-      )}
+      {lookupError && <ErrorBlock status="empty" title="无法继续登记" description={lookupError} />}
 
       {waybill && (
         <>

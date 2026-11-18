@@ -7,6 +7,7 @@ import {
   DollarOutlined,
   FileTextOutlined,
   LogoutOutlined,
+  MobileOutlined,
   ShopOutlined,
   SwapOutlined,
   TagsOutlined,
@@ -39,6 +40,16 @@ const menuSections: MenuSection[] = [
       { key: '/', label: '工作台', permission: '' },
       { key: '/reports/dimension', label: '运营报表', permission: 'finance.read' },
       { key: '/reports/usage', label: '租户用量', permission: 'finance.read' },
+    ],
+  },
+  {
+    key: 'organization',
+    label: '组织管理',
+    icon: <UserOutlined />,
+    items: [
+      { key: '/organization/branches', label: '网点管理', permission: PERMISSIONS.branchRead },
+      { key: '/organization/users', label: '员工管理', permission: PERMISSIONS.userRead },
+      { key: '/organization/roles', label: '角色权限', permission: PERMISSIONS.roleRead },
     ],
   },
   {
@@ -117,14 +128,15 @@ const menuSections: MenuSection[] = [
   },
 ];
 
-/** 详情类路由（不在菜单中）的面包屑末级名称，按前缀匹配。 */
-const DETAIL_LABELS: { prefix: string; label: string }[] = [
-  { prefix: '/waybills/', label: '运单详情' },
-  { prefix: '/transport/trips/', label: '配载工作台' },
-  { prefix: '/transfers/', label: '调拨详情' },
-  { prefix: '/customers/', label: '客户详情' },
-  { prefix: '/routes/', label: '线路编辑' },
-  { prefix: '/pricing/rule-sets/', label: '规则版本' },
+/** 详情类路由（不在菜单中）的面包屑末级名称；越具体的规则放在前面。 */
+const DETAIL_LABELS: { test: (pathname: string) => boolean; label: string }[] = [
+  { test: (pathname) => /^\/waybills\/[^/]+\/label$/.test(pathname), label: '电子面单' },
+  { test: (pathname) => pathname.startsWith('/waybills/'), label: '运单详情' },
+  { test: (pathname) => pathname.startsWith('/transport/trips/'), label: '配载工作台' },
+  { test: (pathname) => pathname.startsWith('/transfers/'), label: '调拨详情' },
+  { test: (pathname) => pathname.startsWith('/customers/'), label: '客户详情' },
+  { test: (pathname) => pathname.startsWith('/routes/'), label: '线路编辑' },
+  { test: (pathname) => pathname.startsWith('/pricing/rule-sets/'), label: '规则版本' },
 ];
 
 interface NavResolution {
@@ -171,7 +183,7 @@ function resolveNav(pathname: string): NavResolution {
   if (!matched) {
     return home;
   }
-  const detail = DETAIL_LABELS.find((d) => pathname.startsWith(d.prefix));
+  const detail = DETAIL_LABELS.find((d) => d.test(pathname));
   return {
     activeKey: matched.item.key,
     sectionKey: matched.section.key,
@@ -306,6 +318,13 @@ export function BasicLayout() {
           <Dropdown
             menu={{
               items: [
+                {
+                  key: 'mobile',
+                  icon: <MobileOutlined />,
+                  label: '移动作业',
+                  onClick: () => navigate('/m'),
+                },
+                { type: 'divider' },
                 { key: 'logout', icon: <LogoutOutlined />, label: '退出登录', onClick: onLogout },
               ],
             }}

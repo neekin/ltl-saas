@@ -106,4 +106,614 @@ body {
     size: A5 portrait;
     margin: 0;
   }
+
+  .ltl-label {
+    /* 多货物件时允许连续页，而不是把所有内容硬压进单页 */
+    min-height: 0 !important;
+  }
+
+  .ltl-label tr,
+  .ltl-label__block {
+    break-inside: avoid;
+  }
+}
+
+/* ── P10 移动作业：轻色表面、清晰步骤与触控尺寸 ────────────────── */
+.mobile-shell {
+  --adm-color-primary: #1d4fa0;
+  --mobile-accent: #1d4fa0;
+  --mobile-text: #172033;
+  --mobile-muted: #6b7688;
+  --mobile-border: #e4e9f1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #f4f6fa;
+  color: var(--mobile-text);
+}
+
+.mobile-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: #fff;
+  border-bottom: 1px solid var(--mobile-border);
+}
+
+.mobile-header__title {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mobile-header__eyebrow {
+  color: var(--mobile-accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.mobile-header__title strong {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.mobile-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mobile-header__actions button {
+  min-height: 36px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid var(--mobile-border);
+  border-radius: 18px;
+  background: #fff;
+  color: var(--mobile-accent);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mobile-header__actions button:active {
+  transform: scale(0.98);
+}
+
+.mobile-header__actions button:last-child {
+  width: 36px;
+  padding: 0;
+  justify-content: center;
+  font-size: 18px;
+}
+
+.mobile-main {
+  flex: 1;
+  width: 100%;
+  padding: 12px 12px calc(84px + env(safe-area-inset-bottom));
+}
+
+.mobile-tabbar {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  z-index: 30;
+  border-top: 1px solid var(--mobile-border);
+  background: #fff;
+}
+
+.mobile-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-stack > .adm-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(23, 32, 51, 0.04);
+}
+
+.mobile-stack > .adm-card .adm-card-body {
+  padding: 16px;
+}
+
+.mobile-stack .adm-card-header-title {
+  font-weight: 600;
+}
+
+.mobile-hero h1 {
+  margin: 6px 0 6px;
+  font-size: 22px;
+  line-height: 1.35;
+}
+
+.mobile-hero p {
+  margin: 0 0 18px;
+  color: var(--mobile-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.mobile-hero__eyebrow {
+  color: var(--mobile-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mobile-section {
+  background: #fff;
+  border: 1px solid var(--mobile-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.mobile-section h2 {
+  margin: 0 0 12px;
+  font-size: 15px;
+}
+
+.mobile-action-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-action-list > button {
+  width: 100%;
+  min-height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border: 0;
+  border-top: 1px solid #eef1f6;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mobile-action-list > button:first-child {
+  border-top: 0;
+}
+
+.mobile-action-list > button:active {
+  background: #f6f8fc;
+}
+
+.mobile-action-list__icon {
+  width: 38px;
+  height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: #edf3fc;
+  color: var(--mobile-accent);
+  font-size: 21px;
+}
+
+.mobile-action-list__text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mobile-action-list__text small {
+  color: var(--mobile-muted);
+  font-size: 12px;
+}
+
+.mobile-action-list__arrow {
+  color: #9aa5b5;
+}
+
+.mobile-help {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 4px;
+  color: var(--mobile-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mobile-lookup {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.mobile-lookup__input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--mobile-border);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.mobile-lookup__input:focus-within {
+  border-color: var(--mobile-accent);
+}
+
+.mobile-lookup .adm-button {
+  min-width: 76px;
+}
+
+.mobile-scan-button {
+  margin-top: 10px;
+  min-height: 44px;
+}
+
+.mobile-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.mobile-hint {
+  margin: 0 0 12px;
+  color: var(--mobile-muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.mobile-field-label {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--mobile-muted);
+  font-size: 12px;
+}
+
+.mobile-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mobile-result-head strong {
+  font-size: 17px;
+}
+
+.mobile-progress {
+  margin-top: 16px;
+  padding: 14px;
+  border-radius: 10px;
+  background: #f0f5fc;
+}
+
+.mobile-progress > strong {
+  display: block;
+  color: var(--mobile-accent);
+  font-size: 24px;
+  line-height: 1.35;
+}
+
+.mobile-progress > small {
+  display: block;
+  margin-top: 4px;
+  color: var(--mobile-muted);
+  font-size: 12px;
+}
+
+.mobile-metrics,
+.mobile-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.mobile-metrics > div,
+.mobile-summary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 8px;
+  border: 1px solid var(--mobile-border);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.mobile-metrics span,
+.mobile-summary span {
+  color: var(--mobile-muted);
+  font-size: 11px;
+}
+
+.mobile-metrics strong,
+.mobile-summary strong {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.mobile-summary small {
+  color: var(--mobile-muted);
+  font-size: 11px;
+}
+
+.mobile-info-row,
+.mobile-package-row,
+.mobile-assignment-row,
+.mobile-trip-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 0;
+  border-top: 1px solid #eef1f6;
+}
+
+.mobile-info-row > span,
+.mobile-package-row small,
+.mobile-trip-row small {
+  color: var(--mobile-muted);
+  font-size: 12px;
+}
+
+.mobile-info-row:first-child,
+.mobile-package-row:first-child,
+.mobile-assignment-row:first-child,
+.mobile-trip-row:first-child {
+  border-top: 0;
+}
+
+.mobile-form-field {
+  margin-bottom: 14px;
+}
+
+.mobile-form-field > label {
+  display: block;
+  margin-bottom: 6px;
+  color: #3c4759;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.mobile-form-field > .adm-input {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--mobile-border);
+  border-radius: 8px;
+}
+
+.mobile-copy-declared {
+  margin-top: 12px;
+}
+
+.mobile-success-card {
+  text-align: center;
+}
+
+.mobile-success-icon {
+  color: #2e9e5b;
+  font-size: 44px;
+}
+
+.mobile-success-card h2 {
+  margin: 10px 0 4px;
+  font-size: 20px;
+}
+
+.mobile-success-card > p {
+  color: var(--mobile-muted);
+  font-size: 13px;
+}
+
+.mobile-success-card > .adm-button {
+  margin-top: 10px;
+}
+
+.mobile-subnav {
+  display: flex;
+}
+
+.mobile-trip-row {
+  width: 100%;
+  min-height: 60px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  border-top: 1px solid #eef1f6;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mobile-trip-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-trip-row:active {
+  background: #f6f8fc;
+}
+
+.mobile-assignment-row__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mobile-assignment-row__head > .adm-button {
+  min-height: 40px;
+}
+
+.mobile-empty {
+  padding: 16px 0;
+  color: var(--mobile-muted);
+  text-align: center;
+  font-size: 13px;
+}
+
+.mobile-difference {
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f2f6fb;
+  color: #3c4759;
+  font-size: 13px;
+}
+
+.mobile-danger {
+  color: #c0362c;
+}
+
+.mobile-muted {
+  color: var(--mobile-muted);
+}
+
+.mobile-scanner__frame {
+  position: relative;
+  width: 100%;
+  height: 260px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #111827;
+}
+
+.mobile-scanner__frame video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mobile-scanner__corner {
+  position: absolute;
+  inset: 44px 32px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 0 0 9999px rgba(10, 16, 28, 0.22);
+}
+
+.mobile-scanner__error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.mobile-scanner__tip {
+  margin-top: 12px;
+  color: var(--mobile-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 360px) {
+  .mobile-header__actions button:first-child span {
+    display: none;
+  }
+
+  .mobile-metrics,
+  .mobile-summary {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── P10 客户查询门户 ──────────────────────────────────────────── */
+.ltl-track-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 32px 16px calc(32px + env(safe-area-inset-bottom));
+  background: #f5f7fa;
+}
+
+.ltl-track-shell {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+}
+
+.ltl-track-brand {
+  margin-bottom: 24px;
+  text-align: center;
+}
+
+.ltl-track-brand__icon {
+  color: var(--mobile-accent, #1d4fa0);
+  font-size: 30px;
+}
+
+.ltl-track-brand h1 {
+  margin: 8px 0 4px;
+}
+
+.ltl-track-query .ant-form-item {
+  margin-bottom: 14px;
+}
+
+.ltl-track-query__submit {
+  margin-top: 4px;
+}
+
+.ltl-track-hero {
+  padding: 20px;
+  border: 1px solid #dce6f5;
+  border-radius: 8px;
+  background: #f0f5fc;
+}
+
+.ltl-track-hero strong {
+  display: block;
+  margin: 4px 0;
+  color: #1d4fa0;
+  font-size: 26px;
+  line-height: 1.35;
+}
+
+.ltl-track-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  color: #6b7688;
+  font-size: 13px;
+}
+
+.ltl-track-packages {
+  margin-top: 12px;
+}
+
+@media (max-width: 600px) {
+  .ltl-track-page {
+    padding: 20px 12px;
+  }
+
+  .ltl-track-brand {
+    margin-bottom: 16px;
+  }
+
+  .ltl-track-packages .ant-table {
+    overflow-x: auto;
+  }
 }

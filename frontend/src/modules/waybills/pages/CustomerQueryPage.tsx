@@ -1,114 +1,141 @@
 import { SearchOutlined, TruckOutlined } from '@ant-design/icons';
 import { useMutation } from '@tanstack/react-query';
-import { Button, Card, Col, Descriptions, Input, Row, Table, Typography } from 'antd';
+import { Alert, Button, Card, Descriptions, Form, Input, Table, Typography } from 'antd';
 import { useState } from 'react';
-import { EmptyState, StatusTag } from '../../../shared/components';
+import { useSearchParams } from 'react-router-dom';
+import { EmptyState, StatusTag, formatStatus } from '../../../shared/components';
 import { queryWaybillAsCustomer, type CustomerWaybillView } from '../api/customerQuery';
 
-/** 客户运单查询门户（P10）：匿名凭租户编码 + 运单号 + 查询码查单票。 */
+interface QueryForm {
+  tenantCode: string;
+  waybillNo: string;
+  queryCode: string;
+}
+
+/** 客户运单查询门户（P10）：承运方编码 + 运单号 + 查询码，结果突出运输进度。 */
 export function CustomerQueryPage() {
-  const [tenantCode, setTenantCode] = useState('demo');
-  const [waybillNo, setWaybillNo] = useState('');
-  const [queryCode, setQueryCode] = useState('');
+  const [searchParams] = useSearchParams();
+  const [form] = Form.useForm<QueryForm>();
+  const [result, setResult] = useState<CustomerWaybillView | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const initialValues: QueryForm = {
+    tenantCode: searchParams.get('tenantCode') ?? '',
+    waybillNo: searchParams.get('waybillNo') ?? '',
+    queryCode: '',
+  };
 
   const queryMutation = useMutation({
-    mutationFn: () => queryWaybillAsCustomer(tenantCode.trim(), waybillNo.trim(), queryCode.trim()),
-    onError: (e: Error) => {
+    mutationFn: (values: QueryForm) =>
+      queryWaybillAsCustomer(
+        values.tenantCode.trim(),
+        values.waybillNo.trim(),
+        values.queryCode.trim(),
+      ),
+    onError: (mutationError: Error) => {
       setResult(null);
-      setError(e.message);
+      setError(mutationError.message);
     },
     onSuccess: (data) => {
       setResult(data);
       setError(null);
     },
   });
-  const [result, setResult] = useState<CustomerWaybillView | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f5f7fa', padding: '32px 16px' }}>
-      <div style={{ maxWidth: 900, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <div style={{ fontSize: 28, color: '#1D4FA0' }}>
+    <div className="ltl-track-page">
+      <div className="ltl-track-shell">
+        <div className="ltl-track-brand">
+          <div className="ltl-track-brand__icon">
             <TruckOutlined />
           </div>
           <Typography.Title level={3} style={{ margin: '8px 0 4px' }}>
             运单查询
           </Typography.Title>
           <Typography.Paragraph type="secondary">
-            输入运单号与查询码，了解您的货物运输进度
+            输入承运方提供的信息，了解货物的当前运输进度
           </Typography.Paragraph>
         </div>
 
-        <Card title="查询条件" style={{ marginBottom: 16 }}>
-          <Row gutter={[12, 12]}>
-            <Col xs={24} sm={8}>
-              <Input
-                prefix={<span style={{ color: '#8c96a5' }}>#</span>}
-                placeholder="租户编码"
-                value={tenantCode}
-                onChange={(e) => setTenantCode(e.target.value)}
-              />
-            </Col>
-            <Col xs={24} sm={8}>
+        <Card title="查询条件" className="ltl-track-query" style={{ marginBottom: 16 }}>
+          <Form<QueryForm>
+            form={form}
+            layout="vertical"
+            initialValues={initialValues}
+            requiredMark={false}
+            onValuesChange={() => {
+              setResult(null);
+              setError(null);
+            }}
+            onFinish={(values) => queryMutation.mutate(values)}
+          >
+            <Form.Item
+              name="tenantCode"
+              label="承运方编码"
+              extra="由承运方提供，通常印在托运单或面单上"
+              normalize={(value: string) => value?.trim()}
+              rules={[{ required: true, whitespace: true, message: '请输入承运方编码' }]}
+            >
+              <Input prefix={<span style={{ color: '#8c96a5' }}>#</span>} placeholder="例如 DEMO" />
+            </Form.Item>
+            <Form.Item
+              name="waybillNo"
+              label="运单号"
+              normalize={(value: string) => value?.trim()}
+              rules={[{ required: true, whitespace: true, message: '请输入运单号' }]}
+            >
               <Input
                 prefix={<SearchOutlined style={{ color: '#8c96a5' }} />}
-                placeholder="运单号"
-                value={waybillNo}
-                onChange={(e) => setWaybillNo(e.target.value)}
-                onPressEnter={() => queryMutation.mutate()}
+                placeholder="输入完整运单号"
               />
-            </Col>
-            <Col xs={24} sm={5}>
-              <Input
-                placeholder="查询码"
-                value={queryCode}
-                onChange={(e) => setQueryCode(e.target.value)}
-                onPressEnter={() => queryMutation.mutate()}
-                maxLength={16}
-              />
-            </Col>
-            <Col xs={24} sm={3}>
-              <Button
-                type="primary"
-                block
-                loading={queryMutation.isPending}
-                onClick={() => queryMutation.mutate()}
-              >
-                查询
-              </Button>
-            </Col>
-          </Row>
-          <Typography.Paragraph type="secondary" style={{ margin: '10px 0 0', fontSize: 12 }}>
-            查询码由承运方在开单时提供；如遗忘请联系承运方重置。
-          </Typography.Paragraph>
+            </Form.Item>
+            <Form.Item
+              name="queryCode"
+              label="查询码"
+              extra="查询码由承运方在开单时提供；如遗忘请联系承运方重置"
+              normalize={(value: string) => value?.trim()}
+              rules={[{ required: true, whitespace: true, message: '请输入查询码' }]}
+            >
+              <Input placeholder="输入查询码" maxLength={16} autoComplete="off" />
+            </Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              size="large"
+              loading={queryMutation.isPending}
+              className="ltl-track-query__submit"
+            >
+              查询运输进度
+            </Button>
+          </Form>
         </Card>
 
         {error && (
-          <Card style={{ marginBottom: 16 }}>
-            <Typography.Text type="danger">{error}</Typography.Text>
-          </Card>
+          <Alert
+            style={{ marginBottom: 16 }}
+            type="error"
+            showIcon
+            message="查询未成功"
+            description={error}
+          />
         )}
 
         {result && (
-          <Card title={`运单 ${result.waybillNo}`}>
-            <Descriptions
-              bordered
-              size="small"
-              column={{ xs: 1, sm: 2 }}
-              style={{ marginBottom: 16 }}
-            >
-              <Descriptions.Item label="运单状态">
-                <StatusTag status={result.status} category="waybill" />
-              </Descriptions.Item>
+          <Card title={`运单 ${result.waybillNo}`} className="ltl-track-result">
+            <div className="ltl-track-hero">
+              <Typography.Text type="secondary">当前运输进度</Typography.Text>
+              <strong>{formatStatus(result.transportStatus)}</strong>
+              <div className="ltl-track-meta">
+                <span>运单状态：{formatStatus(result.status, 'waybill')}</span>
+                <span>交付状态：{formatStatus(result.deliveryStatus)}</span>
+                <span>开单时间：{new Date(result.createdAt).toLocaleString('zh-CN')}</span>
+              </div>
+            </div>
+
+            <Descriptions bordered size="small" column={{ xs: 1, sm: 2 }} style={{ marginTop: 16 }}>
               <Descriptions.Item label="货物状态">
                 <StatusTag status={result.cargoStatus} />
-              </Descriptions.Item>
-              <Descriptions.Item label="运输状态">
-                <StatusTag status={result.transportStatus} />
-              </Descriptions.Item>
-              <Descriptions.Item label="交付状态">
-                <StatusTag status={result.deliveryStatus} />
               </Descriptions.Item>
               <Descriptions.Item label="运费财务">
                 <StatusTag status={result.freightStatus} />
@@ -127,12 +154,17 @@ export function CustomerQueryPage() {
                 {result.receiverName} / {result.receiverPhoneMasked}
               </Descriptions.Item>
             </Descriptions>
-            <Typography.Title level={5}>货物件</Typography.Title>
+
+            <Typography.Title level={5} className="ltl-track-packages">
+              货物件
+            </Typography.Title>
             <Table
+              className="ltl-track-packages"
               rowKey="packageNo"
               size="small"
               dataSource={result.packages}
               pagination={false}
+              scroll={{ x: 560 }}
               locale={{ emptyText: <EmptyState simple description="暂无货物件" /> }}
               columns={[
                 { title: '件号', dataIndex: 'packageNo', width: 70 },
@@ -143,14 +175,14 @@ export function CustomerQueryPage() {
                   dataIndex: 'weightKg',
                   width: 110,
                   align: 'right',
-                  render: (v: number) => v.toFixed(3),
+                  render: (value: number) => value.toFixed(3),
                 },
                 {
                   title: '体积(m³)',
                   dataIndex: 'volumeM3',
                   width: 110,
                   align: 'right',
-                  render: (v: number) => v.toFixed(4),
+                  render: (value: number) => value.toFixed(4),
                 },
               ]}
             />

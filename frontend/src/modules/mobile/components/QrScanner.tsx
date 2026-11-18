@@ -28,7 +28,6 @@ export function QrScanner({ onResult, onClose, title = '扫码查询' }: QrScann
   useEffect(() => {
     let cancelled = false;
     firedRef.current = false;
-    setError(null);
     const hints = new Map();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
     const reader = new BrowserMultiFormatReader(hints);
@@ -85,7 +84,18 @@ export function QrScanner({ onResult, onClose, title = '扫码查询' }: QrScann
       }
       closeOnAction={false}
       actions={[
-        ...(error ? [{ key: 'retry', text: '重试', onClick: () => setRetryKey((v) => v + 1) }] : []),
+        ...(error
+          ? [
+              {
+                key: 'retry',
+                text: '重试',
+                onClick: () => {
+                  setError(null);
+                  setRetryKey((v) => v + 1);
+                },
+              },
+            ]
+          : []),
         { key: 'cancel', text: error ? '手动输入' : '取消', onClick: onClose },
       ]}
     />

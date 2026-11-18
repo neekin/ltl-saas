@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, DatePicker, Flex, Table, Tabs, Typography } from 'antd';
+import { Alert, Button, Card, DatePicker, Table, Tabs, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
@@ -12,10 +12,10 @@ const DIMENSION_LABELS: Record<ReportDimension, { tab: string; code: string; nam
   customers: { tab: '客户月结', code: '客户编码', name: '客户名称' },
 };
 
-/** 运营维度报表（REPORT-002 前端）：网点/线路/客户三维度运营聚合。 */
+/** 运营维度报表（REPORT-002 前端）：按当前选定月份查看三个经营维度。 */
 export function DimensionReportPage() {
   const [dimension, setDimension] = useState<ReportDimension>('branches');
-  const [month, setMonth] = useState<string | undefined>(undefined);
+  const [month, setMonth] = useState(dayjs().format('YYYYMM'));
 
   const reportQuery = useQuery({
     queryKey: ['dimension-report', dimension, month],
@@ -23,13 +23,14 @@ export function DimensionReportPage() {
   });
 
   const labels = DIMENSION_LABELS[dimension];
+  const monthText = dayjs(month, 'YYYYMM').format('YYYY 年 M 月');
 
   const columns: ColumnsType<DimensionMetric> = [
     {
       title: labels.code,
       dataIndex: 'code',
       width: 150,
-      render: (v: string) => <span className="ltl-code">{v}</span>,
+      render: (value: string) => <span className="ltl-code">{value}</span>,
     },
     { title: labels.name, dataIndex: 'name' },
     {
@@ -46,8 +47,8 @@ export function DimensionReportPage() {
       width: 150,
       align: 'right',
       sorter: (a, b) => a.freightRevenue - b.freightRevenue,
-      render: (v: number) => (
-        <span className="ltl-amount ltl-amount--strong">¥ {v.toFixed(2)}</span>
+      render: (value: number) => (
+        <span className="ltl-amount ltl-amount--strong">¥ {value.toFixed(2)}</span>
       ),
     },
     {
@@ -55,14 +56,14 @@ export function DimensionReportPage() {
       dataIndex: 'totalWeightKg',
       width: 130,
       align: 'right',
-      render: (v: number) => <span className="ltl-amount">{v.toFixed(2)}</span>,
+      render: (value: number) => <span className="ltl-amount">{value.toFixed(2)}</span>,
     },
     {
       title: '体积 (m³)',
       dataIndex: 'totalVolumeM3',
       width: 130,
       align: 'right',
-      render: (v: number) => <span className="ltl-amount">{v.toFixed(3)}</span>,
+      render: (value: number) => <span className="ltl-amount">{value.toFixed(3)}</span>,
     },
   ];
 
@@ -70,7 +71,7 @@ export function DimensionReportPage() {
     <div>
       <PageHeader
         title="运营报表"
-        description="按网点、线路、客户维度查看运单量与运费收入；数据来自服务端实时聚合。"
+        description="按网点、线路、客户维度查看指定月份的运单量与运费收入；数据由服务端实时聚合。"
       />
 
       <Card>
@@ -82,33 +83,57 @@ export function DimensionReportPage() {
             label: value.tab,
           }))}
         />
-        <Flex gap={12} wrap align="center" style={{ marginBottom: 16 }}>
-          <Typography.Text type="secondary">统计月份：</Typography.Text>
-          <DatePicker
-            picker="month"
-            value={month ? dayjs(month, 'YYYYMM') : null}
-            onChange={(date) => setMonth(date ? date.format('YYYYMM') : undefined)}
-            allowClear
-            placeholder="全部按当月"
+        <div
+          className="ltl-filter-bar"
+          style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}
+        >
+          <div>
+            <div style={{ marginBottom: 4, color: '#6b7688', fontSize: 12 }}>统计月份</div>
+            <DatePicker
+              picker="month"
+              format="YYYY年MM月"
+              value={dayjs(month, 'YYYYMM')}
+              onChange={(date) => date && setMonth(date.format('YYYYMM'))}
+              allowClear={false}
+            />
+          </div>
+          <Typography.Text type="secondary">当前展示：{monthText}</Typography.Text>
+          <Button
+            loading={reportQuery.isFetching && !reportQuery.isError}
+            onClick={() => void reportQuery.refetch()}
+          >
+            重新统计
+          </Button>
+        </div>
+
+        {reportQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            message="报表加载失败"
+            description={reportQuery.error?.message ?? '请稍后重试，未用空数据代替失败结果。'}
+            action={
+              <Button size="small" onClick={() => void reportQuery.refetch()}>
+                重试
+              </Button>
+            }
           />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            留空按当前月统计
-          </Typography.Text>
-        </Flex>
-        <Table<DimensionMetric>
-          rowKey="id"
-          size="middle"
-          loading={reportQuery.isLoading}
-          dataSource={reportQuery.data}
-          columns={columns}
-          scroll={{ x: 850 }}
-          locale={{ emptyText: <EmptyState description="该维度暂无数据" /> }}
-          pagination={{
-            pageSize: 20,
-            showTotal: (total) => `共 ${total} 条`,
-            showSizeChanger: false,
-          }}
-        />
+        ) : (
+          <Table<DimensionMetric>
+            rowKey="id"
+            size="middle"
+            loading={reportQuery.isFetching}
+            dataSource={reportQuery.data ?? []}
+            columns={columns}
+            scroll={{ x: 850 }}
+            locale={{ emptyText: <EmptyState description={`${monthText}暂无数据`} /> }}
+            pagination={{
+              pageSize: 20,
+              showTotal: (total) => `共 ${total} 条`,
+              showSizeChanger: false,
+            }}
+          />
+        )}
       </Card>
     </div>
   );

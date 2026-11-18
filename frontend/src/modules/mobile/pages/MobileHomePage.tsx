@@ -11,9 +11,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../auth/store/authStore';
 
 const tasks = [
-  { key: '/m/receive', title: '收货登记', desc: '核对实收件数、重量与体积', icon: <ReceiptOutline /> },
+  {
+    key: '/m/receive',
+    title: '收货登记',
+    desc: '核对实收件数、重量与体积',
+    icon: <ReceiptOutline />,
+  },
   { key: '/m/load', title: '装车配载', desc: '选择批次，扫描运单装车', icon: <TruckOutline /> },
-  { key: '/m/arrival', title: '到货核验', desc: '按批次登记实收与破损', icon: <UnorderedListOutline /> },
+  {
+    key: '/m/arrival',
+    title: '到货核验',
+    desc: '按批次登记实收与破损',
+    icon: <UnorderedListOutline />,
+  },
 ];
 
 /** 移动作业台（P10）：先给最高频的扫码入口，再给三项现场任务。 */

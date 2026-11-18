@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { QrScanner } from './QrScanner';
 
 /** 从二维码文本中提取运单号：支持纯运单号或含 waybillNo / waybills 路径的 URL。 */
-export function extractWaybillNo(text: string): string {
+function extractWaybillNo(text: string): string {
   const trimmed = text.trim();
   const match = trimmed.match(/(?:waybillNo=|waybills\/)([\w-]+)/i);
   return match?.[1] ?? trimmed;

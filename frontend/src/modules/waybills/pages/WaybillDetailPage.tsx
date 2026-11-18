@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
+  Alert,
   App,
   Button,
   Card,
@@ -11,13 +12,14 @@ import {
   Popconfirm,
   Row,
   Space,
+  Spin,
   Table,
   Timeline,
   Typography,
 } from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
+import { EmptyState, PageHeader, StatusTag, formatStatus } from '../../../shared/components';
 import {
   cancelWaybill,
   confirmWaybill,
@@ -36,6 +38,12 @@ const eventTypeText: Record<string, string> = {
   Sorted: '分拣完成',
   Departed: '发车',
   Arrived: '到达',
+};
+
+const paymentTypeText: Record<string, string> = {
+  Cash: '现付',
+  OnDelivery: '到付',
+  Monthly: '月结',
 };
 
 /** 运单详情/货物跟踪页（P4 前端）：状态、货物件、收货登记、分拣、轨迹时间线、打印。 */
@@ -112,7 +120,7 @@ export function WaybillDetailPage() {
     mutationFn: () => resetQueryCode(id!),
     onSuccess: (code) => {
       modal.info({
-        title: '客户查询码已重置',
+        title: '查询码已重新生成',
         content: (
           <div>
             <Typography.Paragraph>请将新查询码转告客户，旧码立即失效：</Typography.Paragraph>
@@ -130,8 +138,24 @@ export function WaybillDetailPage() {
     onError: (e: Error) => message.error(e.message),
   });
 
-  if (detailQuery.isLoading || !detailQuery.data) {
-    return <EmptyState simple description="加载中…" />;
+  if (detailQuery.isLoading) {
+    return <Spin tip="加载运单详情…" />;
+  }
+
+  if (detailQuery.isError || !detailQuery.data) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        message="运单详情加载失败"
+        description={detailQuery.error?.message ?? '请稍后重试'}
+        action={
+          <Button size="small" onClick={() => void detailQuery.refetch()}>
+            重新加载
+          </Button>
+        }
+      />
+    );
   }
 
   const waybill = detailQuery.data;
@@ -185,13 +209,16 @@ export function WaybillDetailPage() {
                 <Button danger>取消运单</Button>
               </Popconfirm>
             )}
-            <Button
-              onClick={() => queryCodeMutation.mutate()}
-              loading={queryCodeMutation.isPending}
-            >
-              重置查询码
-            </Button>
             <Button onClick={() => navigate(`/waybills/${id}/label`)}>打印面单</Button>
+            <Popconfirm
+              title="重新生成客户查询码？"
+              description="旧查询码会立即失效，需要把新码重新告知客户。"
+              okText="确认重新生成"
+              cancelText="取消"
+              onConfirm={() => queryCodeMutation.mutate()}
+            >
+              <Button loading={queryCodeMutation.isPending}>重新生成查询码</Button>
+            </Popconfirm>
           </Space>
         }
       />
@@ -212,7 +239,9 @@ export function WaybillDetailPage() {
               <Descriptions.Item label="交付状态">
                 <StatusTag status={waybill.deliveryStatus} />
               </Descriptions.Item>
-              <Descriptions.Item label="支付方式">{waybill.paymentType}</Descriptions.Item>
+              <Descriptions.Item label="支付方式">
+                {paymentTypeText[waybill.paymentType] ?? waybill.paymentType}
+              </Descriptions.Item>
               <Descriptions.Item label="运费应收">
                 {waybill.totalAmount === null ? (
                   <Typography.Text type="secondary">未固化</Typography.Text>
@@ -282,7 +311,21 @@ export function WaybillDetailPage() {
       </Card>
 
       <Card title="运单轨迹" style={{ marginTop: 16 }}>
-        {(eventsQuery.data ?? []).length === 0 ? (
+        {eventsQuery.isLoading ? (
+          <Spin tip="加载轨迹…" />
+        ) : eventsQuery.isError ? (
+          <Alert
+            type="error"
+            showIcon
+            message="轨迹加载失败"
+            description={eventsQuery.error?.message ?? '请稍后重试'}
+            action={
+              <Button size="small" onClick={() => void eventsQuery.refetch()}>
+                重新加载
+              </Button>
+            }
+          />
+        ) : (eventsQuery.data ?? []).length === 0 ? (
           <EmptyState simple description="暂无轨迹事件" />
         ) : (
           <Timeline
@@ -291,7 +334,7 @@ export function WaybillDetailPage() {
               children: (
                 <>
                   <Typography.Text strong>
-                    {eventTypeText[event.eventType] ?? event.eventType}
+                    {eventTypeText[event.eventType] ?? formatStatus(event.eventType)}
                   </Typography.Text>
                   {event.detail && (
                     <Typography.Text type="secondary"> — {event.detail}</Typography.Text>

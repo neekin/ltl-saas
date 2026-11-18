@@ -1,6 +1,9 @@
 import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { BasicLayout } from '../layouts/BasicLayout';
 import { DashboardPage } from '../../modules/reports/pages/DashboardPage';
+import { BranchListPage } from '../../modules/organization/pages/BranchListPage';
+import { UserListPage } from '../../modules/organization/pages/UserListPage';
+import { RoleListPage } from '../../modules/organization/pages/RoleListPage';
 import { DimensionReportPage } from '../../modules/reports/pages/DimensionReportPage';
 import { TenantUsagePage } from '../../modules/reports/pages/TenantUsagePage';
 import { SystemStatusPage } from '../../modules/system/pages/SystemStatusPage';
@@ -78,6 +81,9 @@ export const router = createBrowserRouter([
 
           // P2：经营基础资料
           { path: 'customers', element: <CustomerListPage /> },
+          { path: 'organization/branches', element: <BranchListPage /> },
+          { path: 'organization/users', element: <UserListPage /> },
+          { path: 'organization/roles', element: <RoleListPage /> },
           { path: 'customers/:id', element: <CustomerListPage /> },
           { path: 'routes', element: <RouteListPage /> },
           { path: 'routes/:id', element: <RouteEditPage /> },

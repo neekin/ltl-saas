@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Col,
+  Descriptions,
   Form,
   Input,
   InputNumber,
@@ -19,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../../shared/components';
 import { http } from '../../../shared/api/http';
 import { trial, type TrialResult } from '../../pricing/api/pricing';
+import { useAuthStore } from '../../auth/store/authStore';
 import { createWaybill } from '../api/waybills';
 
 interface CustomerDetailContacts {
@@ -50,9 +52,10 @@ interface PackageRow {
 export function WaybillCreatePage() {
   const navigate = useNavigate();
   const { message, modal } = App.useApp();
+  const tenantCode = useAuthStore((s) => s.user?.tenantCode);
   const [form] = Form.useForm();
   const [packages, setPackages] = useState<PackageRow[]>([]);
-  const [trialResult, setTrialResult] = useState<TrialResult | null>(null);
+  const [trialRecord, setTrialRecord] = useState<{ key: string; result: TrialResult } | null>(null);
   const [trialing, setTrialing] = useState(false);
 
   const branchQuery = useQuery({
@@ -86,6 +89,9 @@ export function WaybillCreatePage() {
 
   // 监听客户选择变化 → 预填发货人信息（主联系人 + 默认地址）
   const selectedCustomerId = Form.useWatch('customerId', form);
+  const watchedRuleSetId = Form.useWatch('ruleSetId', form);
+  const watchedOriginBranchId = Form.useWatch('originBranchId', form);
+  const watchedDestBranchId = Form.useWatch('destBranchId', form);
   const customerDetailQuery = useQuery({
     queryKey: ['customer-detail-for-prefill', selectedCustomerId],
     queryFn: async () => {
@@ -120,6 +126,17 @@ export function WaybillCreatePage() {
   const declaredWeight = packages.reduce((sum, p) => sum + p.weightKg * p.quantity, 0);
   const declaredVolume = packages.reduce((sum, p) => sum + p.volumeM3 * p.quantity, 0);
   const declaredPieces = packages.reduce((sum, p) => sum + p.quantity, 0);
+  // 试算结果只在当前价卡、网点与货物输入完全一致时展示，旧金额不误导开单。
+  const trialKey = [
+    watchedRuleSetId ?? '',
+    watchedOriginBranchId ?? '',
+    watchedDestBranchId ?? '',
+    packages
+      .map((p) => `${p.key}:${p.cargoName}:${p.quantity}:${p.weightKg}:${p.volumeM3}`)
+      .join('|'),
+  ].join('||');
+  const trialResult = trialRecord?.result ?? null;
+  const trialStale = !!trialRecord && trialRecord.key !== trialKey;
 
   const onTrial = async () => {
     const ruleSetId = form.getFieldValue('ruleSetId') as string | undefined;
@@ -138,7 +155,7 @@ export function WaybillCreatePage() {
         originBranchId: originBranchId ?? null,
         destBranchId: destBranchId ?? null,
       });
-      setTrialResult(result);
+      setTrialRecord({ key: trialKey, result });
     } catch (e) {
       message.error(e instanceof Error ? e.message : '试算失败');
     } finally {
@@ -149,6 +166,20 @@ export function WaybillCreatePage() {
   const onSubmit = async (values: Record<string, unknown>) => {
     if (packages.length === 0) {
       message.error('至少添加一个货物件');
+      return;
+    }
+    const invalidPackage = packages.find(
+      (item) =>
+        !item.cargoName.trim() ||
+        !Number.isInteger(item.quantity) ||
+        item.quantity < 1 ||
+        !Number.isFinite(item.weightKg) ||
+        item.weightKg <= 0 ||
+        !Number.isFinite(item.volumeM3) ||
+        item.volumeM3 < 0,
+    );
+    if (invalidPackage) {
+      message.error('请补全货名，并确认件数 ≥ 1、重量 > 0、体积 ≥ 0');
       return;
     }
     try {
@@ -175,25 +206,44 @@ export function WaybillCreatePage() {
         })),
       });
       if (result.queryCode) {
-        // P10：把查询码交给内部用户转告客户；客户凭 租户编码+运单号+查询码 匿名查单。
+        // 明确成功终态：不允许关闭弹窗后回到仍可重复提交的旧表单。
+        const trackUrl = `${window.location.origin}/track`;
         modal.confirm({
-          title: `开单成功：${result.waybillNo}`,
+          title: `运单已创建：${result.waybillNo}`,
+          width: 520,
           content: (
             <div>
               <Typography.Paragraph>
-                请保存以下客户查询码并转告客户（关闭后仍可在运单详情重新生成）：
+                请保存以下信息并一起转告客户。查询码只在本次显示明文，后续可在运单详情重新生成。
               </Typography.Paragraph>
-              <Typography.Text
-                code
-                copyable
-                style={{ fontSize: 20, fontWeight: 600, letterSpacing: 2 }}
-              >
-                {result.queryCode}
-              </Typography.Text>
+              <Descriptions bordered size="small" column={1}>
+                <Descriptions.Item label="客户查询入口">
+                  <Typography.Text copyable>{trackUrl}</Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="承运方编码">
+                  <Typography.Text copyable>{tenantCode ?? '请向承运方确认'}</Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="运单号">
+                  <Typography.Text copyable className="ltl-code">
+                    {result.waybillNo}
+                  </Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="查询码">
+                  <Typography.Text
+                    code
+                    copyable
+                    style={{ fontSize: 20, fontWeight: 600, letterSpacing: 2 }}
+                  >
+                    {result.queryCode}
+                  </Typography.Text>
+                </Descriptions.Item>
+              </Descriptions>
             </div>
           ),
-          okText: '查看运单详情',
-          cancelText: '关闭',
+          okText: '完成并查看运单详情',
+          okCancel: false,
+          keyboard: false,
+          maskClosable: false,
           onOk: () => navigate(`/waybills/${result.waybillId}`),
         });
       } else {
@@ -208,6 +258,20 @@ export function WaybillCreatePage() {
   const createMutation = useMutation({
     mutationFn: onSubmit,
   });
+
+  const onCancel = () => {
+    if (!form.isFieldsTouched() && packages.length === 0) {
+      navigate('/waybills');
+      return;
+    }
+    modal.confirm({
+      title: '放弃本次开单？',
+      content: '已填写的信息和试算结果不会保存。',
+      okText: '放弃并返回',
+      cancelText: '继续编辑',
+      onOk: () => navigate('/waybills'),
+    });
+  };
 
   return (
     <div>
@@ -499,7 +563,7 @@ export function WaybillCreatePage() {
           />
         </Card>
 
-        {trialResult && (
+        {!trialStale && trialResult && (
           <Card
             title={`试算结果：命中 ${trialResult.quote.matchedRuleName}（${trialResult.ruleSetCode} v${trialResult.versionNumber}）`}
             style={{ marginBottom: 16 }}
@@ -533,7 +597,7 @@ export function WaybillCreatePage() {
                 ¥ {trialResult.quote.total.toFixed(2)}
               </Typography.Text>
               <Typography.Text type="secondary" style={{ marginLeft: 8 }}>
-                （开单后按此金额固化）
+                （修改价卡、网点或货物件后需重新试算）
               </Typography.Text>
             </div>
           </Card>
@@ -543,7 +607,7 @@ export function WaybillCreatePage() {
           className="ltl-no-print"
           style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}
         >
-          <Button onClick={() => navigate('/waybills')}>取消</Button>
+          <Button onClick={onCancel}>取消</Button>
           <Button type="primary" size="large" htmlType="submit" loading={createMutation.isPending}>
             开单并固化费用
           </Button>

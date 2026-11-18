@@ -6,12 +6,7 @@ import { formatStatus } from '../../../shared/components';
 import { MobileWaybillNo } from '../components/MobileWaybillNo';
 import { MobileWaybillSearch } from '../components/MobileWaybillSearch';
 import { getWaybillByNo } from '../../waybills/api/waybills';
-import {
-  getTrip,
-  listTrips,
-  loadWaybill,
-  removeWaybill,
-} from '../../transport/api/trips';
+import { getTrip, listTrips, loadWaybill, removeWaybill } from '../../transport/api/trips';
 
 /** 移动装车配载（P10）：先选择可配载批次，再精确扫描运单号装车。 */
 export function MobileLoadPage() {
@@ -88,7 +83,11 @@ export function MobileLoadPage() {
             </ErrorBlock>
           )}
           {!tripsQuery.isLoading && !tripsQuery.isError && planned.length === 0 && (
-            <ErrorBlock status="empty" title="暂无计划批次" description="请先在 PC 后台创建运输批次" />
+            <ErrorBlock
+              status="empty"
+              title="暂无计划批次"
+              description="请先在 PC 后台创建运输批次"
+            />
           )}
           {!tripsQuery.isLoading &&
             !tripsQuery.isError &&
@@ -181,7 +180,9 @@ export function MobileLoadPage() {
                 <div key={item.id} className="mobile-assignment-row">
                   <div className="mobile-assignment-row__head">
                     <MobileWaybillNo waybillId={item.waybillId} />
-                    <Tag color={item.active ? 'success' : 'default'}>{item.active ? '在车' : '已卸'}</Tag>
+                    <Tag color={item.active ? 'success' : 'default'}>
+                      {item.active ? '在车' : '已卸'}
+                    </Tag>
                   </div>
                   {item.active && (
                     <Button

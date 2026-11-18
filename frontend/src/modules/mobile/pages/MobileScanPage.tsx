@@ -87,7 +87,10 @@ export function MobileScanPage() {
             <div className="mobile-progress">
               <span className="mobile-field-label">当前运输进度</span>
               <strong>{formatStatus(waybill.transportStatus)}</strong>
-              <small>货物：{formatStatus(waybill.cargoStatus)} ｜ 交付：{formatStatus(waybill.deliveryStatus)}</small>
+              <small>
+                货物：{formatStatus(waybill.cargoStatus)} ｜ 交付：
+                {formatStatus(waybill.deliveryStatus)}
+              </small>
             </div>
             <div className="mobile-metrics">
               <div>
@@ -128,7 +131,8 @@ export function MobileScanPage() {
                     {item.packageNo}. {item.cargoName}
                   </strong>
                   <small>
-                    {item.quantity} 件 ｜ {item.weightKg.toFixed(3)} kg ｜ {item.volumeM3.toFixed(4)} m³
+                    {item.quantity} 件 ｜ {item.weightKg.toFixed(3)} kg ｜{' '}
+                    {item.volumeM3.toFixed(4)} m³
                   </small>
                 </div>
               </div>
