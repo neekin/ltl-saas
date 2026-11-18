@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { EmptyState, PageHeader } from '../../../shared/components';
+import { downloadCsv } from '../../../shared/utils/csv';
 import { getBranchPaymentSummary, type BranchPaymentSummary } from '../api/finance';
 
 /** 网点收款汇总页（FIN-003 前端）：按运单始发网点聚合收款笔数与金额，支持按月筛选。 */
@@ -85,6 +86,22 @@ export function BranchPaymentSummaryPage() {
             onClick={() => void summaryQuery.refetch()}
           >
             重新统计
+          </Button>
+          <Button
+            disabled={(summaryQuery.data ?? []).length === 0}
+            onClick={() =>
+              downloadCsv(
+                `branch-payment-summary${month ? `-${month}` : ''}.csv`,
+                ['网点编码', '网点名称', '累计收款', '累计笔数', '当月收款', '当月笔数'],
+                (summaryQuery.data ?? []).map((r) => [
+                  r.branchCode, r.branchName,
+                  r.totalCollected.toFixed(2), r.paymentCount,
+                  r.monthCollected.toFixed(2), r.monthPaymentCount,
+                ]),
+              )
+            }
+          >
+            导出 Excel(CSV)
           </Button>
         </div>
 

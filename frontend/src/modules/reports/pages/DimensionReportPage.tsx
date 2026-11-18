@@ -4,6 +4,7 @@ import type { ColumnsType } from 'antd/es/table';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { EmptyState, PageHeader } from '../../../shared/components';
+import { downloadCsv } from '../../../shared/utils/csv';
 import { getDimensionReport, type DimensionMetric, type ReportDimension } from '../api/reports';
 
 const DIMENSION_LABELS: Record<ReportDimension, { tab: string; code: string; name: string }> = {
@@ -103,6 +104,21 @@ export function DimensionReportPage() {
             onClick={() => void reportQuery.refetch()}
           >
             重新统计
+          </Button>
+          <Button
+            disabled={(reportQuery.data ?? []).length === 0}
+            onClick={() =>
+              downloadCsv(
+                `${dimension}-${month}.csv`,
+                [labels.code, labels.name, '运单数', '运费收入', '货量(kg)', '体积(m³)'],
+                (reportQuery.data ?? []).map((r) => [
+                  r.code, r.name, r.waybillCount,
+                  r.freightRevenue.toFixed(2), r.totalWeightKg.toFixed(2), r.totalVolumeM3.toFixed(3),
+                ]),
+              )
+            }
+          >
+            导出 Excel(CSV)
           </Button>
         </div>
 

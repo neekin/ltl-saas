@@ -717,3 +717,19 @@ body {
     overflow-x: auto;
   }
 }
+
+
+/* 网点交接单打印：仅输出 .ltl-transfer-print 范围 */
+@media print {
+  .ltl-transfer-print,
+  .ltl-transfer-print * {
+    visibility: visible !important;
+  }
+
+  .ltl-transfer-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}

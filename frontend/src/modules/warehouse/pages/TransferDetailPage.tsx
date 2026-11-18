@@ -146,7 +146,7 @@ export function TransferDetailPage() {
   ];
 
   return (
-    <div>
+    <div className="ltl-transfer-print">
       <PageHeader
         title={
           <Space size={12} wrap>
@@ -177,6 +177,7 @@ export function TransferDetailPage() {
                 验收入库
               </Button>
             )}
+            <Button onClick={() => window.print()}>打印交接单</Button>
             {canCancel && (
               <Button danger onClick={() => cancelMutation.mutate()}>
                 取消
