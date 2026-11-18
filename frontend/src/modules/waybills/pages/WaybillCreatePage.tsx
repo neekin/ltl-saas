@@ -198,6 +198,7 @@ export function WaybillCreatePage() {
         remark: (values.remark as string) || undefined,
         declaredValue: (values.declaredValue as number) || undefined,
         insuranceFee: (values.insuranceFee as number) || undefined,
+        codAmount: (values.codAmount as number) || undefined,
         packages: packages.map((p) => ({
           cargoName: p.cargoName,
           quantity: p.quantity,
@@ -361,6 +362,28 @@ export function WaybillCreatePage() {
                     { value: 'OnDelivery', label: '到付' },
                     { value: 'Monthly', label: '月结' },
                   ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item
+                name="codAmount"
+                label="COD 代收金额"
+                rules={[
+                  () => ({
+                    validator: (_, value) =>
+                      value === undefined || value === null || value >= 0
+                        ? Promise.resolve()
+                        : Promise.reject(new Error('COD 代收金额不能为负数')),
+                  }),
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  precision={2}
+                  placeholder="可选，独立资金业务"
+                  addonBefore="元"
+                  style={{ width: '100%' }}
                 />
               </Form.Item>
             </Col>

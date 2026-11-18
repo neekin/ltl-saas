@@ -78,7 +78,11 @@ public sealed class WaybillCargoService(WaybillsDbContext db) : IWaybillCargoSer
     public async Task MarkTransportShippedAsync(Guid waybillId, Guid? operatorUserId, string detail)
     {
         var waybill = await RequireWaybillAsync(waybillId);
-        waybill.MarkTransportShipped(DateTime.UtcNow, operatorUserId);
+        // 多段运输（AGENTS §1）：中转段再发车时运单仍处于运输中，只追加轨迹事件，不重复状态迁移。
+        if (waybill.TransportStatus == WaybillTransportStatus.NotShipped)
+        {
+            waybill.MarkTransportShipped(DateTime.UtcNow, operatorUserId);
+        }
         AppendEvent(waybill, WaybillEventType.Departed, operatorUserId, detail);
         await db.SaveChangesAsync();
     }

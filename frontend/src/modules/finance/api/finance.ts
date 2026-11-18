@@ -98,3 +98,38 @@ export async function getBranchPaymentSummary(month?: string): Promise<BranchPay
   });
   return response.data;
 }
+
+/** 应收懒初始化（首次收款前创建，金额 = 运单固化总额）。 */
+export async function ensureReceivable(waybillId: string): Promise<Receivable> {
+  const response = await http.post<Receivable>(
+    `/finance/receivables/ensure?waybillId=${encodeURIComponent(waybillId)}`,
+  );
+  return response.data;
+}
+
+/** COD 订单懒初始化（首次登记收款前创建，金额 = 运单 COD 代收金额）。 */
+export async function ensureCodOrder(waybillId: string): Promise<CodOrder> {
+  const response = await http.post<CodOrder>(
+    `/finance/cod/orders/ensure?waybillId=${encodeURIComponent(waybillId)}`,
+  );
+  return response.data;
+}
+
+export interface CodSettlement {
+  id: string;
+  codOrderId: string;
+  amount: number;
+  status: string;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  paidBy: string | null;
+  paidAt: string | null;
+}
+
+/** 按运单列出 COD 结算单（新→旧）。 */
+export async function listCodSettlements(waybillId: string): Promise<CodSettlement[]> {
+  const response = await http.get<CodSettlement[]>('/finance/cod/settlements', {
+    params: { waybillId },
+  });
+  return response.data;
+}

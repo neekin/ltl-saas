@@ -27,6 +27,12 @@ public record CreateCodSettlementRequest(Guid WaybillId, decimal Amount);
 public interface ICodService
 {
     Task<CodOrderDto> EnsureCodOrderAsync(Guid waybillId);
+
+    /// <summary>带权限校验的 COD 订单懒初始化（UI 首次登记收款前入口）。</summary>
+    Task<CodOrderDto> EnsureCodOrderForOperatorAsync(Guid operatorUserId, Guid waybillId);
+
+    /// <summary>按运单列出 COD 结算单（审批/付款界面数据源；新→旧）。</summary>
+    Task<IReadOnlyList<CodSettlementDto>> ListSettlementsByWaybillAsync(Guid waybillId);
     Task<CodOrderDto?> GetCodOrderByWaybillAsync(Guid waybillId);
     Task<CodCollectionDto> RecordCollectionAsync(Guid operatorUserId, RecordCodCollectionRequest request);
     Task<CodSettlementDto> CreateSettlementAsync(Guid operatorUserId, CreateCodSettlementRequest request);
@@ -45,6 +51,14 @@ public sealed class CodService(
     IAuthorizationService authorization,
     IAuditLogService audit) : ICodService
 {
+    /// <summary>带权限校验的 COD 订单懒初始化。</summary>
+    public async Task<CodOrderDto> EnsureCodOrderForOperatorAsync(Guid operatorUserId, Guid waybillId)
+    {
+        if (!await authorization.HasPermissionAsync(operatorUserId, "cod.manage"))
+            throw new PermissionDeniedException("cod.manage");
+        return await EnsureCodOrderAsync(waybillId);
+    }
+
     public async Task<CodOrderDto> EnsureCodOrderAsync(Guid waybillId)
     {
         var existing = await db.CodOrders
@@ -78,6 +92,25 @@ public sealed class CodService(
             .AsNoTracking()
             .SingleOrDefaultAsync(o => o.WaybillId == waybillId);
         return codOrder is null ? null : ToDto(codOrder);
+    }
+
+    /// <summary>按运单列出结算单（新→旧）。COD 数据都在租户过滤器内。</summary>
+    public async Task<IReadOnlyList<CodSettlementDto>> ListSettlementsByWaybillAsync(Guid waybillId)
+    {
+        var codOrder = await db.CodOrders
+            .AsNoTracking()
+            .SingleOrDefaultAsync(o => o.WaybillId == waybillId);
+        if (codOrder is null)
+        {
+            return [];
+        }
+
+        var settlements = await db.CodSettlements
+            .AsNoTracking()
+            .Where(x => x.CodOrderId == codOrder.Id)
+            .OrderByDescending(x => x.CreatedAt)
+            .ToListAsync();
+        return settlements.Select(ToDto).ToList();
     }
 
     public async Task<CodCollectionDto> RecordCollectionAsync(

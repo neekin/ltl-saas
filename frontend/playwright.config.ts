@@ -37,7 +37,7 @@ export default defineConfig({
       timeout: 60_000,
     },
     {
-      command: 'dotnet run --project src/Ltl.Api --no-build',
+      command: 'ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/Ltl.Api --no-build',
       cwd: '../backend',
       url: 'http://localhost:5080/health',
       reuseExistingServer: true,

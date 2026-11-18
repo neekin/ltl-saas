@@ -27,6 +27,7 @@ public static class WaybillEndpoints
                 request.Packages.Select(p => new WaybillPackageDraft(
                     p.CargoName, p.Quantity, p.WeightKg, p.VolumeM3)).ToArray(),
                 request.RuleSetId, DateOnly.FromDateTime(DateTime.UtcNow),
+                CodAmount: request.CodAmount,
                 Remark: request.Remark, DeclaredValue: request.DeclaredValue,
                 InsuranceFee: request.InsuranceFee, BranchId: request.OriginBranchId,
                 OperatorId: RequireUserId(user)))));
@@ -50,12 +51,16 @@ public static class WaybillEndpoints
             Results.Ok(await service.CancelAsync(RequireUserId(user), id, request.Reason)));
 
         // P10 客户查询：凭租户编码 + 运单号 + 查询码匿名查单票（脱敏）；防枚举统一 401。
+        // 畸形请求（无 body / 空字段）同样按 401 处理，交由服务层统一校验，避免 500 与信息差异。
         app.MapPost("/api/public/waybill-query", async (
-            CustomerQueryRequest request, IWaybillQueryCodeService service) =>
+            CustomerQueryRequest? request, IWaybillQueryCodeService service) =>
         {
             try
             {
-                return Results.Ok(await service.QueryAsync(request.TenantCode, request.WaybillNo, request.QueryCode));
+                return Results.Ok(await service.QueryAsync(
+                    request?.TenantCode ?? string.Empty,
+                    request?.WaybillNo ?? string.Empty,
+                    request?.QueryCode ?? string.Empty));
             }
             catch (UnauthorizedAccessException)
             {
@@ -89,7 +94,8 @@ public static class WaybillEndpoints
         IReadOnlyList<CreatePackageRequest> Packages,
         string? Remark = null,
         decimal? DeclaredValue = null,
-        decimal? InsuranceFee = null);
+        decimal? InsuranceFee = null,
+        decimal? CodAmount = null);
 
     public sealed record CreatePackageRequest(
         string CargoName, int Quantity, decimal WeightKg, decimal VolumeM3);

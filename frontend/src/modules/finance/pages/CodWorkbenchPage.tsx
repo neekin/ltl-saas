@@ -3,7 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { App, Button, Card, Col, Flex, Input, InputNumber, Row, Space, Typography } from 'antd';
 import { useState } from 'react';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
-import { getCodOrder, recordCodCollection, type CodOrder } from '../api/finance';
+import { ensureCodOrder, getCodOrder, recordCodCollection, type CodOrder } from '../api/finance';
 
 /** COD 工作台（P8 前端）：按运单查询 COD 订单并登记收款。 */
 export function CodWorkbenchPage() {
@@ -52,7 +52,23 @@ export function CodWorkbenchPage() {
 
       {!codOrder && (
         <Card>
-          <EmptyState description="输入运单 ID 查询 COD 订单" />
+          <EmptyState description="输入运单 ID 查询 COD 订单；如运单已设置代收金额，可先初始化 COD 订单。" />
+          {waybillId.trim() && (
+            <div style={{ marginTop: 12 }}>
+              <Button
+                onClick={async () => {
+                  try {
+                    setCodOrder(await ensureCodOrder(waybillId));
+                    message.success('COD 订单已创建');
+                  } catch (e) {
+                    message.error(e instanceof Error ? e.message : '创建 COD 订单失败');
+                  }
+                }}
+              >
+                初始化 COD 订单
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 

@@ -19,8 +19,10 @@ import {
   approveCodSettlement,
   createCodSettlement,
   getCodOrder,
+  listCodSettlements,
   payCodSettlement,
   type CodOrder,
+  type CodSettlement,
 } from '../api/finance';
 
 /** COD 管理页（P8 前端）：COD 收款 + 结算审批 + 付款。 */
@@ -28,13 +30,16 @@ export function CodManagementPage() {
   const { message } = App.useApp();
   const [waybillId, setWaybillId] = useState('');
   const [codOrder, setCodOrder] = useState<CodOrder | null>(null);
+  const [settlements, setSettlements] = useState<CodSettlement[]>([]);
   const [settleAmount, setSettleAmount] = useState(0);
 
   const search = async () => {
     try {
       setCodOrder(await getCodOrder(waybillId));
+      setSettlements(await listCodSettlements(waybillId));
     } catch {
       setCodOrder(null);
+      setSettlements([]);
     }
   };
 
@@ -157,20 +162,26 @@ export function CodManagementPage() {
                 结算单已创建并计入已结算金额；审批和付款操作由 COD 管理员执行。
               </Typography.Paragraph>
               <Space wrap>
-                <Popconfirm
-                  title="确认审批该结算单？"
-                  onConfirm={() => approveMutation.mutate(codOrder.id)}
-                >
-                  <Button type="primary">审批</Button>
-                </Popconfirm>
-                <Popconfirm
-                  title="确认付款给发货人？"
-                  onConfirm={() => payMutation.mutate(codOrder.id)}
-                >
-                  <Button danger loading={payMutation.isPending}>
-                    付款 ¥ {codOrder.settledAmount.toFixed(2)}
-                  </Button>
-                </Popconfirm>
+                {settlements
+                  .filter((x) => x.status === 'Draft')
+                  .map((x) => (
+                    <Popconfirm key={x.id} title="确认审批该结算单？"
+                      onConfirm={() => approveMutation.mutate(x.id)}
+                    >
+                      <Button type="primary">审批 ¥ {x.amount.toFixed(2)}</Button>
+                    </Popconfirm>
+                  ))}
+                {settlements
+                  .filter((x) => x.status === 'Approved')
+                  .map((x) => (
+                    <Popconfirm key={x.id} title="确认付款给发货人？"
+                      onConfirm={() => payMutation.mutate(x.id)}
+                    >
+                      <Button danger loading={payMutation.isPending}>
+                        付款 ¥ {x.amount.toFixed(2)}
+                      </Button>
+                    </Popconfirm>
+                  ))}
               </Space>
             </Card>
           )}

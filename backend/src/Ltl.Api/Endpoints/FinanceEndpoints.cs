@@ -22,6 +22,11 @@ public static class FinanceEndpoints
             var result = await service.GetReceivableAsync(waybillId);
             return result is null ? Results.NotFound() : Results.Ok(result);
         });
+        finance.MapPost("/receivables/ensure", async (Guid waybillId, ClaimsPrincipal user, IFinanceService service) =>
+        {
+            RequireManage(user);
+            return Results.Ok(await service.EnsureReceivableForOperatorAsync(RequireUserId(user), waybillId));
+        });
         finance.MapPost("/payments", async (RecordPaymentRequest request, ClaimsPrincipal user, IFinanceService service) =>
         {
             RequireManage(user);

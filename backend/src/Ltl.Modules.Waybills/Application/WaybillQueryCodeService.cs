@@ -46,6 +46,15 @@ public sealed class WaybillQueryCodeService(
 {
     public async Task<CustomerWaybillView> QueryAsync(string tenantCode, string waybillNo, string queryCode)
     {
+        // 匿名端点暴露在公网：空 body / 缺字段等畸形请求统一按"凭据错误"拒绝（401），
+        // 既避免对 null 解引用产生 500，也不让调用方区分"参数缺失"与"凭据错误"（防枚举，AGENTS §8）。
+        if (string.IsNullOrWhiteSpace(tenantCode) ||
+            string.IsNullOrWhiteSpace(waybillNo) ||
+            string.IsNullOrWhiteSpace(queryCode))
+        {
+            throw new UnauthorizedAccessException("运单号或查询码不正确");
+        }
+
         // 匿名端点无 JWT，不能用 ITenantContext；由租户编码解析租户 ID（原生 SQL 显式参数）。
         // tenantCode 仅用于定位租户，授权依据是运单号 + 查询码双因子（AGENTS §5.1）。
         var code = tenantCode.Trim();

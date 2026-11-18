@@ -131,6 +131,8 @@ export async function createWaybill(payload: {
   remark?: string;
   declaredValue?: number;
   insuranceFee?: number;
+  /** COD 代收金额（独立资金业务，不计入运费应收）；不传 = 无 COD */
+  codAmount?: number;
   packages: { cargoName: string; quantity: number; weightKg: number; volumeM3: number }[];
 }): Promise<{ waybillId: string; waybillNo: string; totalAmount: number; queryCode?: string }> {
   const response = await http.post<{

@@ -26,6 +26,22 @@
 
 约定：匿名客户查询**不依赖 EF 全局查询过滤器**（无 JWT 时上下文为空），显式 `IgnoreQueryFilters()` + SQL 参数化携带 `tenant_id`（AGENTS.md §5.1）；查询码库内仅存 SHA256 哈希，明文仅开单/重置时返回；报表 SQL 别名一律 snake_case（与 `UseSnakeCaseNamingConvention` 一致）。前端独立路由：`/m`（移动作业）、`/track`（客户查询）、`/waybills/:id/label`（A5 面单）。
 
+## 开发补全端点（2026-11-19）
+
+| 方法 | 路径 | 说明 | 认证/权限 |
+| --- | --- | --- | --- |
+| PUT | `/api/customers/{id}/credit-policy` | 月结信用政策（额度/账期，null=清除）；开单额度检查依赖 | customer.manage + JWT |
+| GET | `/api/organization/roles/permissions` | 平台预置权限点目录（权限配置界面数据源） | role.read + JWT |
+| GET | `/api/finance/branch-payment-summary?month=yyyyMM` | 网点收款汇总（按运单始发网点聚合累计+当月；未传月份默认当前月） | finance.read + JWT |
+| POST | `/api/finance/receivables/ensure?waybillId=` | 应收懒初始化（首笔收款前 UI 入口，金额=运单固化总额） | finance.manage + JWT |
+| GET | `/api/finance/cod/settlements?waybillId=` | 按运单列出 COD 结算单（新→旧；审批/付款界面数据源） | cod.read + JWT |
+| POST | `/api/finance/cod/orders/ensure?waybillId=` | COD 订单懒初始化（首次登记收款前 UI 入口） | cod.manage + JWT |
+| POST | `/api/waybills`（请求新增） | 请求体新增可选 `codAmount`：开单即设置 COD 代收金额 | waybill.manage + JWT |
+
+## E2E（AGENTS §10 优先场景，Playwright，`npm run e2e`）
+
+前置：本地 Docker 栈（PostgreSQL 5433/Redis）+ Playwright webServer 自动拉起前后端（Development 环境含种子：demo 租户、GZ01/WH02/CS03、粤A88888 车辆、R001 线路、KH001 客户额度 5 万/30 天）。已覆盖：① 现付直达全流程；② 广州—武汉—长沙两段批次接力；③ 网点调拨差异留痕；④ 月结部分收款→结清；⑤ COD 收取→结算→审批→付款。
+
 ## 统一错误格式（BASE-002 已落地）
 
 - 全局异常处理：未处理异常一律返回 `500` + `application/problem+json`（RFC 9457 ProblemDetails）。

@@ -21,6 +21,16 @@ public static class CodEndpoints
             var result = await service.GetCodOrderByWaybillAsync(waybillId);
             return result is null ? Results.NotFound() : Results.Ok(result);
         });
+        cod.MapGet("/settlements", async (Guid waybillId, ClaimsPrincipal user, ICodService service) =>
+        {
+            Require(user, "cod.read");
+            return Results.Ok(await service.ListSettlementsByWaybillAsync(waybillId));
+        });
+        cod.MapPost("/orders/ensure", async (Guid waybillId, ClaimsPrincipal user, ICodService service) =>
+        {
+            Require(user, "cod.manage");
+            return Results.Ok(await service.EnsureCodOrderForOperatorAsync(RequireUserId(user), waybillId));
+        });
         cod.MapPost("/collections", async (
             RecordCodCollectionRequest request, ClaimsPrincipal user, ICodService service) =>
         {

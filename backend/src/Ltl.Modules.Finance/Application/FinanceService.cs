@@ -35,6 +35,9 @@ public interface IFinanceService
     /// <summary>确保应收存在（运单确认后首次收款时懒创建，金额 = 运单 TotalAmount）。</summary>
     Task<ReceivableDto> EnsureReceivableAsync(Guid waybillId);
 
+    /// <summary>带权限校验的应收懒初始化（FIN-001 首笔收款前 UI 入口）。</summary>
+    Task<ReceivableDto> EnsureReceivableForOperatorAsync(Guid operatorUserId, Guid waybillId);
+
     /// <summary>信用额度检查（月结客户；outstanding > credit_limit → false）。customerId 无额度 → true。</summary>
     Task<bool> IsWithinCreditLimitAsync(Guid customerId);
 
@@ -61,6 +64,14 @@ public sealed class FinanceService(
     IAuthorizationService authorization,
     IAuditLogService audit) : IFinanceService
 {
+    /// <summary>带权限校验的应收懒初始化（FIN-001 首笔收款前 UI 入口）。</summary>
+    public async Task<ReceivableDto> EnsureReceivableForOperatorAsync(Guid operatorUserId, Guid waybillId)
+    {
+        if (!await authorization.HasPermissionAsync(operatorUserId, "finance.manage"))
+            throw new PermissionDeniedException("finance.manage");
+        return await EnsureReceivableAsync(waybillId);
+    }
+
     public async Task<ReceivableDto> EnsureReceivableAsync(Guid waybillId)
     {
         var existing = await db.Receivables

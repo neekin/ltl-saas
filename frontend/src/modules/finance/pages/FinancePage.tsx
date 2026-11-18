@@ -17,6 +17,7 @@ import {
 import { useState } from 'react';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
 import {
+  ensureReceivable,
   getReceivable,
   listPayments,
   recordPayment,
@@ -75,7 +76,24 @@ export function FinancePage() {
 
       {!receivable && (
         <Card>
-          <EmptyState description="输入运单 ID 查询应收账款" />
+          <EmptyState description="输入运单 ID 查询应收账款；如运单已确认并固化费用，可先初始化应收。" />
+          {waybillId.trim() && (
+            <div style={{ marginTop: 12 }}>
+              <Button
+                onClick={async () => {
+                  try {
+                    setReceivable(await ensureReceivable(waybillId));
+                    setPayments(await listPayments(waybillId));
+                    message.success('应收已创建');
+                  } catch (e) {
+                    message.error(e instanceof Error ? e.message : '创建应收失败');
+                  }
+                }}
+              >
+                初始化应收
+              </Button>
+            </div>
+          )}
         </Card>
       )}
 

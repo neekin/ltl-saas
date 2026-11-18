@@ -348,9 +348,12 @@ static void SeedDevelopmentData(IServiceProvider services)
     try
     {
         var tenancyDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Tenancy.Infrastructure.TenancyDbContext>();
+        var tenantContext = scope.ServiceProvider.GetRequiredService<Ltl.SharedKernel.Application.ITenantContext>();
         var orgDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Organization.Infrastructure.OrganizationDbContext>();
         var customersDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Customers.Infrastructure.CustomersDbContext>();
         var pricingDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Pricing.Infrastructure.PricingDbContext>();
+        var routingDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Routing.Infrastructure.RoutingDbContext>();
+        var transportDb = scope.ServiceProvider.GetRequiredService<Ltl.Modules.Transport.Infrastructure.TransportDbContext>();
 
         // 1. 租户
         var tenant = tenancyDb.Tenants.FirstOrDefault(t => t.Code == "demo");
@@ -361,6 +364,10 @@ static void SeedDevelopmentData(IServiceProvider services)
             tenancyDb.SaveChanges();
         }
 
+        // 关键：显式建立租户上下文（AGENTS §4.3）。否则各业务 DbContext 的全局过滤器 fail-closed，
+        // 种子里的 Any() 判重恒为 false，导致重复插入并使整个种子块静默中断。
+        tenantContext.SetTenant(tenant.Id);
+
         // 2. 网点
         if (!orgDb.Branches.Any(b => b.Code == "GZ01"))
         {
@@ -370,7 +377,36 @@ static void SeedDevelopmentData(IServiceProvider services)
         {
             orgDb.Branches.Add(Ltl.Modules.Organization.Domain.Branch.Create(tenant.Id, "WH02", "武汉", DateTime.UtcNow));
         }
+        if (!orgDb.Branches.Any(b => b.Code == "CS03"))
+        {
+            orgDb.Branches.Add(Ltl.Modules.Organization.Domain.Branch.Create(tenant.Id, "CS03", "长沙", DateTime.UtcNow));
+        }
         orgDb.SaveChanges();
+
+        // 2.1 演示车辆（E2E 多段运输场景依赖）
+        if (!transportDb.Vehicles.Any(v => v.PlateNo == "粤A88888"))
+        {
+            transportDb.Vehicles.Add(Ltl.Modules.Transport.Domain.Vehicle.Create(
+                tenant.Id, "粤A88888", "HighRailer", 20_000m, 80m, DateTime.UtcNow));
+            transportDb.SaveChanges();
+        }
+
+        // 2.2 演示线路：广州—长沙（途经武汉中转）
+        var gzBranch = orgDb.Branches.First(b => b.Code == "GZ01");
+        var whBranch = orgDb.Branches.First(b => b.Code == "WH02");
+        var csBranch = orgDb.Branches.First(b => b.Code == "CS03");
+        if (!routingDb.Routes.Any(r => r.Code == "R001"))
+        {
+            var route = Ltl.Modules.Routing.Domain.Route.Create(
+                tenant.Id, "R001", "广州—长沙（武汉中转）", gzBranch.Id, csBranch.Id, DateTime.UtcNow);
+            routingDb.Routes.Add(route);
+            routingDb.SaveChanges();
+            routingDb.Stops.AddRange(
+                Ltl.Modules.Routing.Domain.RouteStop.Create(tenant.Id, route.Id, gzBranch.Id, 0, DateTime.UtcNow),
+                Ltl.Modules.Routing.Domain.RouteStop.Create(tenant.Id, route.Id, whBranch.Id, 1, DateTime.UtcNow),
+                Ltl.Modules.Routing.Domain.RouteStop.Create(tenant.Id, route.Id, csBranch.Id, 2, DateTime.UtcNow));
+            routingDb.SaveChanges();
+        }
 
         // 3. 角色 + 权限
         var adminRole = orgDb.Roles.FirstOrDefault(r => r.Code == "admin");
