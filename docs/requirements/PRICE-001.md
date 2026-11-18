@@ -133,6 +133,23 @@ PricingRuleDefinition
 8. 草稿更新持久化 + JSON 精度往返（如 0.35 单价、阶梯边界 3.5kg）。
 9. xmin 乐观并发。
 
+## 8.1 保价费（2026-11-19 增补）
+
+原实现中 `insuranceFee` 仅为运单上的手填快照字段，不计入费用——已改为**计价引擎附加费**闭环：
+
+| 项 | 设计 |
+|---|---|
+| 附加费基准 | `PricingSurchargeBasis.PerDeclaredValue`（按声明价值费率） |
+| 费率字段 | `PricingSurchargeFeeItem.Rate`（%，仅 PerDeclaredValue 可用；其他基准携带 Rate → 校验错误） |
+| 计算公式 | 保价费 = 声明价值 × Rate / 100（HalfUp 两位；未声明价值按 0，明细仍展示口径） |
+| 计价输入 | `PricingQuoteInput.DeclaredValue`（可空，≥0；随输入快照保存） |
+| 结果输出 | `PricingQuoteResult.InsuranceFee`（保价附加费合计），随计价快照固化 |
+| 应收联动 | 保价费计入 TotalAmount → 随应收创建（无需单独应收项） |
+| 前端 | 开单页填「声明价值」，保价费实时试算展示；规则条件配置器按基准切换费率输入 |
+
+测试：引擎单测（费率计算/未声明价值）、校验器单测（Rate 必填/负数/非保价基准携带 Rate）、
+集成测试（开单含声明价值 → 保费计入应收总额 → waybill.InsuranceFee 回写）。
+
 ## 9. 验收标准
 
 - [ ] 定义仅含白名单枚举字段/操作符/策略，无任何可执行代码载体。

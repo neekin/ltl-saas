@@ -87,7 +87,7 @@ public sealed class WaybillPersistenceTests(PostgreSqlFixture fixture) : IClassF
         Assert.Equal(12.345m, reloaded.Packages[0].WeightKg); // numeric(12,3) 精度往返
         Assert.Equal(0.1234m, reloaded.Packages[0].VolumeM3); // numeric(12,4) 精度往返
         Assert.Equal(3, reloaded.TotalPieces);
-        Assert.Equal(42.845m, reloaded.TotalWeightKg);
+        Assert.Equal(55.19m, reloaded.TotalWeightKg); // 乘件数口径：12.345×2 + 30.5×1
         Assert.Equal(WaybillCodStatus.None, reloaded.CodStatus);
     }
 

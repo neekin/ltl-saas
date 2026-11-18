@@ -8,6 +8,7 @@ public sealed record CreateWaybillResult(
     string WaybillNo,
     WaybillStatus Status,
     decimal TotalAmount,
+    decimal? InsuranceFee,
     decimal? CodAmount,
     string RuleSetCode,
     int VersionNumber,

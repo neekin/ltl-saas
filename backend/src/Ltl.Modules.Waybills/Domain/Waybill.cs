@@ -215,7 +215,7 @@ public sealed class Waybill : TenantScopedEntity
         string receiverName, string receiverPhone, string receiverAddress,
         string? remark, IReadOnlyList<WaybillPackageDraft> packages,
         DateTime nowUtc, Guid? updatedBy = null,
-        decimal? declaredValue = null, decimal? insuranceFee = null)
+        decimal? declaredValue = null)
     {
         RequireDraft("修改");
 
@@ -227,7 +227,6 @@ public sealed class Waybill : TenantScopedEntity
         ReceiverAddress = RequireNonBlank(receiverAddress, "收货地址", 500);
         Remark = string.IsNullOrWhiteSpace(remark) ? null : remark.Trim();
         DeclaredValue = declaredValue;
-        InsuranceFee = insuranceFee;
 
         if (packages.Count == 0)
         {
@@ -237,6 +236,21 @@ public sealed class Waybill : TenantScopedEntity
         _packages.Clear();
         _packages.AddRange(packages.Select((draft, index) => WaybillPackage.Create(
             TenantId, Id, index + 1, draft, EnsureUtc(nowUtc), updatedBy)));
+        Touch(nowUtc, updatedBy);
+    }
+
+    /// <summary>
+    /// 更新保价费（仅 Draft；WB-002 计价固化联动：保价费由计价引擎按规则计算，服务层回写展示）。
+    /// </summary>
+    public void UpdateInsuranceFee(decimal? insuranceFee, DateTime nowUtc, Guid? updatedBy = null)
+    {
+        RequireDraft("更新保价费");
+        if (insuranceFee is < 0)
+        {
+            throw new ArgumentException("保价费不能为负数。", nameof(insuranceFee));
+        }
+
+        InsuranceFee = insuranceFee;
         Touch(nowUtc, updatedBy);
     }
 
@@ -399,10 +413,10 @@ public sealed class Waybill : TenantScopedEntity
     public int TotalPieces => _packages.Sum(p => p.Quantity);
 
     /// <summary>汇总重量（Σ，kg）。</summary>
-    public decimal TotalWeightKg => _packages.Sum(p => p.WeightKg);
+    public decimal TotalWeightKg => _packages.Sum(p => p.WeightKg * p.Quantity);
 
     /// <summary>汇总体积（Σ，m³）。</summary>
-    public decimal TotalVolumeM3 => _packages.Sum(p => p.VolumeM3);
+    public decimal TotalVolumeM3 => _packages.Sum(p => p.VolumeM3 * p.Quantity);
 
     /// <summary>
     /// 货物/仓储状态流转：收货登记（RECEIVE-001）。仅已确认运单、待收货状态可收货；

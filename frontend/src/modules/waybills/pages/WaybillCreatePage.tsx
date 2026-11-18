@@ -129,10 +129,12 @@ export function WaybillCreatePage() {
   const declaredVolume = packages.reduce((sum, p) => sum + p.volumeM3 * p.quantity, 0);
   const declaredPieces = packages.reduce((sum, p) => sum + p.quantity, 0);
   // 试算结果只在当前价卡、网点与货物输入完全一致时展示，旧金额不误导开单。
+  const watchedDeclaredValue = Form.useWatch('declaredValue', form);
   const trialKey = [
     watchedRuleSetId ?? '',
     watchedOriginBranchId ?? '',
     watchedDestBranchId ?? '',
+    watchedDeclaredValue ?? '',
     packages
       .map((p) => `${p.key}:${p.cargoName}:${p.quantity}:${p.weightKg}:${p.volumeM3}`)
       .join('|'),
@@ -154,6 +156,7 @@ export function WaybillCreatePage() {
         weightKg: declaredWeight,
         volumeM3: declaredVolume,
         pieceCount: declaredPieces,
+        declaredValue: (form.getFieldValue('declaredValue') as number) || undefined,
         originBranchId: originBranchId ?? null,
         destBranchId: destBranchId ?? null,
       });
@@ -199,7 +202,6 @@ export function WaybillCreatePage() {
         receiverAddress: values.receiverAddress as string,
         remark: (values.remark as string) || undefined,
         declaredValue: (values.declaredValue as number) || undefined,
-        insuranceFee: (values.insuranceFee as number) || undefined,
         codAmount: (values.codAmount as number) || undefined,
         packages: packages.map((p) => ({
           cargoName: p.cargoName,
@@ -364,6 +366,28 @@ export function WaybillCreatePage() {
                     { value: 'OnDelivery', label: '到付' },
                     { value: 'Monthly', label: '月结' },
                   ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={12} lg={8}>
+              <Form.Item
+                name="declaredValue"
+                label="声明价值"
+                rules={[
+                  () => ({
+                    validator: (_, value) =>
+                      value === undefined || value === null || value >= 0
+                        ? Promise.resolve()
+                        : Promise.reject(new Error('声明价值不能为负数')),
+                  }),
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  precision={2}
+                  placeholder="可选；价卡含保价费规则时按此计费"
+                  addonBefore="元"
+                  style={{ width: '100%' }}
                 />
               </Form.Item>
             </Col>

@@ -31,7 +31,7 @@ public static class WaybillEndpoints
                 request.RuleSetId, DateOnly.FromDateTime(DateTime.UtcNow),
                 CodAmount: request.CodAmount,
                 Remark: request.Remark, DeclaredValue: request.DeclaredValue,
-                InsuranceFee: request.InsuranceFee, BranchId: request.OriginBranchId,
+                BranchId: request.OriginBranchId,
                 OperatorId: RequireUserId(user), IdempotencyKey: idempotencyKey))));
 
         // WB-003：查询/详情/草稿修改/确认/取消
@@ -96,7 +96,6 @@ public static class WaybillEndpoints
         IReadOnlyList<CreatePackageRequest> Packages,
         string? Remark = null,
         decimal? DeclaredValue = null,
-        decimal? InsuranceFee = null,
         decimal? CodAmount = null);
 
     public sealed record CreatePackageRequest(

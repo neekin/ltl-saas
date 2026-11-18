@@ -70,7 +70,7 @@ public class WaybillPrintTests : IClassFixture<PostgreSqlFixture>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
         Assert.Equal("Confirmed", body.RootElement.GetProperty("waybillStatus").GetString());
-        Assert.Equal(100m, body.RootElement.GetProperty("declaredWeightKg").GetDecimal());
+        Assert.Equal(200m, body.RootElement.GetProperty("declaredWeightKg").GetDecimal()); // 乘件数口径
         Assert.Equal(1, body.RootElement.GetProperty("packages").GetArrayLength());
         Assert.False(string.IsNullOrEmpty(body.RootElement.GetProperty("waybillNo").GetString()));
     }

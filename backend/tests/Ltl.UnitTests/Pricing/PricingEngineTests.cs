@@ -18,7 +18,8 @@ public class PricingEngineTests
         Guid? customer = null,
         Guid? route = null,
         Guid? origin = null,
-        Guid? dest = null) => new()
+        Guid? dest = null,
+        decimal? declaredValue = null) => new()
         {
             WeightKg = weight,
             VolumeM3 = volume,
@@ -27,6 +28,7 @@ public class PricingEngineTests
             RouteId = route,
             OriginBranchId = origin,
             DestBranchId = dest,
+            DeclaredValue = declaredValue,
         };
 
     private static PricingFreightFeeItem ByWeight(decimal unitPrice, decimal? minCharge = null) => new()
@@ -352,6 +354,37 @@ public class PricingEngineTests
             ])), Input(weight: 10m, pieces: 3));
 
         Assert.Equal(16m, quote.Total); // 10 + 2×3
+    }
+
+    [Fact]
+    public void InsuranceSurcharge_ShouldUseDeclaredValueRate()
+    {
+        // 声明价值 10000 元 × 0.5% = 50 元保价费；运费 10×1.5=15，合计 65
+        var quote = Calculate(Definition(Rule(
+            freight: ByWeight(1.5m),
+            surcharges:
+            [
+                new PricingSurchargeFeeItem { Name = "保价费", Basis = PricingSurchargeBasis.PerDeclaredValue, Amount = 0m, Rate = 0.5m },
+            ])), Input(weight: 10m, declaredValue: 10000m));
+
+        Assert.Equal(65m, quote.Total);
+        Assert.Equal(50m, quote.InsuranceFee);
+        var insurance = Assert.Single(quote.Items, i => i.Name == "保价费");
+        Assert.Contains("声明价值 10000 元 × 0.5%", insurance.Detail);
+    }
+
+    [Fact]
+    public void InsuranceSurcharge_WithoutDeclaredValue_ShouldChargeZero()
+    {
+        var quote = Calculate(Definition(Rule(
+            freight: ByWeight(1.5m),
+            surcharges:
+            [
+                new PricingSurchargeFeeItem { Name = "保价费", Basis = PricingSurchargeBasis.PerDeclaredValue, Amount = 0m, Rate = 0.5m },
+            ])), Input(weight: 10m));
+
+        Assert.Equal(15m, quote.Total); // 仅运费
+        Assert.Equal(0m, quote.InsuranceFee);
     }
 
     // ---------- 折扣 ----------

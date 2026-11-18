@@ -36,7 +36,7 @@ export interface PricingRule {
     minCharge?: number | null;
     tiers?: { upTo?: number | null; unitPrice: number }[] | null;
   };
-  surcharges: { name: string; basis: string; amount: number }[];
+  surcharges: { name: string; basis: string; amount: number; rate?: number | null }[];
   discount?: { name: string; mode: string; rate?: number | null; amount?: number | null } | null;
 }
 
@@ -58,6 +58,8 @@ export interface TrialResult {
 export interface TrialInput {
   weightKg: number;
   volumeM3: number;
+  /** 声明价值（元，保价计算基准）；不传 = 未保价 */
+  declaredValue?: number;
   pieceCount: number;
   customerId?: string | null;
   routeId?: string | null;

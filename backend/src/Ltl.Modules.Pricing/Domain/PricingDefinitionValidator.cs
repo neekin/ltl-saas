@@ -333,6 +333,23 @@ public static class PricingDefinitionValidator
         {
             errors.Add($"{label}：附加费金额必须 ≥0。");
         }
+
+        // 保价费（按声明价值费率）：Rate 必填且 ≥0；其他基准不得携带 Rate
+        if (surcharge.Basis == PricingSurchargeBasis.PerDeclaredValue)
+        {
+            if (surcharge.Rate is null)
+            {
+                errors.Add($"{label}：按声明价值费率的附加费必须填写费率（Rate，%）。");
+            }
+            else if (surcharge.Rate < 0)
+            {
+                errors.Add($"{label}：保价费率必须 ≥0。");
+            }
+        }
+        else if (surcharge.Rate is not null)
+        {
+            errors.Add($"{label}：仅按声明价值费率（保价费）的附加费可填写费率（Rate）。");
+        }
     }
 
     private static void ValidateDiscount(PricingDiscountFeeItem discount, string label, List<string> errors)

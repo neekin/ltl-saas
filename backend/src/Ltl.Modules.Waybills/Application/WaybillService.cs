@@ -49,9 +49,11 @@ public sealed class WaybillService(
         // 计价试算（失败明确报错）：输入由货物件汇总 + 命令上下文构成；先试算后取号，失败不消耗单号
         var input = new PricingQuoteInput
         {
-            WeightKg = command.Packages.Sum(p => p.WeightKg),
-            VolumeM3 = command.Packages.Sum(p => p.VolumeM3),
+            // 计费口径与前端汇总/看板报表一致：重量/体积按"每件 × 件数"合计（WB-002 修正：此前漏乘件数）
+            WeightKg = command.Packages.Sum(p => p.WeightKg * p.Quantity),
+            VolumeM3 = command.Packages.Sum(p => p.VolumeM3 * p.Quantity),
             PieceCount = command.Packages.Sum(p => p.Quantity),
+            DeclaredValue = command.DeclaredValue,
             CustomerId = command.CustomerId,
             RouteId = command.RouteId,
             OriginBranchId = command.OriginBranchId,
@@ -75,7 +77,9 @@ public sealed class WaybillService(
             command.ReceiverName, command.ReceiverPhone, command.ReceiverAddress,
             command.Packages, now,
             codAmount: command.CodAmount, routeId: command.RouteId, remark: command.Remark,
-            declaredValue: command.DeclaredValue, insuranceFee: command.InsuranceFee,
+            declaredValue: command.DeclaredValue,
+            // 保价费由计价引擎按规则（PerDeclaredValue 附加费）计算，不再手填（AGENTS §6.4 计费可配置）
+            insuranceFee: trial.Quote.InsuranceFee,
             createdBy: command.OperatorId, idempotencyKey: command.IdempotencyKey);
         waybill.ApplyPricing(trial.Quote.Total, now, command.OperatorId);
 
@@ -107,8 +111,8 @@ public sealed class WaybillService(
         }
 
         return new CreateWaybillResult(
-            waybill.Id, waybill.WaybillNo, waybill.Status, trial.Quote.Total, waybill.CodAmount,
-            trial.RuleSetCode, trial.VersionNumber, queryCode);
+            waybill.Id, waybill.WaybillNo, waybill.Status, trial.Quote.Total, waybill.InsuranceFee,
+            waybill.CodAmount, trial.RuleSetCode, trial.VersionNumber, queryCode);
     }
 
     public async Task<Waybill> ConfirmWaybillAsync(Guid waybillId, Guid? branchId = null, Guid? operatorId = null)
@@ -267,7 +271,8 @@ public sealed class WaybillService(
             .FirstOrDefaultAsync();
 
         return new CreateWaybillResult(
-            waybill.Id, waybill.WaybillNo, waybill.Status, waybill.TotalAmount ?? 0, waybill.CodAmount,
+            waybill.Id, waybill.WaybillNo, waybill.Status, waybill.TotalAmount ?? 0,
+            waybill.InsuranceFee, waybill.CodAmount,
             snapshot?.RuleSetCode ?? string.Empty, snapshot?.VersionNumber ?? 0);
     }
 

@@ -24,7 +24,6 @@ public sealed record CreateWaybillCommand(
     decimal? CodAmount = null,
     string? Remark = null,
     decimal? DeclaredValue = null,
-    decimal? InsuranceFee = null,
     Guid? IdempotencyKey = null,
     Guid? BranchId = null,
     Guid? OperatorId = null);

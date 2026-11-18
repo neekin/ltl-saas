@@ -546,6 +546,69 @@ public class PricingDefinitionValidatorTests
     }
 
     [Fact]
+    public void InsuranceSurcharge_WithoutRate_ShouldError()
+    {
+        var rule = Rule();
+        var error = SingleError(new PricingRule
+        {
+            Priority = rule.Priority,
+            Name = rule.Name,
+            Enabled = true,
+            BillingWeightStrategy = BillingWeightStrategy.WeightOnly,
+            Conditions = [],
+            Freight = rule.Freight,
+            Surcharges =
+            [
+                new PricingSurchargeFeeItem { Name = "保价费", Basis = PricingSurchargeBasis.PerDeclaredValue, Amount = 0m },
+            ],
+        });
+
+        Assert.Contains("必须填写费率", error);
+    }
+
+    [Fact]
+    public void InsuranceSurcharge_NegativeRate_ShouldError()
+    {
+        var rule = Rule();
+        var error = SingleError(new PricingRule
+        {
+            Priority = rule.Priority,
+            Name = rule.Name,
+            Enabled = true,
+            BillingWeightStrategy = BillingWeightStrategy.WeightOnly,
+            Conditions = [],
+            Freight = rule.Freight,
+            Surcharges =
+            [
+                new PricingSurchargeFeeItem { Name = "保价费", Basis = PricingSurchargeBasis.PerDeclaredValue, Amount = 0m, Rate = -1m },
+            ],
+        });
+
+        Assert.Contains("保价费率必须 ≥0", error);
+    }
+
+    [Fact]
+    public void NonInsuranceSurcharge_WithRate_ShouldError()
+    {
+        var rule = Rule();
+        var error = SingleError(new PricingRule
+        {
+            Priority = rule.Priority,
+            Name = rule.Name,
+            Enabled = true,
+            BillingWeightStrategy = BillingWeightStrategy.WeightOnly,
+            Conditions = [],
+            Freight = rule.Freight,
+            Surcharges =
+            [
+                new PricingSurchargeFeeItem { Name = "提货费", Basis = PricingSurchargeBasis.PerWaybill, Amount = 10m, Rate = 1m },
+            ],
+        });
+
+        Assert.Contains("仅按声明价值费率", error);
+    }
+
+    [Fact]
     public void DiscountRateOutOfRange_ShouldError()
     {
         var error = SingleError(DiscountRule(new PricingDiscountFeeItem

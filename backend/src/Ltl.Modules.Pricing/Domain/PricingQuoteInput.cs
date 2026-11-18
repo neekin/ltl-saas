@@ -23,6 +23,9 @@ public sealed class PricingQuoteInput
 
     public Guid? DestBranchId { get; init; }
 
+    /// <summary>声明价值（元，保价计算基准）；null = 未保价，PerDeclaredValue 附加费按 0 计。</summary>
+    public decimal? DeclaredValue { get; init; }
+
     /// <exception cref="ArgumentException">数值非法时抛出。</exception>
     public static void Validate(PricingQuoteInput input)
     {
@@ -39,6 +42,11 @@ public sealed class PricingQuoteInput
         if (input.PieceCount < 1)
         {
             throw new ArgumentException("件数必须 ≥1。", nameof(input));
+        }
+
+        if (input.DeclaredValue is < 0)
+        {
+            throw new ArgumentException("声明价值不能为负数。", nameof(input));
         }
     }
 }

@@ -204,9 +204,9 @@ public class CargoReceiptTests : IClassFixture<PostgreSqlFixture>
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await JsonDocument.ParseAsync(await response.Content.ReadAsStreamAsync());
 
-        // 差异：实收 2 件 = 申报 2 件；实收 99.5kg - 申报 100kg = -0.5
+        // 差异：实收 2 件 = 申报 2 件；实收 99.5kg - 申报合计 200kg（2 件 × 100kg）= -100.5
         Assert.Equal(0, body.RootElement.GetProperty("pieceDifference").GetInt32());
-        Assert.Equal(-0.5m, body.RootElement.GetProperty("weightDifferenceKg").GetDecimal());
+        Assert.Equal(-100.5m, body.RootElement.GetProperty("weightDifferenceKg").GetDecimal());
 
         // 货物状态流转 + 运单事件 + 收货记录 + 审计
         await using var waybills = _fixture.CreateWaybillsContext(tenantId);

@@ -12,4 +12,10 @@ public sealed class PricingSurchargeFeeItem
 
     /// <summary>金额（按 Basis 的单位），≥0。</summary>
     public required decimal Amount { get; init; }
+
+    /// <summary>
+    /// 费率（%），仅 Basis = PerDeclaredValue 时使用：保价费 = 声明价值 × Rate / 100。
+    /// 其他 Basis 必须为 null；Rate 为 0 表示免费保价（合法）。
+    /// </summary>
+    public decimal? Rate { get; init; }
 }

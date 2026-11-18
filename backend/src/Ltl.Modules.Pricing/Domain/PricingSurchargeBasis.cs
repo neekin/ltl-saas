@@ -8,4 +8,7 @@ public enum PricingSurchargeBasis
 
     /// <summary>每件。</summary>
     PerPiece = 2,
+
+    /// <summary>按声明价值费率（保价费：声明价值 × Rate%）。</summary>
+    PerDeclaredValue = 3,
 }

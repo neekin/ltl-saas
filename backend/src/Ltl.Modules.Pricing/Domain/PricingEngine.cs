@@ -27,7 +27,7 @@ public static class PricingEngine
 
         var items = new List<PricingQuoteItem>();
         var freight = CalculateFreight(rule, input, items, out var billingQuantity, out var billingBasis);
-        var surchargeTotal = CalculateSurcharges(rule, input, items);
+        var surchargeTotal = CalculateSurcharges(rule, input, items, out var insuranceFee);
 
         var subtotal = freight + surchargeTotal;
         var discount = CalculateDiscount(rule, subtotal);
@@ -40,6 +40,7 @@ public static class PricingEngine
             BillingQuantity = billingQuantity,
             BillingBasis = billingBasis,
             Items = items,
+            InsuranceFee = insuranceFee,
             Discount = discount,
             Subtotal = subtotal,
             Total = total,
@@ -199,21 +200,35 @@ public static class PricingEngine
     }
 
     private static decimal CalculateSurcharges(
-        PricingRule rule, PricingQuoteInput input, List<PricingQuoteItem> items)
+        PricingRule rule, PricingQuoteInput input, List<PricingQuoteItem> items, out decimal insuranceFee)
     {
         var total = 0m;
+        insuranceFee = 0m;
 
         foreach (var surcharge in rule.Surcharges)
         {
-            var amount = surcharge.Basis == PricingSurchargeBasis.PerPiece
-                ? surcharge.Amount * input.PieceCount
-                : surcharge.Amount;
+            var amount = surcharge.Basis switch
+            {
+                PricingSurchargeBasis.PerPiece => surcharge.Amount * input.PieceCount,
+                PricingSurchargeBasis.PerDeclaredValue when input.DeclaredValue is { } declared =>
+                    declared * surcharge.Rate.GetValueOrDefault() / 100m,
+                // 未声明价值时保价费按 0 计（免费保价），明细仍展示口径
+                PricingSurchargeBasis.PerDeclaredValue => 0m,
+                _ => surcharge.Amount,
+            };
             var rounded = Round(amount);
             total += rounded;
+            if (surcharge.Basis == PricingSurchargeBasis.PerDeclaredValue)
+            {
+                insuranceFee = rounded;
+            }
 
-            var basisText = surcharge.Basis == PricingSurchargeBasis.PerPiece
-                ? $"{Format(surcharge.Amount)} 元/件 × {input.PieceCount} 件"
-                : $"整票 {Format(surcharge.Amount)} 元";
+            var basisText = surcharge.Basis switch
+            {
+                PricingSurchargeBasis.PerPiece => $"{Format(surcharge.Amount)} 元/件 × {input.PieceCount} 件",
+                PricingSurchargeBasis.PerDeclaredValue => $"声明价值 {Format(input.DeclaredValue ?? 0)} 元 × {Format(surcharge.Rate.GetValueOrDefault())}%",
+                _ => $"整票 {Format(surcharge.Amount)} 元",
+            };
 
             items.AddSurcharge(surcharge.Name, rounded, $"{surcharge.Name}：{basisText}");
         }

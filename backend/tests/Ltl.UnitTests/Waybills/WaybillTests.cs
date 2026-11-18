@@ -128,8 +128,9 @@ public class WaybillTests
         ]);
 
         Assert.Equal(5, waybill.TotalPieces);
-        Assert.Equal(17.345m, waybill.TotalWeightKg);
-        Assert.Equal(0.1434m, waybill.TotalVolumeM3);
+        // 乘件数口径（与前端汇总/看板/报表一致）：12.345×2 + 5×3 = 39.69；0.1234×2 + 0.02×3 = 0.3068
+        Assert.Equal(39.69m, waybill.TotalWeightKg);
+        Assert.Equal(0.3068m, waybill.TotalVolumeM3);
     }
 
     // ---------- 运单状态机 ----------

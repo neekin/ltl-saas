@@ -55,6 +55,9 @@ public sealed class PricingQuoteResult
 
     public required IReadOnlyList<PricingQuoteItem> Items { get; init; }
 
+    /// <summary>保价费合计（规则 PerDeclaredValue 附加费；未命中保价规则或未声明价值时为 0/null）。</summary>
+    public decimal? InsuranceFee { get; init; }
+
     public PricingQuoteDiscount? Discount { get; init; }
 
     /// <summary>运费 + 附加费合计。</summary>

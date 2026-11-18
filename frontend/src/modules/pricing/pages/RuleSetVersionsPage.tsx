@@ -67,6 +67,7 @@ const FREIGHT_TYPES = [
 const SURCHARGE_BASES = [
   { value: 'PerWaybill', label: '整票固定' },
   { value: 'PerPiece', label: '每件' },
+  { value: 'PerDeclaredValue', label: '保价费（按声明价值费率）' },
 ];
 
 interface BranchOption { id: string; code: string; name: string }
@@ -377,22 +378,35 @@ export function RuleSetVersionsPage() {
               })}
             />
             <Select
-              style={{ width: 140 }}
+              style={{ width: 190 }}
               value={surcharge.basis}
               options={SURCHARGE_BASES}
               onChange={(v) => updateRule(ruleIndex, {
                 surcharges: rule.surcharges.map((x, i) =>
-                  i === sIndex ? { ...x, basis: v } : x),
+                  i === sIndex
+                    ? { ...x, basis: v, rate: v === 'PerDeclaredValue' ? (x.rate ?? 0.5) : null, amount: v === 'PerDeclaredValue' ? 0 : x.amount }
+                    : x),
               })}
             />
-            <InputNumber
-              min={0} precision={2} value={surcharge.amount}
-              onChange={(v) => updateRule(ruleIndex, {
-                surcharges: rule.surcharges.map((x, i) =>
-                  i === sIndex ? { ...x, amount: v ?? 0 } : x),
-              })}
-              addonBefore="¥" style={{ width: 150 }}
-            />
+            {surcharge.basis === 'PerDeclaredValue' ? (
+              <InputNumber
+                min={0} precision={2} value={surcharge.rate ?? undefined}
+                onChange={(v) => updateRule(ruleIndex, {
+                  surcharges: rule.surcharges.map((x, i) =>
+                    i === sIndex ? { ...x, rate: v ?? null } : x),
+                })}
+                addonBefore="费率" addonAfter="%" style={{ width: 200 }}
+              />
+            ) : (
+              <InputNumber
+                min={0} precision={2} value={surcharge.amount}
+                onChange={(v) => updateRule(ruleIndex, {
+                  surcharges: rule.surcharges.map((x, i) =>
+                    i === sIndex ? { ...x, amount: v ?? 0 } : x),
+                })}
+                addonBefore="¥" style={{ width: 150 }}
+              />
+            )}
             <Button
               type="text" danger icon={<DeleteOutlined />}
               onClick={() => updateRule(ruleIndex, {
@@ -404,7 +418,7 @@ export function RuleSetVersionsPage() {
         <Button
           icon={<PlusOutlined />}
           onClick={() => updateRule(ruleIndex, {
-            surcharges: [...rule.surcharges, { name: '', basis: 'PerWaybill', amount: 0 }],
+            surcharges: [...rule.surcharges, { name: '', basis: 'PerWaybill', amount: 0, rate: null }],
           })}
         >
           添加附加费

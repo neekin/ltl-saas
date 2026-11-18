@@ -21,7 +21,7 @@ namespace Ltl.IntegrationTests.Waybills;
 public sealed class WaybillCommandTests(PostgreSqlFixture fixture) : IClassFixture<PostgreSqlFixture>
 {
     private static readonly DateOnly BusinessDate = new(2026, 11, 17);
-    private static readonly decimal TotalExpected = 18.53m; // 计费重 12.35（12.345 HalfUp）× 1.5 = 18.525 → 18.53
+    private static readonly decimal TotalExpected = 37.04m; // 计费重 2×12.345=24.69（乘件数，与前端/报表口径一致）× 1.5 = 37.035 → 37.04
 
     private Guid _tenantId;
     private Guid _originBranchId;
@@ -93,12 +93,14 @@ public sealed class WaybillCommandTests(PostgreSqlFixture fixture) : IClassFixtu
         new PricingSnapshotSerializer());
 
     private static CreateWaybillCommand Command(
-        Guid origin, Guid dest, Guid customer, Guid ruleSetId, Guid? idempotencyKey = null) => new(
+        Guid origin, Guid dest, Guid customer, Guid ruleSetId,
+        Guid? idempotencyKey = null, decimal? declaredValue = null) => new(
         origin, dest, customer, WaybillPaymentType.Cash,
         "张三", "13800000000", "广州市白云区XX街1号",
         "李四", "13900000000", "武汉市汉阳区YY路2号",
         [new WaybillPackageDraft("纸箱", 2, 12.345m, 0.1234m)],
         ruleSetId, BusinessDate,
+        DeclaredValue: declaredValue,
         IdempotencyKey: idempotencyKey,
         BranchId: origin,
         OperatorId: Guid.NewGuid());
@@ -131,7 +133,7 @@ public sealed class WaybillCommandTests(PostgreSqlFixture fixture) : IClassFixtu
         Assert.Equal(1, snapshot.VersionNumber);
         var serializer = new PricingSnapshotSerializer();
         var input = serializer.DeserializeInput(snapshot.InputJson);
-        Assert.Equal(12.345m, input.WeightKg);
+        Assert.Equal(24.69m, input.WeightKg); // 2 件 × 12.345kg（乘件数口径）
         Assert.Equal(2, input.PieceCount);
         var quote = serializer.DeserializeQuote(snapshot.QuoteJson);
         Assert.Equal(TotalExpected, quote.Total);
@@ -362,5 +364,50 @@ public sealed class WaybillCommandTests(PostgreSqlFixture fixture) : IClassFixtu
 
         await Assert.ThrowsAsync<EntityNotFoundException>(
             () => CreateService(tenantB.Id).ConfirmWaybillAsync(result.WaybillId));
+    }
+
+    [Fact]
+    public async Task CreateWaybill_WithDeclaredValue_ShouldChargeInsuranceIntoTotal()
+    {
+        await SeedAsync();
+        var ruleSetId = await SeedPublishedRuleSetAsync();
+        var service = CreateService();
+
+        // 声明价值 10000 元；保价费率 0.5% → 保费 50；运费 12.345×2×1.5=37.035→37.04；合计 87.04
+        var ruleSets = new PricingRuleSetService(fixture.CreatePricingContext(_tenantId));
+        var draft = await ruleSets.CreateDraftVersionAsync(ruleSetId, new PricingRuleDefinition
+        {
+            Rounding = RoundingPolicy.HalfUpTwoDecimals,
+            Rules =
+            [
+                new PricingRule
+                {
+                    Priority = 1,
+                    Name = "标准运价+保价",
+                    Enabled = true,
+                    BillingWeightStrategy = BillingWeightStrategy.WeightOnly,
+                    Conditions = [],
+                    Freight = new PricingFreightFeeItem { Name = "运费", Type = PricingFreightType.ByWeight, UnitPrice = 1.5m },
+                    Surcharges =
+                    [
+                        new PricingSurchargeFeeItem { Name = "保价费", Basis = PricingSurchargeBasis.PerDeclaredValue, Amount = 0m, Rate = 0.5m },
+                    ],
+                },
+            ],
+        }, DateTime.UtcNow);
+        await ruleSets.PublishVersionAsync(draft.Id, DateTime.UtcNow);
+
+        var command = Command(_originBranchId, _destBranchId, _customerId, ruleSetId, declaredValue: 10000m);
+        var result = await service.CreateWaybillAsync(command);
+
+        // 保费计入应收总额
+        Assert.Equal(87.04m, result.TotalAmount);
+        Assert.Equal(50m, result.InsuranceFee);
+
+        await using var verification = fixture.CreateWaybillsContext(_tenantId);
+        var waybill = await verification.Waybills.SingleAsync(w => w.Id == result.WaybillId);
+        Assert.Equal(10000m, waybill.DeclaredValue);
+        Assert.Equal(50m, waybill.InsuranceFee);
+        Assert.Equal(87.04m, waybill.TotalAmount);
     }
 }

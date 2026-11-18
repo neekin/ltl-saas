@@ -1,3 +1,5 @@
+using Ltl.Modules.Pricing.Application;
+using Ltl.Modules.Pricing.Domain;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Waybills.Domain;
@@ -33,7 +35,8 @@ public sealed record UpdateWaybillDraftRequest(
     string? Remark,
     IReadOnlyList<WaybillPackageDraft> Packages,
     decimal? DeclaredValue = null,
-    decimal? InsuranceFee = null);
+    /// <summary>重算所用价卡；null = 沿用最近一次计价快照的规则集。</summary>
+    Guid? RuleSetId = null);
 
 /// <summary>
 /// 运单查询与草稿修改（WB-003）。数据范围：租户级范围 / 始发或目的网点可达（WB-PRINT 同语义）。
@@ -60,7 +63,9 @@ public sealed record PageResultWaybills(
 public sealed class WaybillAdminService(
     WaybillsDbContext db,
     IAuthorizationService authorization,
-    IBranchSequenceService branchSequenceService) : IWaybillAdminService
+    IBranchSequenceService branchSequenceService,
+    IPricingTrialService pricingTrialService,
+    IPricingSnapshotSerializer snapshotSerializer) : IWaybillAdminService
 {
     public async Task<PageResultWaybills> ListAsync(
         Guid operatorUserId, int page, int pageSize, string? waybillNo)
@@ -125,7 +130,34 @@ public sealed class WaybillAdminService(
             request.SenderName, request.SenderPhone, request.SenderAddress,
             request.ReceiverName, request.ReceiverPhone, request.ReceiverAddress,
             request.Remark, request.Packages, DateTime.UtcNow, operatorUserId,
-            request.DeclaredValue, request.InsuranceFee);
+            declaredValue: request.DeclaredValue);
+
+        // 草稿修改后重算价格（WB-002：RecalculatePricing 显式业务操作；新快照追加保留历史）
+        var input = new PricingQuoteInput
+        {
+            WeightKg = request.Packages.Sum(p => p.WeightKg * p.Quantity),
+            VolumeM3 = request.Packages.Sum(p => p.VolumeM3 * p.Quantity),
+            PieceCount = request.Packages.Sum(p => p.Quantity),
+            DeclaredValue = request.DeclaredValue,
+            CustomerId = waybill.CustomerId,
+            RouteId = waybill.RouteId,
+            OriginBranchId = waybill.OriginBranchId,
+            DestBranchId = waybill.DestBranchId,
+        };
+        PricingQuoteInput.Validate(input);
+        var trial = await pricingTrialService.TrialCalculateAsync(
+            request.RuleSetId ?? (await db.PricingSnapshots
+                .Where(x => x.WaybillId == waybill.Id)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstAsync()).RuleSetId, input);
+        waybill.RecalculatePricing(trial.Quote.Total, DateTime.UtcNow, operatorUserId);
+        waybill.UpdateInsuranceFee(trial.Quote.InsuranceFee, DateTime.UtcNow, operatorUserId);
+        db.PricingSnapshots.Add(WaybillPricingSnapshot.Create(
+            waybill.TenantId, waybill.Id, trial.RuleSetId, trial.RuleSetCode,
+            trial.VersionId, trial.VersionNumber,
+            snapshotSerializer.SerializeInput(trial.Input),
+            snapshotSerializer.SerializeQuote(trial.Quote),
+            DateTime.UtcNow, operatorUserId));
 
         foreach (var oldPackage in oldPackages)
         {
