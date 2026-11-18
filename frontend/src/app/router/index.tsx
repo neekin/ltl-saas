@@ -35,6 +35,7 @@ import { TransferDetailPage } from '../../modules/warehouse/pages/TransferDetail
 import { ArrivalPage } from '../../modules/arrivals/pages/ArrivalPage';
 import { DeliveryPage } from '../../modules/delivery/pages/DeliveryPage';
 import { FinancePage } from '../../modules/finance/pages/FinancePage';
+import { BranchPaymentSummaryPage } from '../../modules/finance/pages/BranchPaymentSummaryPage';
 import { CodWorkbenchPage } from '../../modules/finance/pages/CodWorkbenchPage';
 import { CodManagementPage } from '../../modules/finance/pages/CodManagementPage';
 import { ArrivalDifferencePage } from '../../modules/arrivals/pages/ArrivalDifferencePage';
@@ -116,6 +117,7 @@ export const router = createBrowserRouter([
           { path: 'finance/cod/manage', element: <CodManagementPage /> },
           { path: 'deliveries', element: <DeliveryPage /> },
           { path: 'finance', element: <FinancePage /> },
+          { path: 'finance/branch-summary', element: <BranchPaymentSummaryPage /> },
           { path: 'finance/cod', element: <CodWorkbenchPage /> },
         ],
       },

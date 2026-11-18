@@ -116,6 +116,7 @@ const menuSections: MenuSection[] = [
       { key: '/finance', label: '财务管理', permission: 'finance.read' },
       { key: '/finance/allocations', label: '收款核销', permission: 'finance.read' },
       { key: '/finance/statements', label: '月结账单', permission: 'finance.read' },
+      { key: '/finance/branch-summary', label: '网点收款汇总', permission: 'finance.read' },
       { key: '/finance/cod', label: 'COD 工作台', permission: 'cod.read' },
       { key: '/finance/cod/manage', label: 'COD 管理', permission: 'cod.manage' },
     ],

@@ -9,7 +9,8 @@ using Microsoft.EntityFrameworkCore;
 namespace Ltl.Modules.Customers.Application;
 
 public sealed record CustomerDto(
-    Guid Id, string Code, string Name, string Status, string? Remark, DateTime CreatedAt);
+    Guid Id, string Code, string Name, string Status, string? Remark, DateTime CreatedAt,
+    decimal? CreditLimit, int? PaymentTermsDays);
 
 public sealed record CustomerContactDto(
     Guid Id, string Name, string Phone, bool IsPrimary, string? Remark);
@@ -19,11 +20,15 @@ public sealed record CustomerAddressDto(
 
 public sealed record CustomerDetailDto(
     Guid Id, string Code, string Name, string Status, string? Remark, DateTime CreatedAt,
+    decimal? CreditLimit, int? PaymentTermsDays,
     IReadOnlyList<CustomerContactDto> Contacts,
     IReadOnlyList<CustomerAddressDto> Addresses,
     IReadOnlyList<Guid> ServicedBranchIds);
 
 public sealed record CreateCustomerRequest(string Code, string Name, string? Remark);
+
+/// <summary>月结信用政策：额度（元）与账期（天）；传 null 表示清除设置。</summary>
+public sealed record SetCreditPolicyRequest(decimal? CreditLimit, int? PaymentTermsDays);
 
 public sealed record UpdateCustomerRequest(string Name, string? Remark);
 
@@ -43,6 +48,7 @@ public interface ICustomerAdminService
     Task<CustomerDetailDto> GetAsync(Guid operatorUserId, Guid customerId);
     Task<CustomerDto> CreateAsync(Guid operatorUserId, CreateCustomerRequest request);
     Task<CustomerDto> UpdateAsync(Guid operatorUserId, Guid customerId, UpdateCustomerRequest request);
+    Task<CustomerDto> SetCreditPolicyAsync(Guid operatorUserId, Guid customerId, SetCreditPolicyRequest request);
     Task<CustomerDto> DisableAsync(Guid operatorUserId, Guid customerId);
     Task<CustomerDto> EnableAsync(Guid operatorUserId, Guid customerId);
     Task<CustomerDetailDto> AddContactAsync(Guid operatorUserId, Guid customerId, AddContactRequest request);
@@ -128,6 +134,27 @@ public sealed class CustomerAdminService(
         await audit.RecordAsync(
             "customer.update", "customer", customer.Id, operatorUserId,
             new { code = customer.Code, name = customer.Name });
+        scope.Complete();
+
+        return Map(customer);
+    }
+
+    /// <summary>
+    /// 设置月结信用政策（额度/账期）。金额精度由数据库 NUMERIC(18,2) 约束。
+    /// 开单前的信用额度检查（WaybillService.CheckCreditLimitAsync）依赖此处维护的额度。
+    /// </summary>
+    public async Task<CustomerDto> SetCreditPolicyAsync(
+        Guid operatorUserId, Guid customerId, SetCreditPolicyRequest request)
+    {
+        await RequirePermissionAsync(operatorUserId, CustomerPermissionCodes.CustomerManage, "customer.credit-policy");
+        var customer = await RequireCustomerAsync(customerId);
+
+        using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+        customer.SetCreditPolicy(request.CreditLimit, request.PaymentTermsDays, DateTime.UtcNow, operatorUserId);
+        await db.SaveChangesAsync();
+        await audit.RecordAsync(
+            "customer.credit-policy", "customer", customer.Id, operatorUserId,
+            new { code = customer.Code, creditLimit = request.CreditLimit, paymentTermsDays = request.PaymentTermsDays });
         scope.Complete();
 
         return Map(customer);
@@ -340,6 +367,7 @@ public sealed class CustomerAdminService(
         return new CustomerDetailDto(
             customer.Id, customer.Code, customer.Name, customer.Status.ToString(),
             customer.Remark, customer.CreatedAt,
+            customer.CreditLimit, customer.PaymentTermsDays,
             contacts.Select(c => new CustomerContactDto(
                 c.Id, c.Name, c.Phone, c.IsPrimary, c.Remark)).ToList(),
             addresses.Select(a => new CustomerAddressDto(
@@ -349,5 +377,6 @@ public sealed class CustomerAdminService(
 
     private static CustomerDto Map(Customer customer) => new(
         customer.Id, customer.Code, customer.Name, customer.Status.ToString(),
-        customer.Remark, customer.CreatedAt);
+        customer.Remark, customer.CreatedAt,
+        customer.CreditLimit, customer.PaymentTermsDays);
 }

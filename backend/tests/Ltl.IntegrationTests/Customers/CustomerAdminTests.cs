@@ -147,4 +147,52 @@ public class CustomerAdminTests : IClassFixture<PostgreSqlFixture>
         var response = await client.GetAsync("/api/customers");
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task CreditPolicy_SetPersistAndClear_UpdatesCustomer()
+    {
+        var (tenantId, _, tenantCode) = await SeedAsync(
+            Ltl.Modules.Customers.Domain.CustomerPermissionCodes.CustomerRead,
+            Ltl.Modules.Customers.Domain.CustomerPermissionCodes.CustomerManage);
+        using var client = await AdminClientAsync(tenantCode);
+
+        var create = await client.PostAsJsonAsync("/api/customers", new { code = "KH900", name = "月结客户" });
+        Assert.Equal(HttpStatusCode.OK, create.StatusCode);
+        var customerId = (await JsonDocument.ParseAsync(await create.Content.ReadAsStreamAsync()))
+            .RootElement.GetProperty("id").GetGuid();
+
+        // 设置额度与账期
+        var set = await client.PutAsJsonAsync($"/api/customers/{customerId}/credit-policy",
+            new { creditLimit = 50000m, paymentTermsDays = 30 });
+        Assert.Equal(HttpStatusCode.OK, set.StatusCode);
+        var setBody = await JsonDocument.ParseAsync(await set.Content.ReadAsStreamAsync());
+        Assert.Equal(50000m, setBody.RootElement.GetProperty("creditLimit").GetDecimal());
+        Assert.Equal(30, setBody.RootElement.GetProperty("paymentTermsDays").GetInt32());
+
+        // 持久化验证：重新读取
+        var get = await client.GetAsync($"/api/customers/{customerId}");
+        var getBody = await JsonDocument.ParseAsync(await get.Content.ReadAsStreamAsync());
+        Assert.Equal(50000m, getBody.RootElement.GetProperty("creditLimit").GetDecimal());
+        Assert.Equal(30, getBody.RootElement.GetProperty("paymentTermsDays").GetInt32());
+
+        // 负数额度被领域规则拒绝（400）
+        var negative = await client.PutAsJsonAsync($"/api/customers/{customerId}/credit-policy",
+            new { creditLimit = -1m, paymentTermsDays = 30 });
+        Assert.Equal(HttpStatusCode.BadRequest, negative.StatusCode);
+
+        // 清除（null）回未设置状态
+        var clear = await client.PutAsJsonAsync($"/api/customers/{customerId}/credit-policy",
+            new { creditLimit = (decimal?)null, paymentTermsDays = (int?)null });
+        Assert.Equal(HttpStatusCode.OK, clear.StatusCode);
+        var clearBody = await JsonDocument.ParseAsync(await clear.Content.ReadAsStreamAsync());
+        Assert.True(clearBody.RootElement.GetProperty("creditLimit").ValueKind == JsonValueKind.Null);
+        Assert.True(clearBody.RootElement.GetProperty("paymentTermsDays").ValueKind == JsonValueKind.Null);
+
+        // 无权限写操作被拒（403）
+        var (_, _, otherCode) = await SeedAsync();
+        using var otherClient = await AdminClientAsync(otherCode);
+        var forbidden = await otherClient.PutAsJsonAsync($"/api/customers/{customerId}/credit-policy",
+            new { creditLimit = 100m, paymentTermsDays = 7 });
+        Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
+    }
 }

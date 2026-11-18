@@ -1,21 +1,27 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Form, Input, Modal, Popconfirm, Space, Table, Tag } from 'antd';
+import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Space, Spin, Table, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import {
-  createRole, disableRole, enableRole, getRole, listRoles,
-  type Role, type RoleDetail,
+  createRole, disableRole, enableRole, getRole, listPermissions, listRoles,
+  setRolePermissions, type Permission, type Role, type RoleDetail,
 } from '../api/organization';
 
-/** 角色管理页（P1 前端）：列表/创建/权限配置/启停。 */
+/** 角色管理页（P1 前端）：列表/创建/权限配置/启停。权限点目录按模块分组多选。 */
 export function RoleListPage() {
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
-  const [detailRole, setDetailRole] = useState<RoleDetail | null>(null);
+  const [editingRole, setEditingRole] = useState<RoleDetail | null>(null);
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [createForm] = Form.useForm<{ code: string; name: string }>();
 
   const listQuery = useQuery({ queryKey: ['roles'], queryFn: () => listRoles(1, 100) });
+  const permissionsQuery = useQuery({
+    queryKey: ['permissions'],
+    queryFn: () => listPermissions(),
+    enabled: editingRole !== null,
+  });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['roles'] });
 
@@ -31,6 +37,32 @@ export function RoleListPage() {
     onSuccess: () => { message.success('状态已更新'); invalidate(); },
     onError: (e: Error) => message.error(e.message),
   });
+
+  const openPermissionEditor = async (role: Role) => {
+    try {
+      const detail = await getRole(role.id);
+      setSelectedCodes(detail.permissionCodes);
+      setEditingRole(detail);
+    } catch (e) {
+      message.error(e instanceof Error ? e.message : '加载角色失败');
+    }
+  };
+
+  const savePermissions = useMutation({
+    mutationFn: () => setRolePermissions(editingRole!.id, selectedCodes),
+    onSuccess: () => {
+      message.success('权限已更新（已登录用户实时生效）');
+      setEditingRole(null);
+      invalidate();
+    },
+    onError: (e: Error) => message.error(e.message),
+  });
+
+  // 按模块分组渲染权限复选框；勾选合并时只替换当前模块的选中项
+  const grouped = groupByModule(permissionsQuery.data ?? []);
+  const onModuleChange = (moduleCodes: string[], checked: string[]) => {
+    setSelectedCodes((prev) => [...prev.filter((c) => !moduleCodes.includes(c)), ...checked]);
+  };
 
   return (
     <div>
@@ -52,9 +84,7 @@ export function RoleListPage() {
             title: '操作', key: 'actions',
             render: (_: unknown, record: Role) => (
               <Space>
-                <Button type="link" size="small" onClick={async () => {
-                  setDetailRole(await getRole(record.id));
-                }}>
+                <Button type="link" size="small" onClick={() => void openPermissionEditor(record)}>
                   配置权限
                 </Button>
                 <Popconfirm
@@ -82,37 +112,53 @@ export function RoleListPage() {
         </Form>
       </Modal>
 
-      {detailRole && (
-        <Modal
-          title={`角色权限：${detailRole.name}`}
-          open={!!detailRole}
-          footer={null}
-          onCancel={() => setDetailRole(null)}
-        >
-          <Space direction="vertical" style={{ width: '100%' }}>
-            <div>编码：{detailRole.code}</div>
-            <div>已分配权限：</div>
-            <Space wrap>
-              {detailRole.permissionCodes.map((code) => <Tag key={code}>{code}</Tag>)}
-              {detailRole.permissionCodes.length === 0 && <Tag color="orange">未分配权限</Tag>}
-            </Space>
-            <Popconfirm
-              title={detailRole.status === 'Active' ? '停用后该角色权限即时失效' : '确认启用？'}
-              onConfirm={() => {
-                if (detailRole.status === 'Active') disableRole(detailRole.id);
-                else enableRole(detailRole.id);
-                message.success('状态已更新');
-                setDetailRole(null);
-                invalidate();
-              }}
-            >
-              <Button danger={detailRole.status === 'Active'}>
-                {detailRole.status === 'Active' ? '停用角色' : '启用角色'}
-              </Button>
-            </Popconfirm>
-          </Space>
-        </Modal>
-      )}
+      <Modal
+        title={editingRole ? `配置权限：${editingRole.name}（${editingRole.code}）` : ''}
+        open={editingRole !== null}
+        onCancel={() => setEditingRole(null)}
+        onOk={() => savePermissions.mutate()}
+        confirmLoading={savePermissions.isPending}
+        width={720}
+        destroyOnClose
+      >
+        <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+          已选 {selectedCodes.length} 项；保存后对已登录用户实时生效。
+        </Typography.Paragraph>
+        {permissionsQuery.isLoading ? (
+          <Spin />
+        ) : (
+          Object.entries(grouped).map(([module, perms]) => {
+            const moduleCodes = perms.map((p) => p.code);
+            return (
+              <div key={module} style={{ marginBottom: 12 }}>
+                <Typography.Text strong>{module}</Typography.Text>
+                <Checkbox.Group
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}
+                  value={selectedCodes.filter((c) => moduleCodes.includes(c))}
+                  onChange={(checked) => onModuleChange(moduleCodes, checked as string[])}
+                  options={perms.map((p) => ({
+                    value: p.code,
+                    label: (
+                      <span>
+                        {p.name}{' '}
+                        <Typography.Text type="secondary" code style={{ fontSize: 12 }}>{p.code}</Typography.Text>
+                      </span>
+                    ),
+                  }))}
+                />
+              </div>
+            );
+          })
+        )}
+      </Modal>
     </div>
   );
+}
+
+function groupByModule(permissions: Permission[]): Record<string, Permission[]> {
+  const grouped: Record<string, Permission[]> = {};
+  for (const p of permissions) {
+    (grouped[p.module] ??= []).push(p);
+  }
+  return grouped;
 }

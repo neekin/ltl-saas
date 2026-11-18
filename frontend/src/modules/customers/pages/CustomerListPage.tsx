@@ -1,5 +1,5 @@
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Checkbox } from 'antd';
+import { Checkbox, InputNumber } from 'antd';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   App,
@@ -31,6 +31,7 @@ import {
   removeAddress,
   removeContact,
   revokeBranch,
+  setCreditPolicy,
   updateCustomer,
   type Customer,
   type CustomerDetail,
@@ -117,7 +118,7 @@ export function CustomerListPage() {
   });
 
   const detailMutationWrapper = async (
-    action: () => Promise<CustomerDetail>,
+    action: () => Promise<unknown>,
     successText: string,
   ) => {
     try {
@@ -147,6 +148,22 @@ export function CustomerListPage() {
       render: (status: string) => <StatusTag status={status} />,
     },
     { title: '备注', dataIndex: 'remark', key: 'remark', ellipsis: true },
+    {
+      title: '月结额度',
+      key: 'credit',
+      width: 150,
+      render: (_: unknown, record: Customer) =>
+        record.creditLimit !== null ? (
+          <span>
+            ¥ {record.creditLimit.toFixed(2)}
+            {record.paymentTermsDays !== null && (
+              <Typography.Text type="secondary">（账期 {record.paymentTermsDays} 天）</Typography.Text>
+            )}
+          </span>
+        ) : (
+          <Typography.Text type="secondary">—</Typography.Text>
+        ),
+    },
     {
       title: '操作',
       key: 'actions',
@@ -250,6 +267,12 @@ export function CustomerListPage() {
             detail={detail}
             branchOptions={branchQuery.data ?? []}
             onUpdate={(values) => updateMutation.mutate({ id: detail.id, ...values })}
+            onCreditPolicySave={(values) =>
+              detailMutationWrapper(
+                () => setCreditPolicy(detail.id, values),
+                '信用政策已更新',
+              )
+            }
             onContactAdd={(values) =>
               detailMutationWrapper(() => addContact(detail.id, values), '联系人已添加')
             }
@@ -320,6 +343,7 @@ function CustomerDetailBody({
   detail,
   branchOptions,
   onUpdate,
+  onCreditPolicySave,
   onContactAdd,
   onContactRemove,
   onAddressAdd,
@@ -330,6 +354,10 @@ function CustomerDetailBody({
   detail: CustomerDetail;
   branchOptions: BranchOption[];
   onUpdate: (values: { name: string; remark?: string }) => void;
+  onCreditPolicySave: (values: {
+    creditLimit: number | null;
+    paymentTermsDays: number | null;
+  }) => void;
   onContactAdd: (values: {
     name: string;
     phone: string;
@@ -351,6 +379,7 @@ function CustomerDetailBody({
   const [updateForm] = Form.useForm();
   const [contactForm] = Form.useForm();
   const [addressForm] = Form.useForm();
+  const [creditForm] = Form.useForm();
   const availableBranches = branchOptions.filter((b) => !detail.servicedBranchIds.includes(b.id));
 
   return (
@@ -375,6 +404,45 @@ function CustomerDetailBody({
           <Input placeholder="备注" style={{ width: 200 }} />
         </Form.Item>
         <Button htmlType="submit">保存</Button>
+      </Form>
+
+      <Typography.Title level={5}>月结信用政策</Typography.Title>
+      <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
+        额度为开单前置校验依据（未收余额超过额度将拒绝月结开单）；留空表示不启用额度检查。
+      </Typography.Paragraph>
+      <Form
+        form={creditForm}
+        layout="inline"
+        initialValues={{
+          creditLimit: detail.creditLimit ?? undefined,
+          paymentTermsDays: detail.paymentTermsDays ?? undefined,
+        }}
+        onFinish={(values) => {
+          onCreditPolicySave({
+            creditLimit: values.creditLimit ?? null,
+            paymentTermsDays: values.paymentTermsDays ?? null,
+          });
+        }}
+        style={{ flexWrap: 'wrap', gap: 8, marginBottom: 16 }}
+      >
+        <Form.Item
+          name="creditLimit"
+          label="信用额度"
+          rules={[
+            () => ({
+              validator: (_, value) =>
+                value === undefined || value === null || value >= 0
+                  ? Promise.resolve()
+                  : Promise.reject(new Error('信用额度不能为负数')),
+            }),
+          ]}
+        >
+          <InputNumber min={0} precision={2} placeholder="元" style={{ width: 160 }} />
+        </Form.Item>
+        <Form.Item name="paymentTermsDays" label="账期">
+          <InputNumber min={0} precision={0} addonAfter="天" style={{ width: 140 }} />
+        </Form.Item>
+        <Button htmlType="submit">保存信用政策</Button>
       </Form>
 
       <Typography.Title level={5}>联系人</Typography.Title>

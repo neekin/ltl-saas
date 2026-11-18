@@ -32,6 +32,11 @@ public static class FinanceEndpoints
             RequireRead(user);
             return Results.Ok(await service.ListPaymentsAsync(waybillId));
         });
+        finance.MapGet("/branch-payment-summary", async (string? month, ClaimsPrincipal user, IFinanceService service) =>
+        {
+            RequireRead(user);
+            return Results.Ok(await service.GetBranchPaymentSummaryAsync(RequireUserId(user), month));
+        });
         finance.MapPost("/refunds", async (RefundPaymentRequest request, ClaimsPrincipal user, IFinanceService service) =>
         {
             RequireManage(user);

@@ -21,6 +21,8 @@ public static class CustomerEndpoints
             Results.Ok(await service.CreateAsync(RequireUserId(user), request)));
         customers.MapPut("/{id:guid}", async (Guid id, UpdateCustomerRequest request, ClaimsPrincipal user, ICustomerAdminService service) =>
             Results.Ok(await service.UpdateAsync(RequireUserId(user), id, request)));
+        customers.MapPut("/{id:guid}/credit-policy", async (Guid id, SetCreditPolicyRequest request, ClaimsPrincipal user, ICustomerAdminService service) =>
+            Results.Ok(await service.SetCreditPolicyAsync(RequireUserId(user), id, request)));
         customers.MapPost("/{id:guid}/disable", async (Guid id, ClaimsPrincipal user, ICustomerAdminService service) =>
             Results.Ok(await service.DisableAsync(RequireUserId(user), id)));
         customers.MapPost("/{id:guid}/enable", async (Guid id, ClaimsPrincipal user, ICustomerAdminService service) =>

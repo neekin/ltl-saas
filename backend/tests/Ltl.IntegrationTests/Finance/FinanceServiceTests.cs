@@ -72,6 +72,7 @@ public class FinanceServiceTests : IClassFixture<PostgreSqlFixture>
 
         var authorization = new AuthorizationService(org);
         await authorization.GrantPermissionAsync(role.Id, FinancePermissionCodes.FinanceManage);
+        await authorization.GrantPermissionAsync(role.Id, FinancePermissionCodes.FinanceRead);
         await authorization.AssignRoleAsync(admin.Id, role.Id);
         await authorization.GrantBranchScopeAsync(admin.Id, origin.Id);
 
@@ -161,6 +162,46 @@ public class FinanceServiceTests : IClassFixture<PostgreSqlFixture>
         var rv2Body = await JsonDocument.ParseAsync(await rv2.Content.ReadAsStreamAsync());
         Assert.Equal("Settled", rv2Body.RootElement.GetProperty("status").GetString());
         Assert.Equal(seed.TotalAmount, rv2Body.RootElement.GetProperty("settledAmount").GetDecimal());
+    }
+
+    [Fact]
+    public async Task BranchPaymentSummary_ShouldAggregateByOriginBranch()
+    {
+        var seed = await SeedAsync();
+        using var client = await AdminClientAsync(seed.TenantCode);
+
+        // 全额收款（运单始发网点 GZ01，100kg × 10 = 1000）
+        var pay = await client.PostAsJsonAsync("/api/finance/payments", new
+        {
+            waybillId = seed.WaybillId, amount = seed.TotalAmount, method = "cash", note = (string?)null,
+        });
+        Assert.Equal(HttpStatusCode.OK, pay.StatusCode);
+
+        var summary = await client.GetAsync("/api/finance/branch-payment-summary");
+        Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
+        var body = await JsonDocument.ParseAsync(await summary.Content.ReadAsStreamAsync());
+
+        // 始发网点 GZ01 聚合到该笔收款；目的网点 WH02 无收款
+        var rows = body.RootElement.EnumerateArray().ToList();
+        Assert.Equal(2, rows.Count);
+        var gz = rows.Single(r => r.GetProperty("branchCode").GetString() == "GZ01");
+        Assert.Equal(seed.TotalAmount, gz.GetProperty("totalCollected").GetDecimal());
+        Assert.Equal(1, gz.GetProperty("paymentCount").GetInt32());
+        Assert.Equal(seed.TotalAmount, gz.GetProperty("monthCollected").GetDecimal());
+        Assert.Equal(1, gz.GetProperty("monthPaymentCount").GetInt32());
+        var wh = rows.Single(r => r.GetProperty("branchCode").GetString() == "WH02");
+        Assert.Equal(0m, wh.GetProperty("totalCollected").GetDecimal());
+        Assert.Equal(0, wh.GetProperty("paymentCount").GetInt32());
+
+        // 指定未来月份 → 当月口径为 0，累计不变
+        var future = DateTime.UtcNow.AddMonths(1);
+        var monthParam = $"{future.Year}{future.Month:D2}";
+        var filtered = await client.GetAsync($"/api/finance/branch-payment-summary?month={monthParam}");
+        var filteredBody = await JsonDocument.ParseAsync(await filtered.Content.ReadAsStreamAsync());
+        var gzFiltered = filteredBody.RootElement.EnumerateArray()
+            .Single(r => r.GetProperty("branchCode").GetString() == "GZ01");
+        Assert.Equal(seed.TotalAmount, gzFiltered.GetProperty("totalCollected").GetDecimal());
+        Assert.Equal(0m, gzFiltered.GetProperty("monthCollected").GetDecimal());
     }
 
     [Fact]

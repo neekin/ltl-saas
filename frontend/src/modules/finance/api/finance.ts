@@ -80,3 +80,21 @@ export async function approveCodSettlement(id: string): Promise<void> {
 export async function payCodSettlement(id: string): Promise<void> {
   await http.post(`/finance/cod/settlements/${id}/pay`);
 }
+
+export interface BranchPaymentSummary {
+  branchId: string;
+  branchCode: string;
+  branchName: string;
+  totalCollected: number;
+  paymentCount: number;
+  monthCollected: number;
+  monthPaymentCount: number;
+}
+
+/** 网点收款汇总（FIN-003）：按运单始发网点聚合；month 为 yyyyMM 可选。 */
+export async function getBranchPaymentSummary(month?: string): Promise<BranchPaymentSummary[]> {
+  const response = await http.get<BranchPaymentSummary[]>('/finance/branch-payment-summary', {
+    params: { month },
+  });
+  return response.data;
+}

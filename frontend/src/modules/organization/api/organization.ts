@@ -32,6 +32,12 @@ export interface RoleDetail extends Role {
   permissionCodes: string[];
 }
 
+export interface Permission {
+  code: string;
+  name: string;
+  module: string;
+}
+
 export interface Page<T> {
   items: T[];
   total: number;
@@ -139,4 +145,10 @@ export async function enableRole(id: string): Promise<void> {
 
 export async function setRolePermissions(id: string, permissionCodes: string[]): Promise<void> {
   await http.put(`/organization/roles/${id}/permissions`, { permissionCodes });
+}
+
+/** 平台预置权限点目录（权限配置界面数据源）。 */
+export async function listPermissions(): Promise<Permission[]> {
+  const response = await http.get<Permission[]>('/organization/roles/permissions');
+  return response.data;
 }

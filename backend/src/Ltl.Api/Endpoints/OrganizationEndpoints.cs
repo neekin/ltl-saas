@@ -68,6 +68,8 @@ public static class OrganizationEndpoints
             Results.Ok(await service.EnableAsync(RequireUserId(user), id)));
         roles.MapPut("/{id:guid}/permissions", async (Guid id, SetPermissionsRequest request, ClaimsPrincipal user, IRoleAdminService service) =>
             Results.Ok(await service.SetPermissionsAsync(RequireUserId(user), id, request.PermissionCodes)));
+        roles.MapGet("/permissions", async (ClaimsPrincipal user, IRoleAdminService service) =>
+            Results.Ok(await service.ListPermissionsAsync(RequireUserId(user))));
     }
 
     /// <summary>从 JWT sub claim 解析操作者（服务端来源，AGENTS §5.1；缺失 → 认证失败 401 语义）。</summary>

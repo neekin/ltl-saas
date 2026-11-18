@@ -18,6 +18,12 @@ public sealed record PaymentRecordDto(
 public sealed record RefundRecordDto(
     Guid Id, Guid PaymentId, decimal Amount, string Reason, Guid? OperatorUserId, DateTime OccurredAt);
 
+/// <summary>网点收款汇总行（FIN-003）：累计 + 当月两种口径。</summary>
+public sealed record BranchPaymentSummary(
+    Guid BranchId, string BranchCode, string BranchName,
+    decimal TotalCollected, int PaymentCount,
+    decimal MonthCollected, int MonthPaymentCount);
+
 public record RecordPaymentRequest(
     Guid WaybillId, decimal Amount, string Method, string? Note);
 
@@ -45,6 +51,9 @@ public interface IFinanceService
 
     /// <summary>关闭月结账单（Confirmed → Closed；终态）。</summary>
     Task CloseStatementAsync(Guid operatorUserId, Guid statementId);
+
+    /// <summary>网点收款汇总（FIN-003）：按运单始发网点聚合收款笔数与金额；month 为 yyyyMM 可选。</summary>
+    Task<IReadOnlyList<BranchPaymentSummary>> GetBranchPaymentSummaryAsync(Guid operatorUserId, string? month);
 }
 
 public sealed class FinanceService(
@@ -289,6 +298,54 @@ public sealed class FinanceService(
         statement.Close(DateTime.UtcNow, operatorUserId);
         await db.SaveChangesAsync();
     }
+
+    /// <summary>网点收款汇总：原生 SQL 跨表聚合（AGENTS §5.1），租户条件显式拼接。</summary>
+    public async Task<IReadOnlyList<BranchPaymentSummary>> GetBranchPaymentSummaryAsync(
+        Guid operatorUserId, string? month)
+    {
+        if (db.CurrentTenantId is not { } tenantId)
+            throw new TenantContextMissingException();
+        if (!await authorization.HasPermissionAsync(operatorUserId, "finance.read"))
+            throw new PermissionDeniedException("finance.read");
+
+        // month 为 yyyyMM 时按指定月份筛选当月收款；未传时默认当前月（与 REPORT-001 口径一致）
+        var now = DateTime.UtcNow;
+        var start = new DateTime(now.Year, now.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+        var end = start.AddMonths(1);
+        if (month is { Length: 6 } && int.TryParse(month[..4], out var y)
+            && int.TryParse(month[4..], out var m) && y >= 2000 && y <= 9999 && m >= 1 && m <= 12)
+        {
+            start = new DateTime(y, m, 1, 0, 0, 0, DateTimeKind.Utc);
+            end = start.AddMonths(1);
+        }
+
+        var rows = await db.Database
+            .SqlQuery<BranchPaymentRow>($"""
+                SELECT b.id AS "branch_id", b.code AS "branch_code", b.name AS "branch_name",
+                       COALESCE(SUM(p.amount), 0) AS "total_collected",
+                       COUNT(p.id)::integer AS "payment_count",
+                       COALESCE(SUM(CASE WHEN p.occurred_at >= {start} AND p.occurred_at < {end}
+                           THEN p.amount ELSE 0 END), 0) AS "month_collected",
+                       COUNT(CASE WHEN p.occurred_at >= {start} AND p.occurred_at < {end}
+                           THEN 1 END)::integer AS "month_payment_count"
+                FROM branches b
+                LEFT JOIN waybills w ON w.tenant_id = b.tenant_id AND w.origin_branch_id = b.id
+                LEFT JOIN payment_records p ON p.tenant_id = w.tenant_id AND p.waybill_id = w.id
+                WHERE b.tenant_id = {tenantId}
+                GROUP BY b.id, b.code, b.name
+                ORDER BY "total_collected" DESC, b.code
+                """)
+            .ToListAsync();
+
+        return rows.Select(r => new BranchPaymentSummary(
+            r.BranchId, r.BranchCode, r.BranchName,
+            r.TotalCollected, r.PaymentCount, r.MonthCollected, r.MonthPaymentCount)).ToList();
+    }
+
+    private sealed record BranchPaymentRow(
+        Guid BranchId, string BranchCode, string BranchName,
+        decimal TotalCollected, int PaymentCount,
+        decimal MonthCollected, int MonthPaymentCount);
 
     private sealed record TotalAmountRow(decimal? TotalAmount);
 

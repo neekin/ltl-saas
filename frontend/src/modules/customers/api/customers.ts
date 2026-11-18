@@ -7,6 +7,10 @@ export interface Customer {
   status: string;
   remark: string | null;
   createdAt: string;
+  /** 信用额度（元）；null = 未设置，开单不做额度检查 */
+  creditLimit: number | null;
+  /** 账期天数（月结）；null = 未设置 */
+  paymentTermsDays: number | null;
 }
 
 export interface CustomerDetail extends Customer {
@@ -61,6 +65,15 @@ export async function createCustomer(
 
 export async function updateCustomer(id: string, name: string, remark?: string): Promise<Customer> {
   const response = await http.put<Customer>(`/customers/${id}`, { name, remark });
+  return response.data;
+}
+
+/** 设置月结信用政策（额度/账期）；传 null 表示清除。 */
+export async function setCreditPolicy(
+  id: string,
+  payload: { creditLimit: number | null; paymentTermsDays: number | null },
+): Promise<Customer> {
+  const response = await http.put<Customer>(`/customers/${id}/credit-policy`, payload);
   return response.data;
 }
 

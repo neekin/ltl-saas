@@ -429,6 +429,13 @@ static void SeedDevelopmentData(IServiceProvider services)
             customersDb.SaveChanges();
         }
 
+        // 5.1 月结信用政策（信用额度检查依赖；null = 不检查，故种子显式设置）
+        if (customer.CreditLimit is null)
+        {
+            customer.SetCreditPolicy(50_000m, 30, DateTime.UtcNow, adminUser.Id);
+            customersDb.SaveChanges();
+        }
+
         // 6. 已发布价卡
         var ruleSet = pricingDb.RuleSets.FirstOrDefault(s => s.Code == "std");
         if (ruleSet is null)
