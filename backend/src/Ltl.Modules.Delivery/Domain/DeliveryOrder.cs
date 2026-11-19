@@ -131,11 +131,4 @@ public sealed class DeliveryOrder : TenantScopedEntity
         AssignedAt = EnsureUtc(nowUtc);
         AssignedBy = assignedBy;
     }
-
-    private static DateTime EnsureUtc(DateTime value) =>
-        value.Kind == DateTimeKind.Utc
-            ? value
-            : value.Kind == DateTimeKind.Local
-                ? value.ToUniversalTime()
-                : throw new ArgumentException("时间必须携带 UTC 或本地时区信息，禁止 Unspecified。", nameof(value));
 }

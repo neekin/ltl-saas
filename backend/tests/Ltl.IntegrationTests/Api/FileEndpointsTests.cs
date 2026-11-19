@@ -43,8 +43,14 @@ public class FileEndpointsTests : IClassFixture<PostgreSqlFixture>
         var user = Ltl.Modules.Organization.Domain.User.Create(
             tenant.Id, "admin", "管理员", Ltl.SharedKernel.Security.PasswordHasher.Hash("secret-123"),
             DateTime.UtcNow);
+        var role = Ltl.Modules.Organization.Domain.Role.Create(tenant.Id, "ops", "业务员", DateTime.UtcNow);
         org.Users.Add(user);
+        org.Roles.Add(role);
         await org.SaveChangesAsync();
+
+        var auth = new Ltl.Modules.Organization.Application.Authorization.AuthorizationService(org);
+        await auth.GrantPermissionAsync(role.Id, Ltl.Modules.Waybills.Domain.WaybillPermissionCodes.WaybillRead);
+        await auth.AssignRoleAsync(user.Id, role.Id);
 
         var client = CreateClient();
         var login = await client.PostAsJsonAsync("/api/auth/login",
@@ -120,5 +126,36 @@ public class FileEndpointsTests : IClassFixture<PostgreSqlFixture>
 
         var response = await client.PostAsync("/api/files", Multipart("data"u8.ToArray()));
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Upload_WithoutAnyRolePermission_ShouldReturn403()
+    {
+        var tenantCode = $"file-noperm-{Guid.NewGuid():N}";
+        var tenant = Tenant.Create(tenantCode, "无权限测试租户", DateTime.UtcNow);
+        await using (var tenancy = _fixture.CreateTenancyContext())
+        {
+            tenancy.Tenants.Add(tenant);
+            await tenancy.SaveChangesAsync();
+        }
+
+        await using (var org = _fixture.CreateOrganizationContext(tenant.Id))
+        {
+            org.Users.Add(Ltl.Modules.Organization.Domain.User.Create(
+                tenant.Id, "bare", "裸账号", Ltl.SharedKernel.Security.PasswordHasher.Hash("secret-123"),
+                DateTime.UtcNow));
+            await org.SaveChangesAsync();
+        }
+
+        using var client = CreateClient();
+        var login = await client.PostAsJsonAsync("/api/auth/login",
+            new { tenant_code = tenantCode, username = "bare", password = "secret-123" });
+        login.EnsureSuccessStatusCode();
+        var body = await JsonDocument.ParseAsync(await login.Content.ReadAsStreamAsync());
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue(
+            "Bearer", body.RootElement.GetProperty("access_token").GetString());
+
+        var response = await client.PostAsync("/api/files", Multipart("data"u8.ToArray()));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }

@@ -142,7 +142,7 @@ export function CodManagementPage() {
                   precision={2}
                   value={settleAmount}
                   onChange={(v) => setSettleAmount(v ?? 0)}
-                  addonBefore="结算金额"
+                  prefix="结算金额"
                   style={{ width: 190 }}
                 />
                 <Button
@@ -165,7 +165,9 @@ export function CodManagementPage() {
                 {settlements
                   .filter((x) => x.status === 'Draft')
                   .map((x) => (
-                    <Popconfirm key={x.id} title="确认审批该结算单？"
+                    <Popconfirm
+                      key={x.id}
+                      title="确认审批该结算单？"
                       onConfirm={() => approveMutation.mutate(x.id)}
                     >
                       <Button type="primary">审批 ¥ {x.amount.toFixed(2)}</Button>
@@ -174,7 +176,9 @@ export function CodManagementPage() {
                 {settlements
                   .filter((x) => x.status === 'Approved')
                   .map((x) => (
-                    <Popconfirm key={x.id} title="确认付款给发货人？"
+                    <Popconfirm
+                      key={x.id}
+                      title="确认付款给发货人？"
                       onConfirm={() => payMutation.mutate(x.id)}
                     >
                       <Button danger loading={payMutation.isPending}>

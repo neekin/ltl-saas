@@ -2,7 +2,6 @@ using System.Transactions;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Warehouse.Domain;
-using Ltl.Modules.Warehouse.Domain;
 using Ltl.Modules.Warehouse.Infrastructure;
 using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Domain;

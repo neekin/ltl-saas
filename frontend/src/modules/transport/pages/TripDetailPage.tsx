@@ -341,7 +341,7 @@ export function TripDetailPage() {
         onOk={() => feeMutation.mutate()}
         okText="登记"
         confirmLoading={feeMutation.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
         <Space direction="vertical" style={{ width: '100%' }} size={12}>
           <Select
@@ -360,7 +360,7 @@ export function TripDetailPage() {
             precision={2}
             value={feeForm.amount}
             onChange={(v) => setFeeForm({ ...feeForm, amount: v ?? 0 })}
-            addonBefore="金额（元）"
+            prefix="金额（元）"
             style={{ width: '100%' }}
           />
           <Input

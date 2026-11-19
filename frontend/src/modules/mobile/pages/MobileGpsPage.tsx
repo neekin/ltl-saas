@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button, Card, List, Toast } from 'antd-mobile';
 import { listTrips, reportGps, type Trip } from '../../transport/api/trips';
@@ -17,14 +17,9 @@ export function MobileGpsPage() {
     retry: false,
   });
 
-  // 仅 Departed 批次可上报
+  // 仅 Departed 批次可上报；未手动选择时默认派生首个发车中批次
   const departedTrips = (tripsQuery.data?.items ?? []).filter((t: Trip) => t.status === 'Departed');
-
-  useEffect(() => {
-    if (!tripId && departedTrips.length > 0) {
-      setTripId(departedTrips[0].id);
-    }
-  }, [departedTrips, tripId]);
+  const activeTripId = tripId || departedTrips[0]?.id || '';
 
   const reportMutation = useMutation({
     mutationFn: async () => {
@@ -37,8 +32,9 @@ export function MobileGpsPage() {
       });
       const lat = Number(position.coords.latitude.toFixed(6));
       const lng = Number(position.coords.longitude.toFixed(6));
-      const acc = position.coords.accuracy != null ? Number(position.coords.accuracy.toFixed(1)) : null;
-      await reportGps(tripId, { latitude: lat, longitude: lng, accuracyMeters: acc });
+      const acc =
+        position.coords.accuracy != null ? Number(position.coords.accuracy.toFixed(1)) : null;
+      await reportGps(activeTripId, { latitude: lat, longitude: lng, accuracyMeters: acc });
       return { lat, lng, acc };
     },
     onSuccess: ({ lat, lng, acc }) => {
@@ -50,22 +46,25 @@ export function MobileGpsPage() {
     },
   });
 
-  const report = useCallback(() => {
-    if (!tripId) {
+  const report = () => {
+    if (!activeTripId) {
       Toast.show({ content: '请选择批次', icon: 'fail' });
       return;
     }
     reportMutation.mutate();
-  }, [tripId, reportMutation]);
+  };
 
   return (
     <div style={{ padding: 12 }}>
-      <Card title="位置上报" extra={<span style={{ fontSize: 12, color: '#8c96a5' }}>GPS-001</span>}>
+      <Card
+        title="位置上报"
+        extra={<span style={{ fontSize: 12, color: '#8c96a5' }}>GPS-001</span>}
+      >
         <p style={{ color: '#8c96a5', fontSize: 13 }}>
           仅「发车中」批次可上报；位置写入批次轨迹，用于运输过程追溯。
         </p>
         <select
-          value={tripId}
+          value={activeTripId}
           onChange={(e) => setTripId(e.target.value)}
           style={{
             width: '100%',
@@ -78,7 +77,9 @@ export function MobileGpsPage() {
         >
           {departedTrips.length === 0 && <option value="">无发车中的批次</option>}
           {departedTrips.map((t) => (
-            <option key={t.id} value={t.id}>{t.tripNo}</option>
+            <option key={t.id} value={t.id}>
+              {t.tripNo}
+            </option>
           ))}
         </select>
         <Button

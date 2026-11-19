@@ -28,8 +28,6 @@ public sealed class NotificationRecord : TenantScopedEntity
 
     public DateTime? SentAt { get; private set; }
 
-    public Guid? CreatedBy { get; private set; }
-
     private NotificationRecord()
     {
     }
@@ -96,9 +94,4 @@ public sealed class NotificationRecord : TenantScopedEntity
         FailureReason = reason.Trim();
         SentAt = EnsureUtc(nowUtc);
     }
-
-    private static DateTime EnsureUtc(DateTime value) =>
-        value.Kind == DateTimeKind.Utc
-            ? value
-            : value.ToUniversalTime();
 }

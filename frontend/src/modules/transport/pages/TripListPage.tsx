@@ -32,15 +32,18 @@ export function TripListPage() {
 
   const listQuery = useQuery({ queryKey: ['trips', page], queryFn: () => listTrips(page, 10) });
   const vehiclesQuery = useQuery({
-    queryKey: ['vehicle-options'], queryFn: () => listVehicles(1, 100),
+    queryKey: ['vehicle-options'],
+    queryFn: () => listVehicles(1, 100),
     enabled: createOpen,
   });
   const driversQuery = useQuery({
-    queryKey: ['driver-options'], queryFn: () => listDrivers(1, 100),
+    queryKey: ['driver-options'],
+    queryFn: () => listDrivers(1, 100),
     enabled: createOpen,
   });
   const branchesQuery = useQuery({
-    queryKey: ['branch-options'], queryFn: async () => {
+    queryKey: ['branch-options'],
+    queryFn: async () => {
       const response = await http.get<{ items: BranchOption[] }>('/organization/branches', {
         params: { page: 1, pageSize: 100 },
       });
@@ -53,15 +56,19 @@ export function TripListPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: {
-      originBranchId: string; destBranchId: string; vehicleId: string;
-      driverId?: string; note?: string;
-    }) => createTrip({
-      originBranchId: values.originBranchId,
-      destBranchId: values.destBranchId,
-      vehicleId: values.vehicleId,
-      driverId: values.driverId || null,
-      note: values.note || undefined,
-    }),
+      originBranchId: string;
+      destBranchId: string;
+      vehicleId: string;
+      driverId?: string;
+      note?: string;
+    }) =>
+      createTrip({
+        originBranchId: values.originBranchId,
+        destBranchId: values.destBranchId,
+        vehicleId: values.vehicleId,
+        driverId: values.driverId || null,
+        note: values.note || undefined,
+      }),
     onSuccess: (trip) => {
       message.success('批次已创建');
       setCreateOpen(false);
@@ -73,7 +80,8 @@ export function TripListPage() {
   });
 
   const branchOptions = (branchesQuery.data ?? []).map((b) => ({
-    value: b.id, label: `${b.code} ${b.name}`,
+    value: b.id,
+    label: `${b.code} ${b.name}`,
   }));
   const vehicleOptions = (vehiclesQuery.data?.items ?? [])
     .filter((v) => v.status === 'Active')
@@ -162,20 +170,53 @@ export function TripListPage() {
         onCancel={() => setCreateOpen(false)}
         onOk={() => createForm.submit()}
         confirmLoading={createMutation.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
-        <Form form={createForm} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
-          <Form.Item name="originBranchId" label="起点网点" rules={[{ required: true, message: '必选' }]}>
-            <Select showSearch optionFilterProp="label" placeholder="选择起点网点" options={branchOptions} />
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={(values) => createMutation.mutate(values)}
+        >
+          <Form.Item
+            name="originBranchId"
+            label="起点网点"
+            rules={[{ required: true, message: '必选' }]}
+          >
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="选择起点网点"
+              options={branchOptions}
+            />
           </Form.Item>
-          <Form.Item name="destBranchId" label="目的网点" rules={[{ required: true, message: '必选' }]}>
-            <Select showSearch optionFilterProp="label" placeholder="选择目的网点" options={branchOptions} />
+          <Form.Item
+            name="destBranchId"
+            label="目的网点"
+            rules={[{ required: true, message: '必选' }]}
+          >
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="选择目的网点"
+              options={branchOptions}
+            />
           </Form.Item>
           <Form.Item name="vehicleId" label="车辆" rules={[{ required: true, message: '必选' }]}>
-            <Select showSearch optionFilterProp="label" placeholder="选择车辆" options={vehicleOptions} />
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="选择车辆"
+              options={vehicleOptions}
+            />
           </Form.Item>
           <Form.Item name="driverId" label="司机（可选）">
-            <Select showSearch optionFilterProp="label" allowClear placeholder="选择司机" options={driverOptions} />
+            <Select
+              showSearch
+              optionFilterProp="label"
+              allowClear
+              placeholder="选择司机"
+              options={driverOptions}
+            />
           </Form.Item>
           <Form.Item name="note" label="备注">
             <Input.TextArea rows={2} placeholder="可选" />

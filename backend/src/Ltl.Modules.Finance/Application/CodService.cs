@@ -32,8 +32,8 @@ public interface ICodService
     Task<CodOrderDto> EnsureCodOrderForOperatorAsync(Guid operatorUserId, Guid waybillId);
 
     /// <summary>按运单列出 COD 结算单（审批/付款界面数据源；新→旧）。</summary>
-    Task<IReadOnlyList<CodSettlementDto>> ListSettlementsByWaybillAsync(Guid waybillId);
-    Task<CodOrderDto?> GetCodOrderByWaybillAsync(Guid waybillId);
+    Task<IReadOnlyList<CodSettlementDto>> ListSettlementsByWaybillAsync(Guid operatorUserId, Guid waybillId);
+    Task<CodOrderDto?> GetCodOrderByWaybillAsync(Guid operatorUserId, Guid waybillId);
     Task<CodCollectionDto> RecordCollectionAsync(Guid operatorUserId, RecordCodCollectionRequest request);
     Task<CodSettlementDto> CreateSettlementAsync(Guid operatorUserId, CreateCodSettlementRequest request);
     Task<CodSettlementDto> ApproveSettlementAsync(Guid operatorUserId, Guid settlementId);
@@ -54,8 +54,8 @@ public sealed class CodService(
     /// <summary>带权限校验的 COD 订单懒初始化。</summary>
     public async Task<CodOrderDto> EnsureCodOrderForOperatorAsync(Guid operatorUserId, Guid waybillId)
     {
-        if (!await authorization.HasPermissionAsync(operatorUserId, "cod.manage"))
-            throw new PermissionDeniedException("cod.manage");
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.manage");
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, waybillId);
         return await EnsureCodOrderAsync(waybillId);
     }
 
@@ -86,20 +86,24 @@ public sealed class CodService(
         return ToDto(codOrder);
     }
 
-    public async Task<CodOrderDto?> GetCodOrderByWaybillAsync(Guid waybillId)
+    public async Task<CodOrderDto?> GetCodOrderByWaybillAsync(Guid operatorUserId, Guid waybillId)
     {
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.read");
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, waybillId);
         var codOrder = await db.CodOrders
             .AsNoTracking()
-            .SingleOrDefaultAsync(o => o.WaybillId == waybillId);
+            .SingleOrDefaultAsync(o => o.WaybillId == waybillId && o.TenantId == tenantId);
         return codOrder is null ? null : ToDto(codOrder);
     }
 
-    /// <summary>按运单列出结算单（新→旧）。COD 数据都在租户过滤器内。</summary>
-    public async Task<IReadOnlyList<CodSettlementDto>> ListSettlementsByWaybillAsync(Guid waybillId)
+    /// <summary>按运单列出结算单（新→旧）。校验 cod.read 与运单网点范围。</summary>
+    public async Task<IReadOnlyList<CodSettlementDto>> ListSettlementsByWaybillAsync(Guid operatorUserId, Guid waybillId)
     {
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.read");
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, waybillId);
         var codOrder = await db.CodOrders
             .AsNoTracking()
-            .SingleOrDefaultAsync(o => o.WaybillId == waybillId);
+            .SingleOrDefaultAsync(o => o.WaybillId == waybillId && o.TenantId == tenantId);
         if (codOrder is null)
         {
             return [];
@@ -107,7 +111,7 @@ public sealed class CodService(
 
         var settlements = await db.CodSettlements
             .AsNoTracking()
-            .Where(x => x.CodOrderId == codOrder.Id)
+            .Where(x => x.CodOrderId == codOrder.Id && x.TenantId == tenantId)
             .OrderByDescending(x => x.CreatedAt)
             .ToListAsync();
         return settlements.Select(ToDto).ToList();
@@ -116,8 +120,8 @@ public sealed class CodService(
     public async Task<CodCollectionDto> RecordCollectionAsync(
         Guid operatorUserId, RecordCodCollectionRequest request)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.manage");
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, request.WaybillId);
 
         // 幂等（AGENTS §8）：同租户同幂等键已存在 → 返回原收款记录
         if (request.IdempotencyKey is { } collectionKey)
@@ -140,7 +144,7 @@ public sealed class CodService(
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
         var collection = CodCollection.Create(
-            db.CurrentTenantId.Value, codOrder.Id, request.Amount,
+            tenantId, codOrder.Id, request.Amount,
             operatorUserId, request.Note, DateTime.UtcNow, request.IdempotencyKey);
         db.CodCollections.Add(collection);
 
@@ -160,11 +164,11 @@ public sealed class CodService(
     public async Task<CodSettlementDto> CreateSettlementAsync(
         Guid operatorUserId, CreateCodSettlementRequest request)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.manage");
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, request.WaybillId);
 
         var codOrder = await db.CodOrders
-            .SingleOrDefaultAsync(o => o.WaybillId == request.WaybillId)
+            .SingleOrDefaultAsync(o => o.WaybillId == request.WaybillId && o.TenantId == tenantId)
             ?? throw new EntityNotFoundException("COD 订单", request.WaybillId);
 
         var available = codOrder.AvailableForSettlement;
@@ -176,7 +180,7 @@ public sealed class CodService(
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         var settlement = CodSettlement.Create(
-            db.CurrentTenantId.Value, codOrder.Id, request.Amount,
+            tenantId, codOrder.Id, request.Amount,
             operatorUserId, DateTime.UtcNow);
         db.CodSettlements.Add(settlement);
         await db.SaveChangesAsync();
@@ -194,10 +198,12 @@ public sealed class CodService(
 
     public async Task<CodSettlementDto> ApproveSettlementAsync(Guid operatorUserId, Guid settlementId)
     {
-        var settlement = await db.CodSettlements.FindAsync([settlementId])
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.manage");
+        var settlement = await db.CodSettlements.SingleOrDefaultAsync(s => s.Id == settlementId && s.TenantId == tenantId)
             ?? throw new EntityNotFoundException("结算单", settlementId);
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var codOrder = await db.CodOrders.SingleOrDefaultAsync(o => o.Id == settlement.CodOrderId && o.TenantId == tenantId)
+            ?? throw new EntityNotFoundException("COD 订单", settlement.CodOrderId);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, codOrder.WaybillId);
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         settlement.Approve(operatorUserId, DateTime.UtcNow);
@@ -212,13 +218,12 @@ public sealed class CodService(
 
     public async Task<CodSettlementDto> PaySettlementAsync(Guid operatorUserId, Guid settlementId)
     {
-        var settlement = await db.CodSettlements.FindAsync([settlementId])
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.manage");
+        var settlement = await db.CodSettlements.SingleOrDefaultAsync(s => s.Id == settlementId && s.TenantId == tenantId)
             ?? throw new EntityNotFoundException("结算单", settlementId);
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
-
-        var codOrder = await db.CodOrders.FindAsync([settlement.CodOrderId])
+        var codOrder = await db.CodOrders.SingleOrDefaultAsync(o => o.Id == settlement.CodOrderId && o.TenantId == tenantId)
             ?? throw new EntityNotFoundException("COD 订单", settlement.CodOrderId);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, codOrder.WaybillId);
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         settlement.MarkPaidOut(operatorUserId, DateTime.UtcNow);
@@ -238,13 +243,13 @@ public sealed class CodService(
     public async Task<CodRefundRecordDto> RefundCollectionAsync(
         Guid operatorUserId, Guid collectionId, decimal amount, string reason)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, "cod.manage");
 
-        var collection = await db.CodCollections.FindAsync([collectionId])
+        var collection = await db.CodCollections.SingleOrDefaultAsync(c => c.Id == collectionId && c.TenantId == tenantId)
             ?? throw new EntityNotFoundException("COD 收款记录", collectionId);
-        var codOrder = await db.CodOrders.FindAsync([collection.CodOrderId])
+        var codOrder = await db.CodOrders.SingleOrDefaultAsync(o => o.Id == collection.CodOrderId && o.TenantId == tenantId)
             ?? throw new EntityNotFoundException("COD 订单", collection.CodOrderId);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, codOrder.WaybillId);
 
         // 已退金额 = Σ(refunds for this collection)
         var alreadyRefunded = await db.CodRefunds
@@ -258,7 +263,7 @@ public sealed class CodService(
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         var refund = CodRefundRecord.Create(
-            db.CurrentTenantId.Value, collectionId, amount, reason,
+            tenantId, collectionId, amount, reason,
             operatorUserId, DateTime.UtcNow);
         db.CodRefunds.Add(refund);
 
@@ -276,6 +281,35 @@ public sealed class CodService(
             refund.OperatorUserId, refund.OccurredAt);
     }
 
+    private async Task<Guid> RequirePermissionAsync(Guid operatorUserId, string permissionCode)
+    {
+        if (db.CurrentTenantId is not { } tenantId)
+            throw new TenantContextMissingException();
+        if (!await authorization.HasPermissionAsync(operatorUserId, permissionCode))
+            throw new PermissionDeniedException(permissionCode);
+        return tenantId;
+    }
+
+    private async Task RequireWaybillBranchAccessAsync(Guid tenantId, Guid operatorUserId, Guid waybillId)
+    {
+        var branches = (await db.Database
+                .SqlQuery<WaybillBranchesRow>(
+                    $"""
+                    SELECT origin_branch_id, dest_branch_id
+                    FROM waybills
+                    WHERE tenant_id = {tenantId} AND id = {waybillId}
+                    """)
+                .ToListAsync())
+            .SingleOrDefault()
+            ?? throw new EntityNotFoundException("运单", waybillId);
+
+        if (!await authorization.CanAccessBranchAsync(operatorUserId, branches.OriginBranchId)
+            && !await authorization.CanAccessBranchAsync(operatorUserId, branches.DestBranchId))
+        {
+            throw new PermissionDeniedException("COD 数据范围（运单始发/目的网点）");
+        }
+    }
+
     private static CodOrderDto ToDto(CodOrder o) => new(
         o.Id, o.WaybillId, o.Amount, o.CollectedAmount, o.SettledAmount, o.PaidAmount, o.Status.ToString());
 
@@ -283,4 +317,6 @@ public sealed class CodService(
         s.Id, s.CodOrderId, s.Amount, s.Status.ToString(), s.ApprovedBy, s.ApprovedAt, s.PaidBy, s.PaidAt);
 
     private sealed record CodAmountRow(decimal? CodAmount);
+
+    private sealed record WaybillBranchesRow(Guid OriginBranchId, Guid DestBranchId);
 }

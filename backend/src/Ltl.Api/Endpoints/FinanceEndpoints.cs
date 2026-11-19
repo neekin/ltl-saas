@@ -18,74 +18,42 @@ public static class FinanceEndpoints
         var finance = app.MapGroup("/api/finance");
         finance.MapGet("/receivables", async (Guid waybillId, ClaimsPrincipal user, IFinanceService service) =>
         {
-            RequireRead(user);
-            var result = await service.GetReceivableAsync(waybillId);
+            var result = await service.GetReceivableAsync(RequireUserId(user), waybillId);
             return result is null ? Results.NotFound() : Results.Ok(result);
         });
         finance.MapPost("/receivables/ensure", async (Guid waybillId, ClaimsPrincipal user, IFinanceService service) =>
-        {
-            RequireManage(user);
-            return Results.Ok(await service.EnsureReceivableForOperatorAsync(RequireUserId(user), waybillId));
-        });
+            Results.Ok(await service.EnsureReceivableForOperatorAsync(RequireUserId(user), waybillId)));
         finance.MapPost("/payments", async (
             RecordPaymentRequest request,
             [Microsoft.AspNetCore.Mvc.FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
             ClaimsPrincipal user, IFinanceService service) =>
-        {
-            RequireManage(user);
-            return Results.Ok(await service.RecordPaymentAsync(RequireUserId(user),
-                request with { IdempotencyKey = idempotencyKey ?? request.IdempotencyKey }));
-        });
+            Results.Ok(await service.RecordPaymentAsync(RequireUserId(user),
+                request with { IdempotencyKey = idempotencyKey ?? request.IdempotencyKey })));
         finance.MapGet("/payments", async (Guid waybillId, ClaimsPrincipal user, IFinanceService service) =>
-        {
-            RequireRead(user);
-            return Results.Ok(await service.ListPaymentsAsync(waybillId));
-        });
+            Results.Ok(await service.ListPaymentsAsync(RequireUserId(user), waybillId)));
         finance.MapGet("/branch-payment-summary", async (string? month, ClaimsPrincipal user, IFinanceService service) =>
-        {
-            RequireRead(user);
-            return Results.Ok(await service.GetBranchPaymentSummaryAsync(RequireUserId(user), month));
-        });
+            Results.Ok(await service.GetBranchPaymentSummaryAsync(RequireUserId(user), month)));
         finance.MapPost("/refunds", async (RefundPaymentRequest request, ClaimsPrincipal user, IFinanceService service) =>
-        {
-            RequireManage(user);
-            return Results.Ok(await service.RefundAsync(RequireUserId(user), request));
-        });
+            Results.Ok(await service.RefundAsync(RequireUserId(user), request)));
         finance.MapPost("/statements", async (GenerateStatementRequest request, ClaimsPrincipal user, IFinanceService service) =>
         {
-            RequireManage(user);
             var statement = await service.GenerateStatementAsync(
                 RequireUserId(user), request.CustomerId, request.Period);
             return Results.Ok(new { statement.Id, statement.CustomerId, statement.Period, statement.TotalAmount, statement.Status });
         });
         finance.MapPost("/statements/{id:guid}/confirm", async (Guid id, ClaimsPrincipal user, IFinanceService service) =>
         {
-            RequireManage(user);
             await service.ConfirmStatementAsync(RequireUserId(user), id);
             return Results.Ok(new { confirmed = true });
         });
         finance.MapPost("/statements/{id:guid}/close", async (Guid id, ClaimsPrincipal user, IFinanceService service) =>
         {
-            RequireManage(user);
             await service.CloseStatementAsync(RequireUserId(user), id);
             return Results.Ok(new { closed = true });
         });
     }
 
     public sealed record GenerateStatementRequest(Guid CustomerId, string Period);
-
-    private static void RequireRead(ClaimsPrincipal user)
-    {
-        var userId = RequireUserId(user);
-        // 简化：finance.read 校验由服务层完成（权限实时查库）
-        _ = userId;
-    }
-
-    private static void RequireManage(ClaimsPrincipal user)
-    {
-        var userId = RequireUserId(user);
-        _ = userId;
-    }
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
         Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) && userId != Guid.Empty

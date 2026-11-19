@@ -15,6 +15,20 @@ interface ProblemDetails {
   title?: string;
   detail?: string;
   status?: number;
+  errors?: Record<string, string[]>;
+}
+
+function formatProblemMessage(problem: ProblemDetails | undefined, fallback: string): string {
+  if (!problem) {
+    return fallback;
+  }
+  if (problem.errors) {
+    const first = Object.values(problem.errors).flat().find(Boolean);
+    if (first) {
+      return first;
+    }
+  }
+  return problem.detail || problem.title || fallback;
 }
 
 http.interceptors.request.use((config) => {
@@ -28,7 +42,7 @@ http.interceptors.request.use((config) => {
 let refreshing: Promise<boolean> | null = null;
 
 async function tryRefresh(): Promise<boolean> {
-  const { refreshToken, setAccessToken, setSession, user } = useAuthStore.getState();
+  const { refreshToken, setSession, user } = useAuthStore.getState();
   if (!refreshToken) {
     return false;
   }
@@ -38,10 +52,13 @@ async function tryRefresh(): Promise<boolean> {
       refresh_token: refreshToken,
     })
     .then((response) => {
-      setAccessToken(response.data.access_token);
-      useAuthStore.setState({ refreshToken: response.data.refresh_token });
       if (user) {
         setSession(response.data.access_token, response.data.refresh_token, user);
+      } else {
+        useAuthStore.setState({
+          accessToken: response.data.access_token,
+          refreshToken: response.data.refresh_token,
+        });
       }
       return true;
     })
@@ -59,25 +76,32 @@ http.interceptors.response.use(
     if (axios.isAxiosError(error)) {
       const problem = error.response?.data as ProblemDetails | undefined;
       const status = error.response?.status;
-
-      // 401：尝试静默刷新一次；失败清除会话（路由守卫跳转登录）
       const config = error.config;
-      if (status === 401 && config && !config._retried && useAuthStore.getState().refreshToken) {
-        config._retried = true;
-        if (await tryRefresh()) {
-          const token = useAuthStore.getState().accessToken;
-          if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-            return http.request(config);
+      const requestUrl = config?.url ?? '';
+      const isAuthEndpoint =
+        requestUrl.includes('/auth/login') || requestUrl.includes('/auth/refresh');
+
+      // 401：非登录/刷新接口尝试静默刷新一次；无 refreshToken 或刷新失败统一清理会话并跳转登录
+      if (status === 401 && !isAuthEndpoint) {
+        if (config && !config._retried && useAuthStore.getState().refreshToken) {
+          config._retried = true;
+          if (await tryRefresh()) {
+            const token = useAuthStore.getState().accessToken;
+            if (token) {
+              config.headers.Authorization = `Bearer ${token}`;
+              return http.request(config);
+            }
           }
         }
         useAuthStore.getState().clear();
-        window.location.href = '/login';
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
         return Promise.reject(new Error('登录已过期，请重新登录'));
       }
 
-      // 内部异常仅返回安全标题，不暴露堆栈（AGENTS.md §8）
-      const message = problem?.title || problem?.detail || error.message || '请求失败';
+      // 内部异常仅返回安全标题/明细，不暴露堆栈（AGENTS.md §8）
+      const message = formatProblemMessage(problem, error.message || '请求失败');
       return Promise.reject(new Error(message));
     }
     return Promise.reject(error instanceof Error ? error : new Error('请求失败'));

@@ -125,7 +125,7 @@ export function RuleSetListPage() {
         onOk={() => form.submit()}
         okText="创建"
         confirmLoading={createMutation.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
           <Form.Item name="code" label="编码" rules={[{ required: true, message: '编码必填' }]}>

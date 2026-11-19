@@ -44,6 +44,7 @@ public sealed record UpdateWaybillDraftRequest(
 /// </summary>
 public interface IWaybillAdminService
 {
+    Task<CreateWaybillResult> CreateAsync(Guid operatorUserId, CreateWaybillCommand command);
     Task<PageResultWaybills> ListAsync(Guid operatorUserId, int page, int pageSize, string? waybillNo);
     Task<WaybillDetailDto> GetAsync(Guid operatorUserId, Guid waybillId);
     Task<WaybillDetailDto> UpdateDraftAsync(Guid operatorUserId, Guid waybillId, UpdateWaybillDraftRequest request);
@@ -63,10 +64,30 @@ public sealed record PageResultWaybills(
 public sealed class WaybillAdminService(
     WaybillsDbContext db,
     IAuthorizationService authorization,
-    IBranchSequenceService branchSequenceService,
+    IWaybillService waybillService,
     IPricingTrialService pricingTrialService,
     IPricingSnapshotSerializer snapshotSerializer) : IWaybillAdminService
 {
+    public async Task<CreateWaybillResult> CreateAsync(Guid operatorUserId, CreateWaybillCommand command)
+    {
+        if (db.CurrentTenantId is null)
+        {
+            throw new TenantContextMissingException();
+        }
+
+        if (!await authorization.HasPermissionAsync(operatorUserId, WaybillPermissionCodes.WaybillManage))
+        {
+            throw new PermissionDeniedException(WaybillPermissionCodes.WaybillManage);
+        }
+
+        if (!await authorization.CanAccessBranchAsync(operatorUserId, command.OriginBranchId))
+        {
+            throw new PermissionDeniedException("运单数据范围（始发网点）");
+        }
+
+        return await waybillService.CreateWaybillAsync(command);
+    }
+
     public async Task<PageResultWaybills> ListAsync(
         Guid operatorUserId, int page, int pageSize, string? waybillNo)
     {
@@ -74,7 +95,14 @@ public sealed class WaybillAdminService(
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-        var query = db.Waybills.AsNoTracking().AsQueryable();
+        var allowedBranchIds = await authorization.GetAuthorizedBranchIdsAsync(operatorUserId);
+        if (allowedBranchIds.Count == 0)
+        {
+            return new PageResultWaybills([], 0, page, pageSize);
+        }
+
+        var query = db.Waybills.AsNoTracking()
+            .Where(w => allowedBranchIds.Contains(w.OriginBranchId) || allowedBranchIds.Contains(w.DestBranchId));
         if (!string.IsNullOrWhiteSpace(waybillNo))
         {
             query = query.Where(w => w.WaybillNo.Contains(waybillNo.Trim()));

@@ -1,73 +1,102 @@
+import { type ComponentType, Suspense, lazy } from 'react';
 import { Navigate, createBrowserRouter } from 'react-router-dom';
+import { Spin } from 'antd';
 import { BasicLayout } from '../layouts/BasicLayout';
-import { DashboardPage } from '../../modules/reports/pages/DashboardPage';
-import { BranchListPage } from '../../modules/organization/pages/BranchListPage';
-import { UserListPage } from '../../modules/organization/pages/UserListPage';
-import { RoleListPage } from '../../modules/organization/pages/RoleListPage';
-import { DimensionReportPage } from '../../modules/reports/pages/DimensionReportPage';
-import { TenantUsagePage } from '../../modules/reports/pages/TenantUsagePage';
-import { SystemStatusPage } from '../../modules/system/pages/SystemStatusPage';
-import { LoginPage } from '../../modules/auth/pages/LoginPage';
-import { CustomerQueryPage } from '../../modules/waybills/pages/CustomerQueryPage';
 import { RequireAuth } from './RequireAuth';
-import { MobileLayout } from '../mobile/MobileLayout';
-import { MobileHomePage } from '../../modules/mobile/pages/MobileHomePage';
-import { MobileScanPage } from '../../modules/mobile/pages/MobileScanPage';
-import { MobileReceivePage } from '../../modules/mobile/pages/MobileReceivePage';
-import { MobileLoadPage } from '../../modules/mobile/pages/MobileLoadPage';
-import { MobileArrivalPage } from '../../modules/mobile/pages/MobileArrivalPage';
-import { CustomerListPage } from '../../modules/customers/pages/CustomerListPage';
-import { RouteListPage } from '../../modules/routing/pages/RouteListPage';
-import { RouteEditPage } from '../../modules/routing/pages/RouteEditPage';
-import { RuleSetListPage } from '../../modules/pricing/pages/RuleSetListPage';
-import { RuleSetVersionsPage } from '../../modules/pricing/pages/RuleSetVersionsPage';
-import { TrialPage } from '../../modules/pricing/pages/TrialPage';
-import { WaybillListPage } from '../../modules/waybills/pages/WaybillListPage';
-import { WaybillCreatePage } from '../../modules/waybills/pages/WaybillCreatePage';
-import { WaybillDetailPage } from '../../modules/waybills/pages/WaybillDetailPage';
-import { WaybillLabelPage } from '../../modules/waybills/pages/WaybillLabelPage';
-import { VehicleListPage } from '../../modules/transport/pages/VehicleListPage';
-import { DriverListPage } from '../../modules/transport/pages/DriverListPage';
-import { TripListPage } from '../../modules/transport/pages/TripListPage';
-import { TripDetailPage } from '../../modules/transport/pages/TripDetailPage';
-import { TransferListPage } from '../../modules/warehouse/pages/TransferListPage';
-import { TransferDetailPage } from '../../modules/warehouse/pages/TransferDetailPage';
-import { ArrivalPage } from '../../modules/arrivals/pages/ArrivalPage';
-import { DeliveryPage } from '../../modules/delivery/pages/DeliveryPage';
-import { FinancePage } from '../../modules/finance/pages/FinancePage';
-import { BranchPaymentSummaryPage } from '../../modules/finance/pages/BranchPaymentSummaryPage';
-import { CodWorkbenchPage } from '../../modules/finance/pages/CodWorkbenchPage';
-import { CodManagementPage } from '../../modules/finance/pages/CodManagementPage';
-import { ArrivalDifferencePage } from '../../modules/arrivals/pages/ArrivalDifferencePage';
-import { ExceptionWorkbenchPage } from '../../modules/arrivals/pages/ExceptionWorkbenchPage';
-import { PickupDeliveryPage } from '../../modules/arrivals/pages/PickupDeliveryPage';
-import { StatementPage } from '../../modules/finance/pages/StatementPage';
-import { PaymentAllocationPage } from '../../modules/finance/pages/PaymentAllocationPage';
-import { SortingTasksPage } from '../../modules/warehouse/pages/SortingTasksPage';
-import { NotificationListPage } from '../../modules/system/pages/NotificationListPage';
-import { MobileGpsPage } from '../../modules/mobile/pages/MobileGpsPage';
-import { MobileDispatchPage } from '../../modules/mobile/pages/MobileDispatchPage';
 
-/** 路由表：登录页匿名；业务页面统一经 RequireAuth 守卫（会话由 Zustand 持久化）。 */
+function lazyNamed<T extends Record<string, unknown>, K extends keyof T>(
+  loader: () => Promise<T>,
+  exportName: K,
+) {
+  const LazyComp = lazy(async () => {
+    const mod = await loader();
+    return { default: mod[exportName] as ComponentType };
+  });
+
+  return (
+    <Suspense
+      fallback={
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 48 }}>
+          <Spin />
+        </div>
+      }
+    >
+      <LazyComp />
+    </Suspense>
+  );
+}
+
+/** 路由表：登录页与查件页匿名；业务页面统一经 RequireAuth 守卫 + React.lazy 按路由分包。 */
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  { path: '/track', element: <CustomerQueryPage /> },
-  // P10：独立移动作业应用，与 PC 后台 (/) 路由与布局隔离。
+  {
+    path: '/login',
+    element: lazyNamed(() => import('../../modules/auth/pages/LoginPage'), 'LoginPage'),
+  },
+  {
+    path: '/track',
+    element: lazyNamed(
+      () => import('../../modules/waybills/pages/CustomerQueryPage'),
+      'CustomerQueryPage',
+    ),
+  },
+  // P10：独立移动作业应用，与 PC 后台 (/) 路由、布局及依赖（antd-mobile / @zxing）完全按需分包隔离。
   {
     path: '/m',
     element: <RequireAuth />,
     children: [
       {
         path: '/m',
-        element: <MobileLayout />,
+        element: lazyNamed(() => import('../mobile/MobileLayout'), 'MobileLayout'),
         children: [
-          { index: true, element: <MobileHomePage /> },
-          { path: 'scan', element: <MobileScanPage /> },
-          { path: 'receive', element: <MobileReceivePage /> },
-          { path: 'load', element: <MobileLoadPage /> },
-          { path: 'arrival', element: <MobileArrivalPage /> },
-          { path: 'gps', element: <MobileGpsPage /> },
-          { path: 'dispatch', element: <MobileDispatchPage /> },
+          {
+            index: true,
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileHomePage'),
+              'MobileHomePage',
+            ),
+          },
+          {
+            path: 'scan',
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileScanPage'),
+              'MobileScanPage',
+            ),
+          },
+          {
+            path: 'receive',
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileReceivePage'),
+              'MobileReceivePage',
+            ),
+          },
+          {
+            path: 'load',
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileLoadPage'),
+              'MobileLoadPage',
+            ),
+          },
+          {
+            path: 'arrival',
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileArrivalPage'),
+              'MobileArrivalPage',
+            ),
+          },
+          {
+            path: 'gps',
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileGpsPage'),
+              'MobileGpsPage',
+            ),
+          },
+          {
+            path: 'dispatch',
+            element: lazyNamed(
+              () => import('../../modules/mobile/pages/MobileDispatchPage'),
+              'MobileDispatchPage',
+            ),
+          },
         ],
       },
     ],
@@ -80,51 +109,270 @@ export const router = createBrowserRouter([
         path: '/',
         element: <BasicLayout />,
         children: [
-          { index: true, element: <DashboardPage /> },
-          { path: 'reports/dimension', element: <DimensionReportPage /> },
-          { path: 'reports/usage', element: <TenantUsagePage /> },
-          { path: 'system/status', element: <SystemStatusPage /> },
-          { path: 'system/notifications', element: <NotificationListPage /> },
+          {
+            index: true,
+            element: lazyNamed(
+              () => import('../../modules/reports/pages/DashboardPage'),
+              'DashboardPage',
+            ),
+          },
+          {
+            path: 'reports/dimension',
+            element: lazyNamed(
+              () => import('../../modules/reports/pages/DimensionReportPage'),
+              'DimensionReportPage',
+            ),
+          },
+          {
+            path: 'reports/usage',
+            element: lazyNamed(
+              () => import('../../modules/reports/pages/TenantUsagePage'),
+              'TenantUsagePage',
+            ),
+          },
+          {
+            path: 'system/status',
+            element: lazyNamed(
+              () => import('../../modules/system/pages/SystemStatusPage'),
+              'SystemStatusPage',
+            ),
+          },
+          {
+            path: 'system/notifications',
+            element: lazyNamed(
+              () => import('../../modules/system/pages/NotificationListPage'),
+              'NotificationListPage',
+            ),
+          },
 
           // P2：经营基础资料
-          { path: 'customers', element: <CustomerListPage /> },
-          { path: 'organization/branches', element: <BranchListPage /> },
-          { path: 'organization/users', element: <UserListPage /> },
-          { path: 'organization/roles', element: <RoleListPage /> },
-          { path: 'customers/:id', element: <CustomerListPage /> },
-          { path: 'routes', element: <RouteListPage /> },
-          { path: 'routes/:id', element: <RouteEditPage /> },
+          {
+            path: 'customers',
+            element: lazyNamed(
+              () => import('../../modules/customers/pages/CustomerListPage'),
+              'CustomerListPage',
+            ),
+          },
+          {
+            path: 'organization/branches',
+            element: lazyNamed(
+              () => import('../../modules/organization/pages/BranchListPage'),
+              'BranchListPage',
+            ),
+          },
+          {
+            path: 'organization/users',
+            element: lazyNamed(
+              () => import('../../modules/organization/pages/UserListPage'),
+              'UserListPage',
+            ),
+          },
+          {
+            path: 'organization/roles',
+            element: lazyNamed(
+              () => import('../../modules/organization/pages/RoleListPage'),
+              'RoleListPage',
+            ),
+          },
+          {
+            path: 'customers/:id',
+            element: lazyNamed(
+              () => import('../../modules/customers/pages/CustomerListPage'),
+              'CustomerListPage',
+            ),
+          },
+          {
+            path: 'routes',
+            element: lazyNamed(
+              () => import('../../modules/routing/pages/RouteListPage'),
+              'RouteListPage',
+            ),
+          },
+          {
+            path: 'routes/:id',
+            element: lazyNamed(
+              () => import('../../modules/routing/pages/RouteEditPage'),
+              'RouteEditPage',
+            ),
+          },
 
           // P3：计费引擎
-          { path: 'pricing/rule-sets', element: <RuleSetListPage /> },
-          { path: 'pricing/rule-sets/:id/versions', element: <RuleSetVersionsPage /> },
-          { path: 'pricing/trial', element: <TrialPage /> },
+          {
+            path: 'pricing/rule-sets',
+            element: lazyNamed(
+              () => import('../../modules/pricing/pages/RuleSetListPage'),
+              'RuleSetListPage',
+            ),
+          },
+          {
+            path: 'pricing/rule-sets/:id/versions',
+            element: lazyNamed(
+              () => import('../../modules/pricing/pages/RuleSetVersionsPage'),
+              'RuleSetVersionsPage',
+            ),
+          },
+          {
+            path: 'pricing/trial',
+            element: lazyNamed(() => import('../../modules/pricing/pages/TrialPage'), 'TrialPage'),
+          },
 
           // P4：运单与始发仓
-          { path: 'waybills', element: <WaybillListPage /> },
-          { path: 'waybills/create', element: <WaybillCreatePage /> },
-          { path: 'waybills/:id', element: <WaybillDetailPage /> },
-          { path: 'waybills/:id/label', element: <WaybillLabelPage /> },
-          { path: 'warehouse/sorting', element: <SortingTasksPage /> },
+          {
+            path: 'waybills',
+            element: lazyNamed(
+              () => import('../../modules/waybills/pages/WaybillListPage'),
+              'WaybillListPage',
+            ),
+          },
+          {
+            path: 'waybills/create',
+            element: lazyNamed(
+              () => import('../../modules/waybills/pages/WaybillCreatePage'),
+              'WaybillCreatePage',
+            ),
+          },
+          {
+            path: 'waybills/:id',
+            element: lazyNamed(
+              () => import('../../modules/waybills/pages/WaybillDetailPage'),
+              'WaybillDetailPage',
+            ),
+          },
+          {
+            path: 'waybills/:id/label',
+            element: lazyNamed(
+              () => import('../../modules/waybills/pages/WaybillLabelPage'),
+              'WaybillLabelPage',
+            ),
+          },
+          {
+            path: 'warehouse/sorting',
+            element: lazyNamed(
+              () => import('../../modules/warehouse/pages/SortingTasksPage'),
+              'SortingTasksPage',
+            ),
+          },
 
           // P5：调拨与运输
-          { path: 'transport/vehicles', element: <VehicleListPage /> },
-          { path: 'transport/drivers', element: <DriverListPage /> },
-          { path: 'transport/trips', element: <TripListPage /> },
-          { path: 'transport/trips/:id', element: <TripDetailPage /> },
-          { path: 'transfers', element: <TransferListPage /> },
-          { path: 'transfers/:id', element: <TransferDetailPage /> },
-          { path: 'arrivals', element: <ArrivalPage /> },
-          { path: 'arrivals/differences', element: <ArrivalDifferencePage /> },
-          { path: 'arrivals/pickup', element: <PickupDeliveryPage /> },
-          { path: 'arrivals/exceptions', element: <ExceptionWorkbenchPage /> },
-          { path: 'finance/allocations', element: <PaymentAllocationPage /> },
-          { path: 'finance/statements', element: <StatementPage /> },
-          { path: 'finance/cod/manage', element: <CodManagementPage /> },
-          { path: 'deliveries', element: <DeliveryPage /> },
-          { path: 'finance', element: <FinancePage /> },
-          { path: 'finance/branch-summary', element: <BranchPaymentSummaryPage /> },
-          { path: 'finance/cod', element: <CodWorkbenchPage /> },
+          {
+            path: 'transport/vehicles',
+            element: lazyNamed(
+              () => import('../../modules/transport/pages/VehicleListPage'),
+              'VehicleListPage',
+            ),
+          },
+          {
+            path: 'transport/drivers',
+            element: lazyNamed(
+              () => import('../../modules/transport/pages/DriverListPage'),
+              'DriverListPage',
+            ),
+          },
+          {
+            path: 'transport/trips',
+            element: lazyNamed(
+              () => import('../../modules/transport/pages/TripListPage'),
+              'TripListPage',
+            ),
+          },
+          {
+            path: 'transport/trips/:id',
+            element: lazyNamed(
+              () => import('../../modules/transport/pages/TripDetailPage'),
+              'TripDetailPage',
+            ),
+          },
+          {
+            path: 'transfers',
+            element: lazyNamed(
+              () => import('../../modules/warehouse/pages/TransferListPage'),
+              'TransferListPage',
+            ),
+          },
+          {
+            path: 'transfers/:id',
+            element: lazyNamed(
+              () => import('../../modules/warehouse/pages/TransferDetailPage'),
+              'TransferDetailPage',
+            ),
+          },
+          {
+            path: 'arrivals',
+            element: lazyNamed(
+              () => import('../../modules/arrivals/pages/ArrivalPage'),
+              'ArrivalPage',
+            ),
+          },
+          {
+            path: 'arrivals/differences',
+            element: lazyNamed(
+              () => import('../../modules/arrivals/pages/ArrivalDifferencePage'),
+              'ArrivalDifferencePage',
+            ),
+          },
+          {
+            path: 'arrivals/pickup',
+            element: lazyNamed(
+              () => import('../../modules/arrivals/pages/PickupDeliveryPage'),
+              'PickupDeliveryPage',
+            ),
+          },
+          {
+            path: 'arrivals/exceptions',
+            element: lazyNamed(
+              () => import('../../modules/arrivals/pages/ExceptionWorkbenchPage'),
+              'ExceptionWorkbenchPage',
+            ),
+          },
+          {
+            path: 'finance/allocations',
+            element: lazyNamed(
+              () => import('../../modules/finance/pages/PaymentAllocationPage'),
+              'PaymentAllocationPage',
+            ),
+          },
+          {
+            path: 'finance/statements',
+            element: lazyNamed(
+              () => import('../../modules/finance/pages/StatementPage'),
+              'StatementPage',
+            ),
+          },
+          {
+            path: 'finance/cod/manage',
+            element: lazyNamed(
+              () => import('../../modules/finance/pages/CodManagementPage'),
+              'CodManagementPage',
+            ),
+          },
+          {
+            path: 'deliveries',
+            element: lazyNamed(
+              () => import('../../modules/delivery/pages/DeliveryPage'),
+              'DeliveryPage',
+            ),
+          },
+          {
+            path: 'finance',
+            element: lazyNamed(
+              () => import('../../modules/finance/pages/FinancePage'),
+              'FinancePage',
+            ),
+          },
+          {
+            path: 'finance/branch-summary',
+            element: lazyNamed(
+              () => import('../../modules/finance/pages/BranchPaymentSummaryPage'),
+              'BranchPaymentSummaryPage',
+            ),
+          },
+          {
+            path: 'finance/cod',
+            element: lazyNamed(
+              () => import('../../modules/finance/pages/CodWorkbenchPage'),
+              'CodWorkbenchPage',
+            ),
+          },
         ],
       },
     ],

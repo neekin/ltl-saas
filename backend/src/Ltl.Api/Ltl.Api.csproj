@@ -12,6 +12,8 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="11.0.0" />
     <!-- 显式钉版本，避免传递依赖把 Relational 解析为 10.0.4 造成运行时程序集不匹配 -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
+    <!-- 显式升级 Hangfire.Core 传递引入的 Newtonsoft.Json 11.0.1，修复高危漏洞 NU1903 (GHSA-5crp-9r3c-p9vr) -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
   <ItemGroup>

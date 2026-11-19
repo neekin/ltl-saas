@@ -9,9 +9,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.15" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
+    <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ltl.SharedKernel\Ltl.SharedKernel.csproj" />
     <ProjectReference Include="..\Ltl.Modules.Organization\Ltl.Modules.Organization.csproj" />
-    <ProjectReference Include="..\Ltl.Modules.Finance\Ltl.Modules.Finance.csproj" />
   </ItemGroup>
 
 </Project>

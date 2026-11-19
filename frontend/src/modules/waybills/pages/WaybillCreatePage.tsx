@@ -188,28 +188,31 @@ export function WaybillCreatePage() {
       return;
     }
     try {
-      const result = await createWaybill({
-        originBranchId: values.originBranchId as string,
-        destBranchId: values.destBranchId as string,
-        customerId: values.customerId as string,
-        ruleSetId: values.ruleSetId as string,
-        paymentType: values.paymentType as string,
-        senderName: values.senderName as string,
-        senderPhone: values.senderPhone as string,
-        senderAddress: values.senderAddress as string,
-        receiverName: values.receiverName as string,
-        receiverPhone: values.receiverPhone as string,
-        receiverAddress: values.receiverAddress as string,
-        remark: (values.remark as string) || undefined,
-        declaredValue: (values.declaredValue as number) || undefined,
-        codAmount: (values.codAmount as number) || undefined,
-        packages: packages.map((p) => ({
-          cargoName: p.cargoName,
-          quantity: p.quantity,
-          weightKg: p.weightKg,
-          volumeM3: p.volumeM3,
-        })),
-      }, { idempotencyKey: idempotencyKeyRef.current });
+      const result = await createWaybill(
+        {
+          originBranchId: values.originBranchId as string,
+          destBranchId: values.destBranchId as string,
+          customerId: values.customerId as string,
+          ruleSetId: values.ruleSetId as string,
+          paymentType: values.paymentType as string,
+          senderName: values.senderName as string,
+          senderPhone: values.senderPhone as string,
+          senderAddress: values.senderAddress as string,
+          receiverName: values.receiverName as string,
+          receiverPhone: values.receiverPhone as string,
+          receiverAddress: values.receiverAddress as string,
+          remark: (values.remark as string) || undefined,
+          declaredValue: (values.declaredValue as number) || undefined,
+          codAmount: (values.codAmount as number) || undefined,
+          packages: packages.map((p) => ({
+            cargoName: p.cargoName,
+            quantity: p.quantity,
+            weightKg: p.weightKg,
+            volumeM3: p.volumeM3,
+          })),
+        },
+        { idempotencyKey: idempotencyKeyRef.current },
+      );
       if (result.queryCode) {
         // 明确成功终态：不允许关闭弹窗后回到仍可重复提交的旧表单。
         const trackUrl = `${window.location.origin}/track`;
@@ -386,7 +389,7 @@ export function WaybillCreatePage() {
                   min={0}
                   precision={2}
                   placeholder="可选；价卡含保价费规则时按此计费"
-                  addonBefore="元"
+                  prefix="元"
                   style={{ width: '100%' }}
                 />
               </Form.Item>
@@ -408,7 +411,7 @@ export function WaybillCreatePage() {
                   min={0}
                   precision={2}
                   placeholder="可选，独立资金业务"
-                  addonBefore="元"
+                  prefix="元"
                   style={{ width: '100%' }}
                 />
               </Form.Item>

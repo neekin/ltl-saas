@@ -1,6 +1,20 @@
 import { DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Card, Checkbox, Collapse, Empty, Input, InputNumber, Popconfirm, Select, Space, Spin, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Card,
+  Checkbox,
+  Collapse,
+  Empty,
+  Input,
+  InputNumber,
+  Popconfirm,
+  Select,
+  Space,
+  Spin,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EmptyState, PageHeader, StatusTag } from '../../../shared/components';
@@ -70,9 +84,21 @@ const SURCHARGE_BASES = [
   { value: 'PerDeclaredValue', label: '保价费（按声明价值费率）' },
 ];
 
-interface BranchOption { id: string; code: string; name: string }
-interface CustomerOption { id: string; code: string; name: string }
-interface RouteOption { id: string; code: string; name: string }
+interface BranchOption {
+  id: string;
+  code: string;
+  name: string;
+}
+interface CustomerOption {
+  id: string;
+  code: string;
+  name: string;
+}
+interface RouteOption {
+  id: string;
+  code: string;
+  name: string;
+}
 
 /** 规则集版本管理页（P3 前端）：结构化规则/条件配置器 + 校验/发布；已发布版本不可修改。 */
 export function RuleSetVersionsPage() {
@@ -183,7 +209,10 @@ export function RuleSetVersionsPage() {
 
   const uuidOptions = (field: string) => {
     if (field === 'CustomerId') {
-      return (customersQuery.data ?? []).map((c) => ({ value: c.id, label: `${c.code} ${c.name}` }));
+      return (customersQuery.data ?? []).map((c) => ({
+        value: c.id,
+        label: `${c.code} ${c.name}`,
+      }));
     }
     if (field === 'RouteId') {
       return (routesQuery.data ?? []).map((r) => ({ value: r.id, label: `${r.code} ${r.name}` }));
@@ -201,19 +230,27 @@ export function RuleSetVersionsPage() {
           style={{ width: 190 }}
           value={condition.field}
           options={CONDITION_FIELDS}
-          onChange={(field) => updateRule(ruleIndex, {
-            conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
-              i === condIndex ? { ...c, field, value: '', value2: null } : c),
-          })}
+          onChange={(field) =>
+            updateRule(ruleIndex, {
+              conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
+                i === condIndex ? { ...c, field, value: '', value2: null } : c,
+              ),
+            })
+          }
         />
         <Select
           style={{ width: 190 }}
           value={condition.operator}
           options={CONDITION_OPERATORS}
-          onChange={(operator) => updateRule(ruleIndex, {
-            conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
-              i === condIndex ? { ...c, operator, value2: operator === 'Between' ? c.value2 : null } : c),
-          })}
+          onChange={(operator) =>
+            updateRule(ruleIndex, {
+              conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
+                i === condIndex
+                  ? { ...c, operator, value2: operator === 'Between' ? c.value2 : null }
+                  : c,
+              ),
+            })
+          }
         />
         {isUuid ? (
           <Select
@@ -223,20 +260,26 @@ export function RuleSetVersionsPage() {
             placeholder="选择实体"
             value={condition.value || undefined}
             options={uuidOptions(condition.field)}
-            onChange={(value) => updateRule(ruleIndex, {
-              conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
-                i === condIndex ? { ...c, value } : c),
-            })}
+            onChange={(value) =>
+              updateRule(ruleIndex, {
+                conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
+                  i === condIndex ? { ...c, value } : c,
+                ),
+              })
+            }
           />
         ) : (
           <Input
             style={{ width: 160 }}
             placeholder={isUuid ? '' : '值'}
             value={condition.value}
-            onChange={(e) => updateRule(ruleIndex, {
-              conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
-                i === condIndex ? { ...c, value: e.target.value } : c),
-            })}
+            onChange={(e) =>
+              updateRule(ruleIndex, {
+                conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
+                  i === condIndex ? { ...c, value: e.target.value } : c,
+                ),
+              })
+            }
           />
         )}
         {isBetween && (
@@ -244,19 +287,24 @@ export function RuleSetVersionsPage() {
             style={{ width: 160 }}
             placeholder="上限 Value2"
             value={condition.value2 ?? ''}
-            onChange={(e) => updateRule(ruleIndex, {
-              conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
-                i === condIndex ? { ...c, value2: e.target.value } : c),
-            })}
+            onChange={(e) =>
+              updateRule(ruleIndex, {
+                conditions: draft!.rules[ruleIndex].conditions.map((c, i) =>
+                  i === condIndex ? { ...c, value2: e.target.value } : c,
+                ),
+              })
+            }
           />
         )}
         <Button
           type="text"
           danger
           icon={<DeleteOutlined />}
-          onClick={() => updateRule(ruleIndex, {
-            conditions: draft!.rules[ruleIndex].conditions.filter((_, i) => i !== condIndex),
-          })}
+          onClick={() =>
+            updateRule(ruleIndex, {
+              conditions: draft!.rules[ruleIndex].conditions.filter((_, i) => i !== condIndex),
+            })
+          }
         />
       </Space>
     );
@@ -270,11 +318,15 @@ export function RuleSetVersionsPage() {
       extra={
         draft!.rules.length > 1 && (
           <Button
-            type="text" danger icon={<DeleteOutlined />}
-            onClick={() => setDraft((d) => {
-              if (!d) return d;
-              return { ...d, rules: d.rules.filter((_, i) => i !== ruleIndex) };
-            })}
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() =>
+              setDraft((d) => {
+                if (!d) return d;
+                return { ...d, rules: d.rules.filter((_, i) => i !== ruleIndex) };
+              })
+            }
           >
             删除规则
           </Button>
@@ -287,7 +339,7 @@ export function RuleSetVersionsPage() {
           precision={0}
           value={rule.priority}
           onChange={(v) => updateRule(ruleIndex, { priority: v ?? 1 })}
-          addonBefore="优先级"
+          prefix="优先级"
           style={{ width: 150 }}
         />
         <Input
@@ -317,7 +369,9 @@ export function RuleSetVersionsPage() {
         <Input
           style={{ width: 140 }}
           value={rule.freight.name}
-          onChange={(e) => updateRule(ruleIndex, { freight: { ...rule.freight, name: e.target.value } })}
+          onChange={(e) =>
+            updateRule(ruleIndex, { freight: { ...rule.freight, name: e.target.value } })
+          }
           placeholder="费用名称"
         />
         <Select
@@ -328,22 +382,39 @@ export function RuleSetVersionsPage() {
         />
         {rule.freight.type === 'Fixed' && (
           <InputNumber
-            min={0} precision={2} value={rule.freight.amount ?? undefined}
-            onChange={(v) => updateRule(ruleIndex, { freight: { ...rule.freight, amount: v ?? null } })}
-            addonBefore="一口价 ¥" style={{ width: 170 }}
+            min={0}
+            precision={2}
+            value={rule.freight.amount ?? undefined}
+            onChange={(v) =>
+              updateRule(ruleIndex, { freight: { ...rule.freight, amount: v ?? null } })
+            }
+            prefix="一口价 ¥"
+            style={{ width: 170 }}
           />
         )}
-        {(rule.freight.type === 'ByWeight' || rule.freight.type === 'ByVolume' || rule.freight.type === 'ByPieces') && (
+        {(rule.freight.type === 'ByWeight' ||
+          rule.freight.type === 'ByVolume' ||
+          rule.freight.type === 'ByPieces') && (
           <InputNumber
-            min={0} precision={2} value={rule.freight.unitPrice ?? undefined}
-            onChange={(v) => updateRule(ruleIndex, { freight: { ...rule.freight, unitPrice: v ?? null } })}
-            addonBefore="单价 ¥" style={{ width: 160 }}
+            min={0}
+            precision={2}
+            value={rule.freight.unitPrice ?? undefined}
+            onChange={(v) =>
+              updateRule(ruleIndex, { freight: { ...rule.freight, unitPrice: v ?? null } })
+            }
+            prefix="单价 ¥"
+            style={{ width: 160 }}
           />
         )}
         <InputNumber
-          min={0} precision={2} value={rule.freight.minCharge ?? undefined}
-          onChange={(v) => updateRule(ruleIndex, { freight: { ...rule.freight, minCharge: v ?? null } })}
-          addonBefore="起步价 ¥" style={{ width: 160 }}
+          min={0}
+          precision={2}
+          value={rule.freight.minCharge ?? undefined}
+          onChange={(v) =>
+            updateRule(ruleIndex, { freight: { ...rule.freight, minCharge: v ?? null } })
+          }
+          prefix="起步价 ¥"
+          style={{ width: 160 }}
         />
       </Space>
 
@@ -354,9 +425,14 @@ export function RuleSetVersionsPage() {
         {rule.conditions.map((_, condIndex) => renderConditionRow(ruleIndex, condIndex))}
         <Button
           icon={<PlusOutlined />}
-          onClick={() => updateRule(ruleIndex, {
-            conditions: [...rule.conditions, { field: 'WeightKg', operator: 'GreaterOrEqual', value: '', value2: null }],
-          })}
+          onClick={() =>
+            updateRule(ruleIndex, {
+              conditions: [
+                ...rule.conditions,
+                { field: 'WeightKg', operator: 'GreaterOrEqual', value: '', value2: null },
+              ],
+            })
+          }
         >
           添加条件
         </Button>
@@ -372,72 +448,107 @@ export function RuleSetVersionsPage() {
               style={{ width: 160 }}
               value={surcharge.name}
               placeholder="费用名称"
-              onChange={(e) => updateRule(ruleIndex, {
-                surcharges: rule.surcharges.map((x, i) =>
-                  i === sIndex ? { ...x, name: e.target.value } : x),
-              })}
+              onChange={(e) =>
+                updateRule(ruleIndex, {
+                  surcharges: rule.surcharges.map((x, i) =>
+                    i === sIndex ? { ...x, name: e.target.value } : x,
+                  ),
+                })
+              }
             />
             <Select
               style={{ width: 190 }}
               value={surcharge.basis}
               options={SURCHARGE_BASES}
-              onChange={(v) => updateRule(ruleIndex, {
-                surcharges: rule.surcharges.map((x, i) =>
-                  i === sIndex
-                    ? { ...x, basis: v, rate: v === 'PerDeclaredValue' ? (x.rate ?? 0.5) : null, amount: v === 'PerDeclaredValue' ? 0 : x.amount }
-                    : x),
-              })}
+              onChange={(v) =>
+                updateRule(ruleIndex, {
+                  surcharges: rule.surcharges.map((x, i) =>
+                    i === sIndex
+                      ? {
+                          ...x,
+                          basis: v,
+                          rate: v === 'PerDeclaredValue' ? (x.rate ?? 0.5) : null,
+                          amount: v === 'PerDeclaredValue' ? 0 : x.amount,
+                        }
+                      : x,
+                  ),
+                })
+              }
             />
             {surcharge.basis === 'PerDeclaredValue' ? (
               <InputNumber
-                min={0} precision={2} value={surcharge.rate ?? undefined}
-                onChange={(v) => updateRule(ruleIndex, {
-                  surcharges: rule.surcharges.map((x, i) =>
-                    i === sIndex ? { ...x, rate: v ?? null } : x),
-                })}
-                addonBefore="费率" addonAfter="%" style={{ width: 200 }}
+                min={0}
+                precision={2}
+                value={surcharge.rate ?? undefined}
+                onChange={(v) =>
+                  updateRule(ruleIndex, {
+                    surcharges: rule.surcharges.map((x, i) =>
+                      i === sIndex ? { ...x, rate: v ?? null } : x,
+                    ),
+                  })
+                }
+                prefix="费率"
+                suffix="%"
+                style={{ width: 200 }}
               />
             ) : (
               <InputNumber
-                min={0} precision={2} value={surcharge.amount}
-                onChange={(v) => updateRule(ruleIndex, {
-                  surcharges: rule.surcharges.map((x, i) =>
-                    i === sIndex ? { ...x, amount: v ?? 0 } : x),
-                })}
-                addonBefore="¥" style={{ width: 150 }}
+                min={0}
+                precision={2}
+                value={surcharge.amount}
+                onChange={(v) =>
+                  updateRule(ruleIndex, {
+                    surcharges: rule.surcharges.map((x, i) =>
+                      i === sIndex ? { ...x, amount: v ?? 0 } : x,
+                    ),
+                  })
+                }
+                prefix="¥"
+                style={{ width: 150 }}
               />
             )}
             <Button
-              type="text" danger icon={<DeleteOutlined />}
-              onClick={() => updateRule(ruleIndex, {
-                surcharges: rule.surcharges.filter((_, i) => i !== sIndex),
-              })}
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() =>
+                updateRule(ruleIndex, {
+                  surcharges: rule.surcharges.filter((_, i) => i !== sIndex),
+                })
+              }
             />
           </Space>
         ))}
         <Button
           icon={<PlusOutlined />}
-          onClick={() => updateRule(ruleIndex, {
-            surcharges: [...rule.surcharges, { name: '', basis: 'PerWaybill', amount: 0, rate: null }],
-          })}
+          onClick={() =>
+            updateRule(ruleIndex, {
+              surcharges: [
+                ...rule.surcharges,
+                { name: '', basis: 'PerWaybill', amount: 0, rate: null },
+              ],
+            })
+          }
         >
           添加附加费
         </Button>
       </Space>
 
       <Collapse
-        items={[{
-          key: 'json',
-          label: '高级视图（当前规则 JSON，含阶梯/折扣）',
-          children: (
-            <Input.TextArea
-              rows={6}
-              style={{ fontFamily: 'monospace', fontSize: 12 }}
-              value={JSON.stringify(rule, null, 2)}
-              readOnly
-            />
-          ),
-        }]}
+        items={[
+          {
+            key: 'json',
+            label: '高级视图（当前规则 JSON，含阶梯/折扣）',
+            children: (
+              <Input.TextArea
+                rows={6}
+                style={{ fontFamily: 'monospace', fontSize: 12 }}
+                value={JSON.stringify(rule, null, 2)}
+                readOnly
+              />
+            ),
+          },
+        ]}
       />
     </Card>
   );
@@ -499,27 +610,39 @@ export function RuleSetVersionsPage() {
               {draft.rules.map((rule, ruleIndex) => renderRuleEditor(rule, ruleIndex))}
               <Button
                 icon={<PlusOutlined />}
-                onClick={() => setDraft((d) => {
-                  if (!d) return d;
-                  const nextPriority = Math.max(...d.rules.map((r) => r.priority)) + 1;
-                  return {
-                    ...d,
-                    rules: [...d.rules, {
-                      priority: nextPriority,
-                      name: `规则 ${nextPriority}`,
-                      enabled: true,
-                      billingWeightStrategy: 'WeightOnly',
-                      conditions: [],
-                      freight: { name: '运费', type: 'ByWeight', unitPrice: 1.5 },
-                      surcharges: [],
-                    }],
-                  };
-                })}
+                onClick={() =>
+                  setDraft((d) => {
+                    if (!d) return d;
+                    const nextPriority = Math.max(...d.rules.map((r) => r.priority)) + 1;
+                    return {
+                      ...d,
+                      rules: [
+                        ...d.rules,
+                        {
+                          priority: nextPriority,
+                          name: `规则 ${nextPriority}`,
+                          enabled: true,
+                          billingWeightStrategy: 'WeightOnly',
+                          conditions: [],
+                          freight: { name: '运费', type: 'ByWeight', unitPrice: 1.5 },
+                          surcharges: [],
+                        },
+                      ],
+                    };
+                  })
+                }
               >
                 添加规则
               </Button>
               <Space>
-                <Button onClick={() => { setEditingId(null); setDraft(null); }}>取消</Button>
+                <Button
+                  onClick={() => {
+                    setEditingId(null);
+                    setDraft(null);
+                  }}
+                >
+                  取消
+                </Button>
                 <Button loading={saveMutation.isPending} onClick={() => saveMutation.mutate()}>
                   保存草稿
                 </Button>
@@ -541,18 +664,20 @@ export function RuleSetVersionsPage() {
             </Space>
           ) : (
             <Collapse
-              items={[{
-                key: 'json',
-                label: '规则定义 JSON（只读）',
-                children: (
-                  <Input.TextArea
-                    rows={10}
-                    readOnly
-                    value={JSON.stringify(version.definition, null, 2)}
-                    style={{ fontFamily: 'monospace', background: '#fafafa' }}
-                  />
-                ),
-              }]}
+              items={[
+                {
+                  key: 'json',
+                  label: '规则定义 JSON（只读）',
+                  children: (
+                    <Input.TextArea
+                      rows={10}
+                      readOnly
+                      value={JSON.stringify(version.definition, null, 2)}
+                      style={{ fontFamily: 'monospace', background: '#fafafa' }}
+                    />
+                  ),
+                },
+              ]}
             />
           )}
         </Card>
@@ -560,7 +685,8 @@ export function RuleSetVersionsPage() {
 
       {versionsQuery.data?.length === 0 && <Empty />}
       <Typography.Paragraph type="secondary">
-        条件字段与操作符为服务端白名单（AGENTS §6.4，禁止任意表达式）；优先级数值小者先匹配；发布前校验零错误方可发布。
+        条件字段与操作符为服务端白名单（AGENTS
+        §6.4，禁止任意表达式）；优先级数值小者先匹配；发布前校验零错误方可发布。
       </Typography.Paragraph>
     </div>
   );

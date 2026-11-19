@@ -37,9 +37,6 @@ export type ReportDimension = 'branches' | 'routes' | 'customers';
 
 /** 租户用量（P10：仅供展示，无配额强制）。 */
 
-
-
-
 /** 按维度查询运营报表，month 为 yyyyMM 可选。 */
 export async function getDimensionReport(
   dimension: ReportDimension,

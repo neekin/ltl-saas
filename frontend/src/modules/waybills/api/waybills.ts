@@ -116,25 +116,28 @@ export async function listWaybills(
   return response.data;
 }
 
-export async function createWaybill(payload: {
-  originBranchId: string;
-  destBranchId: string;
-  customerId: string;
-  ruleSetId: string;
-  paymentType: string;
-  senderName: string;
-  senderPhone: string;
-  senderAddress: string;
-  receiverName: string;
-  receiverPhone: string;
-  receiverAddress: string;
-  remark?: string;
-  declaredValue?: number;
-  insuranceFee?: number;
-  /** COD 代收金额（独立资金业务，不计入运费应收）；不传 = 无 COD */
-  codAmount?: number;
-  packages: { cargoName: string; quantity: number; weightKg: number; volumeM3: number }[];
-}, options?: { idempotencyKey?: string }): Promise<{
+export async function createWaybill(
+  payload: {
+    originBranchId: string;
+    destBranchId: string;
+    customerId: string;
+    ruleSetId: string;
+    paymentType: string;
+    senderName: string;
+    senderPhone: string;
+    senderAddress: string;
+    receiverName: string;
+    receiverPhone: string;
+    receiverAddress: string;
+    remark?: string;
+    declaredValue?: number;
+    insuranceFee?: number;
+    /** COD 代收金额（独立资金业务，不计入运费应收）；不传 = 无 COD */
+    codAmount?: number;
+    packages: { cargoName: string; quantity: number; weightKg: number; volumeM3: number }[];
+  },
+  options?: { idempotencyKey?: string },
+): Promise<{
   waybillId: string;
   waybillNo: string;
   totalAmount: number;

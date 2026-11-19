@@ -7,6 +7,7 @@ using Ltl.Modules.Warehouse.Domain;
 using Ltl.Modules.Waybills.Domain;
 using Ltl.SharedKernel.Application;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.EntityFrameworkCore;
 
 namespace Ltl.Api.Infrastructure;
 
@@ -115,4 +116,13 @@ public sealed class WarehouseDomainViolationHandler : ApiExceptionHandler<Wareho
 public sealed class TransportDomainViolationHandler : ApiExceptionHandler<TransportDomainException>
 {
     protected override int StatusCode => StatusCodes.Status409Conflict;
+}
+
+/// <summary>乐观并发冲突（xmin / row_version 不匹配）→ 409（AGENTS §8）。不暴露 EF Core 内部异常文案。</summary>
+public sealed class DbUpdateConcurrencyExceptionHandler : ApiExceptionHandler<DbUpdateConcurrencyException>
+{
+    protected override int StatusCode => StatusCodes.Status409Conflict;
+
+    protected override string Title(DbUpdateConcurrencyException exception) =>
+        "数据已被其他操作修改，请刷新后重试。";
 }

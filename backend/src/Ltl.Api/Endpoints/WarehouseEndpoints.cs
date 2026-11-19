@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Warehouse.Application;
-using Ltl.Modules.Warehouse.Application;
 using Ltl.Modules.Platform.Application;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;

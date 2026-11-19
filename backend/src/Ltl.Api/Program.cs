@@ -6,6 +6,7 @@ using Ltl.Modules.Customers.Infrastructure;
 using Ltl.Modules.Organization.Application.Admin;
 using Ltl.Modules.Organization.Application.Auth;
 using Ltl.Modules.Reporting.Application;
+using Ltl.Modules.Reporting.Infrastructure;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Infrastructure;
 using Ltl.Modules.Pricing.Application;
@@ -72,6 +73,7 @@ builder.Services.AddExceptionHandler<WaybillDomainViolationHandler>();
 builder.Services.AddExceptionHandler<PricingRuleViolationHandler>();
 builder.Services.AddExceptionHandler<WarehouseDomainViolationHandler>();
 builder.Services.AddExceptionHandler<TransportDomainViolationHandler>();
+builder.Services.AddExceptionHandler<DbUpdateConcurrencyExceptionHandler>();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 // JWT 认证（AUTH-001；契约 ADR-0005）：tenant_id 只来自已验证 token 的 claim（AGENTS §5.1）
@@ -192,7 +194,10 @@ builder.Services.AddDbContext<FinanceDbContext>(options =>
 builder.Services.AddScoped<IFinanceService, FinanceService>();
 builder.Services.AddScoped<ICodService, CodService>();
 
-// Reporting 模块（REPORT-001：经营看板）
+// Reporting 模块（REPORT-001：经营看板；独立只读 ReportingDbContext，不依赖其他模块 Infrastructure）
+builder.Services.AddDbContext<ReportingDbContext>(options =>
+    options.UseNpgsql(builder.Configuration.GetConnectionString("Tenancy"))
+        .UseSnakeCaseNamingConvention());
 builder.Services.AddScoped<IReportingService, ReportingService>();
 
 // Transport 模块（VEHICLE-001：车辆/司机档案）
@@ -346,24 +351,6 @@ if (app.Environment.IsDevelopment())
     // Hangfire Dashboard（仅开发环境）
     app.UseHangfireDashboard("/hangfire");
 
-    // 周期任务：清理过期刷新令牌（每日）
-    RecurringJob.AddOrUpdate<HangfireJobs>(
-        "cleanup-expired-tokens",
-        j => j.CleanupExpiredTokensAsync(),
-        Cron.Daily);
-
-    // 周期任务：逾期应收检查（每日）
-    RecurringJob.AddOrUpdate<HangfireJobs>(
-        "overdue-receivables-check",
-        j => j.CheckOverdueReceivablesAsync(),
-        Cron.Daily);
-
-    // 周期任务：到货超时提醒（每日）
-    RecurringJob.AddOrUpdate<HangfireJobs>(
-        "arrival-timeout-alert",
-        j => j.CheckArrivalTimeoutAsync(),
-        Cron.Daily);
-
     // 开发环境种子数据：幂等（已存在则跳过）
     SeedDevelopmentData(app.Services);
 
@@ -373,6 +360,20 @@ if (app.Environment.IsDevelopment())
         throw new InvalidOperationException("演示异常：验证统一 ProblemDetails 错误格式");
     }).AllowAnonymous();
 }
+
+// 周期任务（全环境注册；开发与生产均生效，AGENTS §4.3 租户上下文在任务内部按租户独立建立）
+RecurringJob.AddOrUpdate<HangfireJobs>(
+    "cleanup-expired-tokens",
+    j => j.CleanupExpiredTokensAsync(),
+    Cron.Daily);
+RecurringJob.AddOrUpdate<HangfireJobs>(
+    "overdue-receivables-check",
+    j => j.CheckOverdueReceivablesAsync(),
+    Cron.Daily);
+RecurringJob.AddOrUpdate<HangfireJobs>(
+    "arrival-timeout-alert",
+    j => j.CheckArrivalTimeoutAsync(),
+    Cron.Daily);
 
 app.Run();
 

@@ -134,7 +134,7 @@ export function FinancePage() {
                   precision={2}
                   value={payAmount}
                   onChange={(v) => setPayAmount(v ?? 0)}
-                  addonBefore="金额（元）"
+                  prefix="金额（元）"
                   style={{ width: 180 }}
                 />
                 <Select

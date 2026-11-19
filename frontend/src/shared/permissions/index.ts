@@ -23,4 +23,13 @@ export const PERMISSIONS = {
   vehicleManage: 'transport.vehicle.manage',
   tripRead: 'transport.trip.read',
   tripManage: 'transport.trip.manage',
+  arrivalRead: 'arrival.read',
+  arrivalRecord: 'arrival.record',
+  deliveryRead: 'delivery.read',
+  deliveryManage: 'delivery.manage',
+  financeRead: 'finance.read',
+  financeManage: 'finance.manage',
+  codRead: 'cod.read',
+  codManage: 'cod.manage',
+  notificationRead: 'notification.read',
 } as const;

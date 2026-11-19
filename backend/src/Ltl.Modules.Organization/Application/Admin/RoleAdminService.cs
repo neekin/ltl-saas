@@ -169,12 +169,12 @@ public sealed class RoleAdminService(
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         foreach (var code in toGrant)
         {
-            await authorization.GrantPermissionAsync(roleId, code);
+            await Authorization.GrantPermissionAsync(roleId, code);
         }
 
         foreach (var code in toRevoke)
         {
-            await authorization.RevokePermissionAsync(roleId, code);
+            await Authorization.RevokePermissionAsync(roleId, code);
         }
 
         await RecordAuditAsync(

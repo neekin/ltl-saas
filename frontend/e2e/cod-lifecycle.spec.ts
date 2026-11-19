@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { selectByLabel, submitWaybill } from './helpers';
+import { submitWaybill } from './helpers';
 
 /**
  * E2E 场景 5（AGENTS §10）：COD 收取、结算和付款登记。

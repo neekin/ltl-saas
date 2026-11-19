@@ -205,12 +205,12 @@ public sealed class UserAdminService(
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         foreach (var roleId in toAdd)
         {
-            await authorization.AssignRoleAsync(userId, roleId);
+            await Authorization.AssignRoleAsync(userId, roleId);
         }
 
         foreach (var roleId in toRemove)
         {
-            await authorization.RemoveRoleAsync(userId, roleId);
+            await Authorization.RemoveRoleAsync(userId, roleId);
         }
 
         await RecordAuditAsync(
@@ -240,12 +240,12 @@ public sealed class UserAdminService(
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         foreach (var branchId in toAdd)
         {
-            await authorization.GrantBranchScopeAsync(userId, branchId);
+            await Authorization.GrantBranchScopeAsync(userId, branchId);
         }
 
         foreach (var branchId in toRemove)
         {
-            await authorization.RevokeBranchScopeAsync(userId, branchId);
+            await Authorization.RevokeBranchScopeAsync(userId, branchId);
         }
 
         await RecordAuditAsync(
@@ -263,7 +263,7 @@ public sealed class UserAdminService(
         var user = await RequireUserAsync(userId);
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-        await authorization.GrantTenantWideScopeAsync(userId);
+        await Authorization.GrantTenantWideScopeAsync(userId);
         await RecordAuditAsync(
             "organization.user.grant_tenant_wide_scope", "user", user.Id, operatorUserId,
             new { username = user.Username });
@@ -279,7 +279,7 @@ public sealed class UserAdminService(
         var user = await RequireUserAsync(userId);
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
-        await authorization.RevokeTenantWideScopeAsync(userId);
+        await Authorization.RevokeTenantWideScopeAsync(userId);
         await RecordAuditAsync(
             "organization.user.revoke_tenant_wide_scope", "user", user.Id, operatorUserId,
             new { username = user.Username });
@@ -317,16 +317,16 @@ public sealed class UserAdminService(
     /// <summary>用户配额前置校验（TEN-002）。</summary>
     private async Task EnsureUserQuotaAsync()
     {
-        var tenantId = db.CurrentTenantId
+        var tenantId = Db.CurrentTenantId
             ?? throw new TenantContextMissingException();
-        var rows = await db.Database
+        var rows = await Db.Database
             .SqlQuery<TenantQuotaRow>(
                 $"SELECT max_users AS \"MaxUsers\" FROM tenants WHERE id = {tenantId}")
             .ToListAsync();
         var max = rows.SingleOrDefault()?.MaxUsers;
         if (max is { } limit)
         {
-            var current = await db.Users.IgnoreQueryFilters().CountAsync(u => u.TenantId == tenantId);
+            var current = await Db.Users.IgnoreQueryFilters().CountAsync(u => u.TenantId == tenantId);
             if (current >= limit)
             {
                 throw new ConflictException($"套餐用户配额已用满（{current}/{limit}），请升级套餐后重试。");

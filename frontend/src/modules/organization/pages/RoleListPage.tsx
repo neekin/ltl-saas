@@ -1,10 +1,31 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { App, Button, Checkbox, Form, Input, Modal, Popconfirm, Space, Spin, Table, Tag, Typography } from 'antd';
+import {
+  App,
+  Button,
+  Checkbox,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Typography,
+} from 'antd';
 import { useState } from 'react';
 import {
-  createRole, disableRole, enableRole, getRole, listPermissions, listRoles,
-  setRolePermissions, type Permission, type Role, type RoleDetail,
+  createRole,
+  disableRole,
+  enableRole,
+  getRole,
+  listPermissions,
+  listRoles,
+  setRolePermissions,
+  type Permission,
+  type Role,
+  type RoleDetail,
 } from '../api/organization';
 
 /** 角色管理页（P1 前端）：列表/创建/权限配置/启停。权限点目录按模块分组多选。 */
@@ -27,14 +48,22 @@ export function RoleListPage() {
 
   const createMutation = useMutation({
     mutationFn: (values: { code: string; name: string }) => createRole(values),
-    onSuccess: () => { message.success('角色已创建'); setCreateOpen(false); createForm.resetFields(); invalidate(); },
+    onSuccess: () => {
+      message.success('角色已创建');
+      setCreateOpen(false);
+      createForm.resetFields();
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
   const toggleMutation = useMutation({
     mutationFn: async ({ role, disable }: { role: Role; disable: boolean }) =>
       disable ? disableRole(role.id) : enableRole(role.id),
-    onSuccess: () => { message.success('状态已更新'); invalidate(); },
+    onSuccess: () => {
+      message.success('状态已更新');
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
@@ -67,7 +96,9 @@ export function RoleListPage() {
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>新建角色</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+          新建角色
+        </Button>
       </Space>
       <Table
         rowKey="id"
@@ -77,11 +108,18 @@ export function RoleListPage() {
           { title: '编码', dataIndex: 'code', width: 120 },
           { title: '名称', dataIndex: 'name' },
           {
-            title: '状态', dataIndex: 'status', width: 100,
-            render: (s: string) => <Tag color={s === 'Active' ? 'green' : 'default'}>{s === 'Active' ? '启用' : '停用'}</Tag>,
+            title: '状态',
+            dataIndex: 'status',
+            width: 100,
+            render: (s: string) => (
+              <Tag color={s === 'Active' ? 'green' : 'default'}>
+                {s === 'Active' ? '启用' : '停用'}
+              </Tag>
+            ),
           },
           {
-            title: '操作', key: 'actions',
+            title: '操作',
+            key: 'actions',
             render: (_: unknown, record: Role) => (
               <Space>
                 <Button type="link" size="small" onClick={() => void openPermissionEditor(record)}>
@@ -89,7 +127,9 @@ export function RoleListPage() {
                 </Button>
                 <Popconfirm
                   title={record.status === 'Active' ? '停用后角色权限即时失效' : '确认启用？'}
-                  onConfirm={() => toggleMutation.mutate({ role: record, disable: record.status === 'Active' })}
+                  onConfirm={() =>
+                    toggleMutation.mutate({ role: record, disable: record.status === 'Active' })
+                  }
                 >
                   <Button type="link" size="small" danger={record.status === 'Active'}>
                     {record.status === 'Active' ? '停用' : '启用'}
@@ -101,8 +141,17 @@ export function RoleListPage() {
         ]}
       />
 
-      <Modal title="新建角色" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()}>
-        <Form form={createForm} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
+      <Modal
+        title="新建角色"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        onOk={() => createForm.submit()}
+      >
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={(values) => createMutation.mutate(values)}
+        >
           <Form.Item name="code" label="角色编码" rules={[{ required: true, message: '编码必填' }]}>
             <Input placeholder="如 ops" />
           </Form.Item>
@@ -119,7 +168,7 @@ export function RoleListPage() {
         onOk={() => savePermissions.mutate()}
         confirmLoading={savePermissions.isPending}
         width={720}
-        destroyOnClose
+        destroyOnHidden
       >
         <Typography.Paragraph type="secondary" style={{ marginTop: 0 }}>
           已选 {selectedCodes.length} 项；保存后对已登录用户实时生效。
@@ -141,7 +190,9 @@ export function RoleListPage() {
                     label: (
                       <span>
                         {p.name}{' '}
-                        <Typography.Text type="secondary" code style={{ fontSize: 12 }}>{p.code}</Typography.Text>
+                        <Typography.Text type="secondary" code style={{ fontSize: 12 }}>
+                          {p.code}
+                        </Typography.Text>
                       </span>
                     ),
                   }))}

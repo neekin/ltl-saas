@@ -94,8 +94,18 @@ export function TenantUsagePage() {
                 当前套餐：<Tag color="blue">{data.planName}</Tag>
               </Typography.Paragraph>
             )}
-            <QuotaRow label="运单数" current={data?.waybillCount ?? 0} max={data?.maxWaybills ?? null} unit="票" />
-            <QuotaRow label="用户数" current={data?.userCount ?? 0} max={data?.maxUsers ?? null} unit="人" />
+            <QuotaRow
+              label="运单数"
+              current={data?.waybillCount ?? 0}
+              max={data?.maxWaybills ?? null}
+              unit="票"
+            />
+            <QuotaRow
+              label="用户数"
+              current={data?.userCount ?? 0}
+              max={data?.maxUsers ?? null}
+              unit="人"
+            />
             <QuotaRow
               label="存储"
               current={data?.storageBytes ?? 0}
@@ -116,11 +126,14 @@ export function TenantUsagePage() {
       )}
     </div>
   );
-
 }
 
 function QuotaRow({
-  label, current, max, unit, maxUnit,
+  label,
+  current,
+  max,
+  unit,
+  maxUnit,
 }: {
   label: string;
   current: number;

@@ -77,7 +77,7 @@ export function ArrivalPage() {
                   next[index] = { ...item, receivedPieces: v ?? 0 };
                   setItems(next);
                 }}
-                addonBefore="实收"
+                prefix="实收"
                 style={{ width: '100%' }}
               />
             </Col>
@@ -91,7 +91,7 @@ export function ArrivalPage() {
                   next[index] = { ...item, brokenPieces: v ?? 0 };
                   setItems(next);
                 }}
-                addonBefore="破损"
+                prefix="破损"
                 style={{ width: '100%' }}
               />
             </Col>

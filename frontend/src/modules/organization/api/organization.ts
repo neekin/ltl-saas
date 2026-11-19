@@ -47,7 +47,9 @@ export interface Page<T> {
 
 // ===== 网点 =====
 export async function listBranches(page = 1, pageSize = 100): Promise<Page<Branch>> {
-  const response = await http.get<Page<Branch>>('/organization/branches', { params: { page, pageSize } });
+  const response = await http.get<Page<Branch>>('/organization/branches', {
+    params: { page, pageSize },
+  });
   return response.data;
 }
 
@@ -71,7 +73,9 @@ export async function enableBranch(id: string): Promise<void> {
 
 // ===== 员工 =====
 export async function listUsers(page = 1, pageSize = 100): Promise<Page<User>> {
-  const response = await http.get<Page<User>>('/organization/users', { params: { page, pageSize } });
+  const response = await http.get<Page<User>>('/organization/users', {
+    params: { page, pageSize },
+  });
   return response.data;
 }
 
@@ -80,7 +84,11 @@ export async function getUser(id: string): Promise<UserDetail> {
   return response.data;
 }
 
-export async function createUser(payload: { username: string; displayName: string; password: string }): Promise<User> {
+export async function createUser(payload: {
+  username: string;
+  displayName: string;
+  password: string;
+}): Promise<User> {
   const response = await http.post<User>('/organization/users', {
     username: payload.username,
     displayName: payload.displayName,
@@ -116,7 +124,9 @@ export async function setBranchScopes(id: string, branchIds: string[]): Promise<
 
 // ===== 角色 =====
 export async function listRoles(page = 1, pageSize = 100): Promise<Page<Role>> {
-  const response = await http.get<Page<Role>>('/organization/roles', { params: { page, pageSize } });
+  const response = await http.get<Page<Role>>('/organization/roles', {
+    params: { page, pageSize },
+  });
   return response.data;
 }
 

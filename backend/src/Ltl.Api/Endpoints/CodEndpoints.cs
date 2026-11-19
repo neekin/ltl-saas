@@ -17,59 +17,35 @@ public static class CodEndpoints
         var cod = app.MapGroup("/api/finance/cod");
         cod.MapGet("/", async (Guid waybillId, ClaimsPrincipal user, ICodService service) =>
         {
-            Require(user, "cod.read");
-            var result = await service.GetCodOrderByWaybillAsync(waybillId);
+            var result = await service.GetCodOrderByWaybillAsync(RequireUserId(user), waybillId);
             return result is null ? Results.NotFound() : Results.Ok(result);
         });
         cod.MapGet("/settlements", async (Guid waybillId, ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.read");
-            return Results.Ok(await service.ListSettlementsByWaybillAsync(waybillId));
-        });
+            Results.Ok(await service.ListSettlementsByWaybillAsync(RequireUserId(user), waybillId)));
         cod.MapPost("/orders/ensure", async (Guid waybillId, ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.manage");
-            return Results.Ok(await service.EnsureCodOrderForOperatorAsync(RequireUserId(user), waybillId));
-        });
+            Results.Ok(await service.EnsureCodOrderForOperatorAsync(RequireUserId(user), waybillId)));
         cod.MapPost("/collections", async (
             RecordCodCollectionRequest request,
             [Microsoft.AspNetCore.Mvc.FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
             ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.manage");
-            return Results.Ok(await service.RecordCollectionAsync(RequireUserId(user),
-                request with { IdempotencyKey = idempotencyKey ?? request.IdempotencyKey }));
-        });
+            Results.Ok(await service.RecordCollectionAsync(RequireUserId(user),
+                request with { IdempotencyKey = idempotencyKey ?? request.IdempotencyKey })));
         cod.MapPost("/settlements", async (
             CreateCodSettlementRequest request, ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.manage");
-            return Results.Ok(await service.CreateSettlementAsync(RequireUserId(user), request));
-        });
+            Results.Ok(await service.CreateSettlementAsync(RequireUserId(user), request)));
         cod.MapPost("/settlements/{id:guid}/approve", async (
             Guid id, ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.manage");
-            return Results.Ok(await service.ApproveSettlementAsync(RequireUserId(user), id));
-        });
+            Results.Ok(await service.ApproveSettlementAsync(RequireUserId(user), id)));
         cod.MapPost("/settlements/{id:guid}/pay", async (
             Guid id, ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.manage");
-            return Results.Ok(await service.PaySettlementAsync(RequireUserId(user), id));
-        });
+            Results.Ok(await service.PaySettlementAsync(RequireUserId(user), id)));
         cod.MapPost("/collections/{collectionId:guid}/refund", async (
             Guid collectionId, RefundCodCollectionRequest request, ClaimsPrincipal user, ICodService service) =>
-        {
-            Require(user, "cod.manage");
-            return Results.Ok(await service.RefundCollectionAsync(
-                RequireUserId(user), collectionId, request.Amount, request.Reason));
-        });
+            Results.Ok(await service.RefundCollectionAsync(
+                RequireUserId(user), collectionId, request.Amount, request.Reason)));
     }
 
     public sealed record RefundCodCollectionRequest(decimal Amount, string Reason);
-
-    private static void Require(ClaimsPrincipal user, string permission) { }
 
     private static Guid RequireUserId(ClaimsPrincipal user) =>
         Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) && userId != Guid.Empty

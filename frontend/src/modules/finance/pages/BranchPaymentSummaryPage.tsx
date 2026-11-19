@@ -30,7 +30,9 @@ export function BranchPaymentSummaryPage() {
       width: 150,
       align: 'right',
       sorter: (a, b) => a.totalCollected - b.totalCollected,
-      render: (v: number) => <span className="ltl-amount ltl-amount--strong">¥ {v.toFixed(2)}</span>,
+      render: (v: number) => (
+        <span className="ltl-amount ltl-amount--strong">¥ {v.toFixed(2)}</span>
+      ),
     },
     {
       title: '累计笔数',
@@ -94,9 +96,12 @@ export function BranchPaymentSummaryPage() {
                 `branch-payment-summary${month ? `-${month}` : ''}.csv`,
                 ['网点编码', '网点名称', '累计收款', '累计笔数', '当月收款', '当月笔数'],
                 (summaryQuery.data ?? []).map((r) => [
-                  r.branchCode, r.branchName,
-                  r.totalCollected.toFixed(2), r.paymentCount,
-                  r.monthCollected.toFixed(2), r.monthPaymentCount,
+                  r.branchCode,
+                  r.branchName,
+                  r.totalCollected.toFixed(2),
+                  r.paymentCount,
+                  r.monthCollected.toFixed(2),
+                  r.monthPaymentCount,
                 ]),
               )
             }

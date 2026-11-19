@@ -41,10 +41,10 @@ public interface IFinanceService
     /// <summary>信用额度检查（月结客户；outstanding > credit_limit → false）。customerId 无额度 → true。</summary>
     Task<bool> IsWithinCreditLimitAsync(Guid customerId);
 
-    Task<ReceivableDto?> GetReceivableAsync(Guid waybillId);
+    Task<ReceivableDto?> GetReceivableAsync(Guid operatorUserId, Guid waybillId);
     Task<PaymentRecordDto> RecordPaymentAsync(Guid operatorUserId, RecordPaymentRequest request);
     Task<RefundRecordDto> RefundAsync(Guid operatorUserId, RefundPaymentRequest request);
-    Task<IReadOnlyList<PaymentRecordDto>> ListPaymentsAsync(Guid waybillId);
+    Task<IReadOnlyList<PaymentRecordDto>> ListPaymentsAsync(Guid operatorUserId, Guid waybillId);
 
     /// <summary>月结账单：按客户按期生成（汇总未收应收）。</summary>
     Task<CustomerStatement> GenerateStatementAsync(Guid operatorUserId, Guid customerId, string period);
@@ -67,8 +67,8 @@ public sealed class FinanceService(
     /// <summary>带权限校验的应收懒初始化（FIN-001 首笔收款前 UI 入口）。</summary>
     public async Task<ReceivableDto> EnsureReceivableForOperatorAsync(Guid operatorUserId, Guid waybillId)
     {
-        if (!await authorization.HasPermissionAsync(operatorUserId, "finance.manage"))
-            throw new PermissionDeniedException("finance.manage");
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceManage);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, waybillId);
         return await EnsureReceivableAsync(waybillId);
     }
 
@@ -115,24 +115,34 @@ public sealed class FinanceService(
         if (creditLimit is not { } limit)
             return true;
 
-        var outstanding = await db.Receivables
-            .Where(r => r.Status != ReceivableStatus.Settled)
-            .SumAsync(r => r.Amount - r.SettledAmount);
+        var tenantId = db.CurrentTenantId.Value;
+        var outstanding = (await db.Database
+                .SqlQuery<OutstandingRow>(
+                    $"""
+                    SELECT COALESCE(SUM(r.amount - r.settled_amount), 0) AS "Outstanding"
+                    FROM receivables r
+                    INNER JOIN waybills w ON w.id = r.waybill_id AND w.tenant_id = r.tenant_id
+                    WHERE r.tenant_id = {tenantId} AND w.customer_id = {customerId} AND r.status != {(int)ReceivableStatus.Settled}
+                    """)
+                .ToListAsync())
+            .SingleOrDefault()?.Outstanding ?? 0m;
         return outstanding <= limit;
     }
 
-    public async Task<ReceivableDto?> GetReceivableAsync(Guid waybillId)
+    public async Task<ReceivableDto?> GetReceivableAsync(Guid operatorUserId, Guid waybillId)
     {
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceRead);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, waybillId);
         var receivable = await db.Receivables
             .AsNoTracking()
-            .SingleOrDefaultAsync(r => r.WaybillId == waybillId);
+            .SingleOrDefaultAsync(r => r.WaybillId == waybillId && r.TenantId == tenantId);
         return receivable is null ? null : ToDto(receivable);
     }
 
     public async Task<PaymentRecordDto> RecordPaymentAsync(Guid operatorUserId, RecordPaymentRequest request)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceManage);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, request.WaybillId);
 
         // 幂等（AGENTS §8）：同租户同幂等键已存在 → 返回原收款记录，不再入账
         if (request.IdempotencyKey is { } paymentKey)
@@ -163,7 +173,7 @@ public sealed class FinanceService(
             if (totalAmount <= 0)
                 throw new InvalidOperationException("运单费用未固化或为零，无法创建应收。");
 
-            receivable = Receivable.Create(db.CurrentTenantId.Value, request.WaybillId, totalAmount, DateTime.UtcNow);
+            receivable = Receivable.Create(tenantId, request.WaybillId, totalAmount, DateTime.UtcNow);
             db.Receivables.Add(receivable);
             await db.SaveChangesAsync();
         }
@@ -186,13 +196,13 @@ public sealed class FinanceService(
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
 
         var payment = PaymentRecord.Create(
-            db.CurrentTenantId.Value, request.WaybillId, request.Amount, method,
+            tenantId, request.WaybillId, request.Amount, method,
             operatorUserId, request.Note, DateTime.UtcNow, operatorUserId, request.IdempotencyKey);
         db.Payments.Add(payment);
         await db.SaveChangesAsync();
 
         var allocation = PaymentAllocation.Create(
-            db.CurrentTenantId.Value, payment.Id, receivable.Id, request.Amount, DateTime.UtcNow);
+            tenantId, payment.Id, receivable.Id, request.Amount, DateTime.UtcNow);
         db.Allocations.Add(allocation);
 
         receivable.ApplySettlement(request.Amount);
@@ -210,11 +220,11 @@ public sealed class FinanceService(
 
     public async Task<RefundRecordDto> RefundAsync(Guid operatorUserId, RefundPaymentRequest request)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceManage);
 
-        var payment = await db.Payments.FindAsync([request.PaymentId])
+        var payment = await db.Payments.SingleOrDefaultAsync(p => p.Id == request.PaymentId && p.TenantId == tenantId)
             ?? throw new EntityNotFoundException("收款记录", request.PaymentId);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, payment.WaybillId);
 
         // 已退金额 = Σ(refund for this payment)
         var alreadyRefunded = await db.Refunds
@@ -235,7 +245,7 @@ public sealed class FinanceService(
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         var refund = RefundRecord.Create(
-            db.CurrentTenantId.Value, request.PaymentId, request.Amount, request.Reason,
+            tenantId, request.PaymentId, request.Amount, request.Reason,
             operatorUserId, DateTime.UtcNow);
         db.Refunds.Add(refund);
 
@@ -252,14 +262,14 @@ public sealed class FinanceService(
             refund.OperatorUserId, refund.OccurredAt);
     }
 
-    public async Task<IReadOnlyList<PaymentRecordDto>> ListPaymentsAsync(Guid waybillId)
+    public async Task<IReadOnlyList<PaymentRecordDto>> ListPaymentsAsync(Guid operatorUserId, Guid waybillId)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceRead);
+        await RequireWaybillBranchAccessAsync(tenantId, operatorUserId, waybillId);
 
         return (await db.Payments
                 .AsNoTracking()
-                .Where(p => p.WaybillId == waybillId)
+                .Where(p => p.WaybillId == waybillId && p.TenantId == tenantId)
                 .OrderBy(p => p.OccurredAt)
                 .ToListAsync())
             .Select(p => new PaymentRecordDto(
@@ -269,8 +279,7 @@ public sealed class FinanceService(
 
     public async Task<CustomerStatement> GenerateStatementAsync(Guid operatorUserId, Guid customerId, string period)
     {
-        if (db.CurrentTenantId is null)
-            throw new TenantContextMissingException();
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceManage);
 
         var existing = await db.Statements
             .SingleOrDefaultAsync(s => s.CustomerId == customerId && s.Period == period);
@@ -282,18 +291,27 @@ public sealed class FinanceService(
             int.Parse(period[..4]), int.Parse(period[4..]), 1, 0, 0, 0, DateTimeKind.Utc);
         var periodEnd = periodStart.AddMonths(1);
 
-        // 按客户筛选未收应收（期间 = 应收创建月份）
-        var receivables = await db.Receivables
-            .Where(r => r.Status != ReceivableStatus.Settled
-                && r.CreatedAt >= periodStart && r.CreatedAt < periodEnd)
-            .ToListAsync();
+        // 按客户筛选未收应收（原生 SQL 读取该客户在本租户下的运单 ID，不跨客户混算）
+        var customerWaybillIds = (await db.Database
+                .SqlQuery<WaybillIdRow>(
+                    $"""SELECT id FROM waybills WHERE tenant_id = {tenantId} AND customer_id = {customerId}""")
+                .ToListAsync())
+            .Select(x => x.Id)
+            .ToList();
+        var receivables = customerWaybillIds.Count == 0
+            ? []
+            : await db.Receivables
+                .Where(r => r.Status != ReceivableStatus.Settled
+                    && customerWaybillIds.Contains(r.WaybillId)
+                    && r.CreatedAt >= periodStart && r.CreatedAt < periodEnd)
+                .ToListAsync();
         if (receivables.Count == 0)
             throw new InvalidOperationException($"该客户在 {period} 期间无未收应收，无需生成账单。");
 
         var totalAmount = receivables.Sum(r => r.Amount - r.SettledAmount);
 
         var statement = CustomerStatement.Create(
-            db.CurrentTenantId.Value, customerId, period, totalAmount, DateTime.UtcNow, operatorUserId);
+            tenantId, customerId, period, totalAmount, DateTime.UtcNow, operatorUserId);
         db.Statements.Add(statement);
         await db.SaveChangesAsync();
 
@@ -301,7 +319,7 @@ public sealed class FinanceService(
         foreach (var receivable in receivables)
         {
             db.StatementItems.Add(CustomerStatementItem.Create(
-                db.CurrentTenantId.Value, statement.Id, receivable.Id, receivable.WaybillId,
+                tenantId, statement.Id, receivable.Id, receivable.WaybillId,
                 receivable.Amount, receivable.SettledAmount, DateTime.UtcNow));
         }
         await db.SaveChangesAsync();
@@ -311,7 +329,8 @@ public sealed class FinanceService(
 
     public async Task ConfirmStatementAsync(Guid operatorUserId, Guid statementId)
     {
-        var statement = await db.Statements.FindAsync([statementId])
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceManage);
+        var statement = await db.Statements.SingleOrDefaultAsync(s => s.Id == statementId && s.TenantId == tenantId)
             ?? throw new EntityNotFoundException("月结账单", statementId);
         statement.Confirm(DateTime.UtcNow, operatorUserId);
         await db.SaveChangesAsync();
@@ -319,20 +338,23 @@ public sealed class FinanceService(
 
     public async Task CloseStatementAsync(Guid operatorUserId, Guid statementId)
     {
-        var statement = await db.Statements.FindAsync([statementId])
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceManage);
+        var statement = await db.Statements.SingleOrDefaultAsync(s => s.Id == statementId && s.TenantId == tenantId)
             ?? throw new EntityNotFoundException("月结账单", statementId);
         statement.Close(DateTime.UtcNow, operatorUserId);
         await db.SaveChangesAsync();
     }
 
-    /// <summary>网点收款汇总：原生 SQL 跨表聚合（AGENTS §5.1），租户条件显式拼接。</summary>
+    /// <summary>网点收款汇总：原生 SQL 跨表聚合（AGENTS §5.1），按用户授权网点范围过滤（AGENTS §5.2）。</summary>
     public async Task<IReadOnlyList<BranchPaymentSummary>> GetBranchPaymentSummaryAsync(
         Guid operatorUserId, string? month)
     {
-        if (db.CurrentTenantId is not { } tenantId)
-            throw new TenantContextMissingException();
-        if (!await authorization.HasPermissionAsync(operatorUserId, "finance.read"))
-            throw new PermissionDeniedException("finance.read");
+        var tenantId = await RequirePermissionAsync(operatorUserId, FinancePermissionCodes.FinanceRead);
+        var allowedBranchIds = (await authorization.GetAuthorizedBranchIdsAsync(operatorUserId)).ToHashSet();
+        if (allowedBranchIds.Count == 0)
+        {
+            return [];
+        }
 
         // month 为 yyyyMM 时按指定月份筛选当月收款；未传时默认当前月（与 REPORT-001 口径一致）
         var now = DateTime.UtcNow;
@@ -363,9 +385,41 @@ public sealed class FinanceService(
                 """)
             .ToListAsync();
 
-        return rows.Select(r => new BranchPaymentSummary(
-            r.BranchId, r.BranchCode, r.BranchName,
-            r.TotalCollected, r.PaymentCount, r.MonthCollected, r.MonthPaymentCount)).ToList();
+        return rows
+            .Where(r => allowedBranchIds.Contains(r.BranchId))
+            .Select(r => new BranchPaymentSummary(
+                r.BranchId, r.BranchCode, r.BranchName,
+                r.TotalCollected, r.PaymentCount, r.MonthCollected, r.MonthPaymentCount))
+            .ToList();
+    }
+
+    private async Task<Guid> RequirePermissionAsync(Guid operatorUserId, string permissionCode)
+    {
+        if (db.CurrentTenantId is not { } tenantId)
+            throw new TenantContextMissingException();
+        if (!await authorization.HasPermissionAsync(operatorUserId, permissionCode))
+            throw new PermissionDeniedException(permissionCode);
+        return tenantId;
+    }
+
+    private async Task RequireWaybillBranchAccessAsync(Guid tenantId, Guid operatorUserId, Guid waybillId)
+    {
+        var branches = (await db.Database
+                .SqlQuery<WaybillBranchesRow>(
+                    $"""
+                    SELECT origin_branch_id, dest_branch_id
+                    FROM waybills
+                    WHERE tenant_id = {tenantId} AND id = {waybillId}
+                    """)
+                .ToListAsync())
+            .SingleOrDefault()
+            ?? throw new EntityNotFoundException("运单", waybillId);
+
+        if (!await authorization.CanAccessBranchAsync(operatorUserId, branches.OriginBranchId)
+            && !await authorization.CanAccessBranchAsync(operatorUserId, branches.DestBranchId))
+        {
+            throw new PermissionDeniedException("财务数据范围（运单始发/目的网点）");
+        }
     }
 
     private sealed record BranchPaymentRow(
@@ -376,6 +430,12 @@ public sealed class FinanceService(
     private sealed record TotalAmountRow(decimal? TotalAmount);
 
     private sealed record CreditLimitRow(decimal? CreditLimit);
+
+    private sealed record OutstandingRow(decimal Outstanding);
+
+    private sealed record WaybillIdRow(Guid Id);
+
+    private sealed record WaybillBranchesRow(Guid OriginBranchId, Guid DestBranchId);
 
     private static ReceivableDto ToDto(Receivable r) => new(
         r.Id, r.WaybillId, r.Amount, r.SettledAmount, r.Outstanding, r.Status.ToString());

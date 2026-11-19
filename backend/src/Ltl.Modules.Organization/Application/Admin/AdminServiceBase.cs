@@ -19,6 +19,7 @@ public abstract class AdminServiceBase(
     IAuditLogService audit)
 {
     protected readonly OrganizationDbContext Db = db;
+    protected readonly IAuthorizationService Authorization = authorization;
 
     protected Guid RequireTenantId() =>
         Db.CurrentTenantId ?? throw new TenantContextMissingException();
@@ -26,7 +27,7 @@ public abstract class AdminServiceBase(
     /// <summary>权限点实时校验；失败 → PermissionDeniedException（403 语义）。</summary>
     protected async Task RequirePermissionAsync(Guid operatorUserId, string permissionCode, string action)
     {
-        if (!await authorization.HasPermissionAsync(operatorUserId, permissionCode))
+        if (!await Authorization.HasPermissionAsync(operatorUserId, permissionCode))
         {
             throw new PermissionDeniedException(action);
         }

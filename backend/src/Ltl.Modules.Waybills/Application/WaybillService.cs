@@ -184,10 +184,15 @@ public sealed class WaybillService(
         if (creditLimit is not { } limit)
             return;
 
-        // 汇总该客户全部未收应收（原生 SQL 跨模块聚合）
+        // 汇总该客户全部未收应收（原生 SQL 跨模块聚合；按 customer_id 精确过滤，不跨客户汇总）
         var outstanding = (await db.Database
                 .SqlQuery<OutstandingRow>(
-                    $"SELECT COALESCE(SUM(r.amount - r.settled_amount), 0) AS \"Outstanding\" FROM receivables r WHERE r.tenant_id = {tenantId} AND r.status != 3")
+                    $"""
+                    SELECT COALESCE(SUM(r.amount - r.settled_amount), 0) AS "Outstanding"
+                    FROM receivables r
+                    INNER JOIN waybills w ON w.id = r.waybill_id AND w.tenant_id = r.tenant_id
+                    WHERE r.tenant_id = {tenantId} AND w.customer_id = {customerId} AND r.status != 3
+                    """)
                 .ToListAsync())
             .SingleOrDefault()?.Outstanding ?? 0;
 

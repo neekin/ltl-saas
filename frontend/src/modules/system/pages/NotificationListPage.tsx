@@ -74,10 +74,7 @@ export function NotificationListPage() {
               setPage(1);
             }}
           />
-          <Button
-            loading={query.isFetching && !query.isError}
-            onClick={() => void query.refetch()}
-          >
+          <Button loading={query.isFetching && !query.isError} onClick={() => void query.refetch()}>
             刷新
           </Button>
         </div>

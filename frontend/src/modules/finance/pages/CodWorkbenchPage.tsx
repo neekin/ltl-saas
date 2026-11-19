@@ -108,7 +108,7 @@ export function CodWorkbenchPage() {
                 precision={2}
                 value={collectAmount}
                 onChange={(v) => setCollectAmount(v ?? 0)}
-                addonBefore="收款（元）"
+                prefix="收款（元）"
                 style={{ width: 190 }}
               />
               <Button

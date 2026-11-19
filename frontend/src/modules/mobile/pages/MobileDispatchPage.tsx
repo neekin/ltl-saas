@@ -18,7 +18,10 @@ export function MobileDispatchPage() {
 
   return (
     <div style={{ padding: 12 }}>
-      <Card title="我的配送任务" extra={<span style={{ fontSize: 12, color: '#8c96a5' }}>DELIVERY-002</span>}>
+      <Card
+        title="我的配送任务"
+        extra={<span style={{ fontSize: 12, color: '#8c96a5' }}>DELIVERY-002</span>}
+      >
         <p style={{ color: '#8c96a5', fontSize: 13 }}>
           派单后任务出现在这里；到货核验页完成签收后任务自动闭环。
         </p>

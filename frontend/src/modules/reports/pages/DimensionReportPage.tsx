@@ -112,8 +112,12 @@ export function DimensionReportPage() {
                 `${dimension}-${month}.csv`,
                 [labels.code, labels.name, '运单数', '运费收入', '货量(kg)', '体积(m³)'],
                 (reportQuery.data ?? []).map((r) => [
-                  r.code, r.name, r.waybillCount,
-                  r.freightRevenue.toFixed(2), r.totalWeightKg.toFixed(2), r.totalVolumeM3.toFixed(3),
+                  r.code,
+                  r.name,
+                  r.waybillCount,
+                  r.freightRevenue.toFixed(2),
+                  r.totalWeightKg.toFixed(2),
+                  r.totalVolumeM3.toFixed(3),
                 ]),
               )
             }

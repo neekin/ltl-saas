@@ -28,12 +28,14 @@ public static class WaybillEndpoints
                 $"waybill-{view.WaybillNo}.prn");
         });
 
-        // WB-002：开单（补暴露服务层能力）。幂等：Idempotency-Key header（AGENTS §8）
+        // WB-002：开单（权限 waybill.manage + 始发网点范围校验）。幂等：Idempotency-Key header（AGENTS §8）
         app.MapPost("/api/waybills", async (
             CreateWaybillRequest request,
             [Microsoft.AspNetCore.Mvc.FromHeader(Name = "Idempotency-Key")] Guid? idempotencyKey,
-            ClaimsPrincipal user, IWaybillService service) =>
-            Results.Ok(await service.CreateWaybillAsync(new CreateWaybillCommand(
+            ClaimsPrincipal user, IWaybillAdminService service) =>
+        {
+            var operatorUserId = RequireUserId(user);
+            return Results.Ok(await service.CreateAsync(operatorUserId, new CreateWaybillCommand(
                 request.OriginBranchId, request.DestBranchId, request.CustomerId,
                 request.PaymentType, request.SenderName, request.SenderPhone, request.SenderAddress,
                 request.ReceiverName, request.ReceiverPhone, request.ReceiverAddress,
@@ -43,7 +45,8 @@ public static class WaybillEndpoints
                 CodAmount: request.CodAmount,
                 Remark: request.Remark, DeclaredValue: request.DeclaredValue,
                 BranchId: request.OriginBranchId,
-                OperatorId: RequireUserId(user), IdempotencyKey: idempotencyKey))));
+                OperatorId: operatorUserId, IdempotencyKey: idempotencyKey)));
+        });
 
         // WB-003：查询/详情/草稿修改/确认/取消
         var waybills = app.MapGroup("/api/waybills");

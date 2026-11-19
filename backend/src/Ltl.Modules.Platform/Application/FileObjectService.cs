@@ -90,14 +90,22 @@ public sealed class FileObjectService(
 
     public async Task<FileObjectDto> GetAsync(Guid fileId)
     {
-        var fileObject = await db.FileObjects.FindAsync([fileId])
+        var tenantId = db.CurrentTenantId
+            ?? throw new TenantContextMissingException();
+        var fileObject = await db.FileObjects
+                .AsNoTracking()
+                .SingleOrDefaultAsync(f => f.Id == fileId && f.TenantId == tenantId)
             ?? throw new EntityNotFoundException("文件", fileId);
         return Map(fileObject);
     }
 
     public async Task<(FileObjectDto Metadata, Stream Content)> GetContentAsync(Guid fileId)
     {
-        var fileObject = await db.FileObjects.FindAsync([fileId])
+        var tenantId = db.CurrentTenantId
+            ?? throw new TenantContextMissingException();
+        var fileObject = await db.FileObjects
+                .AsNoTracking()
+                .SingleOrDefaultAsync(f => f.Id == fileId && f.TenantId == tenantId)
             ?? throw new EntityNotFoundException("文件", fileId);
 
         var stream = await storage.GetAsync(fileObject.StorageKey)

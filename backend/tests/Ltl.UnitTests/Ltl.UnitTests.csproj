@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.15" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="xunit" Version="2.9.2" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
@@ -18,6 +19,10 @@
     <ProjectReference Include="..\..\src\Ltl.Modules.Platform\Ltl.Modules.Platform.csproj" />
     <ProjectReference Include="..\..\src\Ltl.Modules.Pricing\Ltl.Modules.Pricing.csproj" />
     <ProjectReference Include="..\..\src\Ltl.Modules.Waybills\Ltl.Modules.Waybills.csproj" />
+    <ProjectReference Include="..\..\src\Ltl.Modules.Finance\Ltl.Modules.Finance.csproj" />
+    <ProjectReference Include="..\..\src\Ltl.Modules.Delivery\Ltl.Modules.Delivery.csproj" />
+    <ProjectReference Include="..\..\src\Ltl.Modules.Arrival\Ltl.Modules.Arrivals.csproj" />
+    <ProjectReference Include="..\..\src\Ltl.Modules.Warehouse\Ltl.Modules.Warehouse.csproj" />
   </ItemGroup>
 
 </Project>

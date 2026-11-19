@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { Card, Col, Row, Statistic, Typography } from 'antd';
+import { Alert, Button, Card, Col, Row, Statistic, Typography } from 'antd';
 import {
   ArrowDownOutlined,
   ArrowUpOutlined,
@@ -12,10 +12,26 @@ import { getDashboard } from '../api/reports';
 
 /** 经营看板（P9 前端）：核心运营指标。 */
 export function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => getDashboard(),
   });
+
+  if (isError) {
+    return (
+      <Alert
+        type="error"
+        showIcon
+        title="经营看板加载失败"
+        description={error instanceof Error ? error.message : '请稍后重试'}
+        action={
+          <Button size="small" onClick={() => void refetch()}>
+            重试
+          </Button>
+        }
+      />
+    );
+  }
 
   if (isLoading || !data) {
     return <Typography.Text type="secondary">加载中…</Typography.Text>;
@@ -90,7 +106,7 @@ export function DashboardPage() {
               precision={2}
               prefix={<ArrowUpOutlined />}
               suffix="元"
-              valueStyle={{ color: '#3f8600' }}
+              styles={{ content: { color: '#3f8600' } }}
             />
           </Card>
         </Col>
@@ -102,7 +118,7 @@ export function DashboardPage() {
               precision={2}
               prefix={<ArrowDownOutlined />}
               suffix="元"
-              valueStyle={{ color: '#cf1322' }}
+              styles={{ content: { color: '#cf1322' } }}
             />
           </Card>
         </Col>

@@ -156,7 +156,7 @@ public class TripLoadTests : IClassFixture<PostgreSqlFixture>
         return client;
     }
 
-    public async Task ReceivePublicAsync(TripSeed seed, Guid waybillId) => await ReceiveAsync(seed, waybillId);
+    internal async Task ReceivePublicAsync(TripSeed seed, Guid waybillId) => await ReceiveAsync(seed, waybillId);
 
     private async Task ReceiveAsync(TripSeed seed, Guid waybillId)
     {
@@ -293,6 +293,7 @@ public class TripLoadTests : IClassFixture<PostgreSqlFixture>
         var otherAuthorization = new AuthorizationService(otherOrg);
         await otherAuthorization.GrantPermissionAsync(otherRole.Id, TransportPermissionCodes.TripManage);
         await otherAuthorization.AssignRoleAsync(otherAdmin.Id, otherRole.Id);
+        await otherAuthorization.GrantBranchScopeAsync(otherAdmin.Id, otherBranch.Id);
 
         using var otherClient = await AdminClientAsync(otherTenantCode);
         var notFound = await otherClient.PostAsJsonAsync("/api/transport/trips", new

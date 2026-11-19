@@ -219,4 +219,76 @@ public class WaybillAdminTests : IClassFixture<PostgreSqlFixture>
         await using var verification = _fixture.CreateWaybillsContext(seed.TenantId);
         Assert.Equal(1, await verification.Waybills.CountAsync(w => w.IdempotencyKey == idempotencyKey));
     }
+
+    [Fact]
+    public async Task CreateWaybill_WithoutPermissionOrBranchScope_ShouldReturn403_AndListScopedToBranch()
+    {
+        var seed = await SeedAsync();
+
+        // 新增第三网点 CS03 与仅限 CS03 的只读/开单用户
+        await using (var org = _fixture.CreateOrganizationContext(seed.TenantId))
+        {
+            var thirdBranch = Branch.Create(seed.TenantId, "CS03", "长沙", DateTime.UtcNow);
+            var reader = User.Create(seed.TenantId, "reader", "只读员", PasswordHasher.Hash("secret-123"), DateTime.UtcNow);
+            var branchOps = User.Create(seed.TenantId, "csops", "长沙开单员", PasswordHasher.Hash("secret-123"), DateTime.UtcNow);
+            var readRole = Role.Create(seed.TenantId, "wb-read", "运单只读", DateTime.UtcNow);
+            var manageRole = Role.Create(seed.TenantId, "wb-manage", "运单管理", DateTime.UtcNow);
+            org.Branches.Add(thirdBranch);
+            org.Users.AddRange(reader, branchOps);
+            org.Roles.AddRange(readRole, manageRole);
+            await org.SaveChangesAsync();
+
+            var auth = new AuthorizationService(org);
+            await auth.GrantPermissionAsync(readRole.Id, WaybillPermissionCodes.WaybillRead);
+            await auth.AssignRoleAsync(reader.Id, readRole.Id);
+            await auth.GrantBranchScopeAsync(reader.Id, thirdBranch.Id);
+
+            await auth.GrantPermissionAsync(manageRole.Id, WaybillPermissionCodes.WaybillRead);
+            await auth.GrantPermissionAsync(manageRole.Id, WaybillPermissionCodes.WaybillManage);
+            await auth.AssignRoleAsync(branchOps.Id, manageRole.Id);
+            await auth.GrantBranchScopeAsync(branchOps.Id, thirdBranch.Id);
+        }
+
+        var request = new
+        {
+            originBranchId = seed.OriginBranchId,
+            destBranchId = seed.DestBranchId,
+            customerId = seed.CustomerId,
+            ruleSetId = seed.RuleSetId,
+            paymentType = "Cash",
+            senderName = "张三", senderPhone = "138", senderAddress = "广州",
+            receiverName = "李四", receiverPhone = "139", receiverAddress = "武汉",
+            packages = new object[] { new { cargoName = "纸箱", quantity = 1, weightKg = 10m, volumeM3 = 0.1m } },
+        };
+
+        // 1) 无 waybill.manage 权限 → POST /api/waybills 403
+        using var readerClient = CreateClient();
+        var readerLogin = await readerClient.PostAsJsonAsync("/api/auth/login",
+            new { tenant_code = seed.TenantCode, username = "reader", password = "secret-123" });
+        readerLogin.EnsureSuccessStatusCode();
+        var readerToken = (await JsonDocument.ParseAsync(await readerLogin.Content.ReadAsStreamAsync()))
+            .RootElement.GetProperty("access_token").GetString();
+        readerClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", readerToken);
+
+        var noPermCreate = await readerClient.PostAsJsonAsync("/api/waybills", request);
+        Assert.Equal(HttpStatusCode.Forbidden, noPermCreate.StatusCode);
+
+        // 2) 仅授权 CS03 网点的用户查列表 → 看不到 GZ01→WH02 的 3 张运单
+        var scopedList = await readerClient.GetAsync("/api/waybills?page=1&pageSize=10");
+        Assert.Equal(HttpStatusCode.OK, scopedList.StatusCode);
+        var scopedListBody = await JsonDocument.ParseAsync(await scopedList.Content.ReadAsStreamAsync());
+        Assert.Equal(0, scopedListBody.RootElement.GetProperty("total").GetInt32());
+
+        // 3) 有 waybill.manage 但仅授权 CS03 网点 → 为 GZ01 开单 403
+        using var csOpsClient = CreateClient();
+        var opsLogin = await csOpsClient.PostAsJsonAsync("/api/auth/login",
+            new { tenant_code = seed.TenantCode, username = "csops", password = "secret-123" });
+        opsLogin.EnsureSuccessStatusCode();
+        var opsToken = (await JsonDocument.ParseAsync(await opsLogin.Content.ReadAsStreamAsync()))
+            .RootElement.GetProperty("access_token").GetString();
+        csOpsClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", opsToken);
+
+        var wrongBranchCreate = await csOpsClient.PostAsJsonAsync("/api/waybills", request);
+        Assert.Equal(HttpStatusCode.Forbidden, wrongBranchCreate.StatusCode);
+    }
 }

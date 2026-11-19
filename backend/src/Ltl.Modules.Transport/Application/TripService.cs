@@ -4,7 +4,6 @@ using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Platform.Domain;
 using Ltl.Modules.Transport.Domain;
 using Ltl.Modules.Transport.Infrastructure;
-using Ltl.Modules.Transport.Domain;
 using Ltl.Modules.Waybills.Application;
 using Ltl.Modules.Waybills.Domain;
 using Ltl.SharedKernel.Application;
@@ -84,6 +83,7 @@ public sealed class TripService(
     public async Task<TransportTripDto> CreateTripAsync(Guid operatorUserId, CreateTripRequest request)
     {
         var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        await RequireOriginBranchAccessAsync(operatorUserId, request.OriginBranchId);
 
         // 车辆必须为本租户启用车辆（原生 SQL 显式租户参数，AGENTS §5.1）
         var vehicleActive = await DbVehicleActiveAsync(tenantId, request.VehicleId);
@@ -144,7 +144,9 @@ public sealed class TripService(
 
     public async Task<TransportTripDto> GetTripAsync(Guid operatorUserId, Guid tripId)
     {
-        var trip = await RequireTripAsync(tripId);
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireVisibleTripBranchAsync(operatorUserId, trip);
         var assignments = await db.TripWaybills
             .Where(w => w.TripId == tripId)
             .OrderBy(w => w.LoadedAt)
@@ -155,7 +157,8 @@ public sealed class TripService(
     public async Task<TripWaybillDto> LoadWaybillAsync(Guid operatorUserId, Guid tripId, Guid waybillId)
     {
         var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
-        var trip = await RequireTripAsync(tripId);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireOriginBranchAccessAsync(operatorUserId, trip.OriginBranchId);
 
         if (trip.Status != TransportTripStatus.Planned)
         {
@@ -226,9 +229,10 @@ public sealed class TripService(
 
     public async Task RemoveWaybillAsync(Guid operatorUserId, Guid tripId, Guid assignmentId)
     {
-        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
-        var trip = await RequireTripAsync(tripId);
-        var assignment = await db.TripWaybills.FindAsync([assignmentId])
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireOriginBranchAccessAsync(operatorUserId, trip.OriginBranchId);
+        var assignment = await db.TripWaybills.SingleOrDefaultAsync(w => w.Id == assignmentId && w.TenantId == tenantId)
             ?? throw new EntityNotFoundException("配载记录", assignmentId);
 
         if (assignment.TripId != tripId)
@@ -276,8 +280,16 @@ public sealed class TripService(
         page = page < 1 ? 1 : page;
         pageSize = pageSize is < 1 or > 100 ? 20 : pageSize;
 
-        var total = await db.Trips.CountAsync();
-        var trips = await db.Trips
+        var allowedBranchIds = await authorization.GetAuthorizedBranchIdsAsync(operatorUserId);
+        if (allowedBranchIds.Count == 0)
+        {
+            return new PageResultTrips([], 0, page, pageSize);
+        }
+
+        var query = db.Trips
+            .Where(t => allowedBranchIds.Contains(t.OriginBranchId) || allowedBranchIds.Contains(t.DestBranchId));
+        var total = await query.CountAsync();
+        var trips = await query
             .OrderByDescending(t => t.CreatedAt)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .ToListAsync();
@@ -299,7 +311,8 @@ public sealed class TripService(
     public async Task<GpsPointDto> ReportGpsAsync(Guid operatorUserId, Guid tripId, ReportGpsRequest request)
     {
         var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
-        var trip = await RequireTripAsync(tripId);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireVisibleTripBranchAsync(operatorUserId, trip);
         if (trip.Status != TransportTripStatus.Departed)
         {
             throw new TransportDomainException(
@@ -320,8 +333,9 @@ public sealed class TripService(
     /// <inheritdoc cref="ITripService.ListGpsAsync"/>
     public async Task<IReadOnlyList<GpsPointDto>> ListGpsAsync(Guid operatorUserId, Guid tripId)
     {
-        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
-        await RequireTripAsync(tripId);
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireVisibleTripBranchAsync(operatorUserId, trip);
         var points = await db.TripGpsPoints
             .AsNoTracking()
             .Where(p => p.TripId == tripId)
@@ -335,8 +349,9 @@ public sealed class TripService(
 
     public async Task<TransportTripDto> DepartTripAsync(Guid operatorUserId, Guid tripId)
     {
-        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
-        var trip = await RequireTripAsync(tripId);
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireOriginBranchAccessAsync(operatorUserId, trip.OriginBranchId);
 
         var activeAssignments = await db.TripWaybills
             .Where(w => w.TripId == tripId && w.Active)
@@ -373,8 +388,9 @@ public sealed class TripService(
 
     public async Task<TransportTripDto> ArriveTripAsync(Guid operatorUserId, Guid tripId)
     {
-        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
-        var trip = await RequireTripAsync(tripId);
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireVisibleTripBranchAsync(operatorUserId, trip);
 
         var activeAssignments = await db.TripWaybills
             .Where(w => w.TripId == tripId && w.Active)
@@ -412,7 +428,8 @@ public sealed class TripService(
         Guid operatorUserId, Guid tripId, string feeType, decimal amount, string? note)
     {
         var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripManage);
-        var trip = await RequireTripAsync(tripId);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireVisibleTripBranchAsync(operatorUserId, trip);
 
         using var scope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
         var fee = TransportTripFee.Create(
@@ -431,8 +448,9 @@ public sealed class TripService(
 
     public async Task<IReadOnlyList<TripFeeDto>> ListFeesAsync(Guid operatorUserId, Guid tripId)
     {
-        await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
-        await RequireTripAsync(tripId);
+        var tenantId = await RequireTenantIdAsync(operatorUserId, TransportPermissionCodes.TripRead);
+        var trip = await RequireTripAsync(tenantId, tripId);
+        await RequireVisibleTripBranchAsync(operatorUserId, trip);
 
         return (await db.TripFees
                 .Where(f => f.TripId == tripId)
@@ -458,8 +476,26 @@ public sealed class TripService(
         return tenantId;
     }
 
-    private async Task<TransportTrip> RequireTripAsync(Guid tripId) =>
-        await db.Trips.FindAsync([tripId]) ?? throw new EntityNotFoundException("运输批次", tripId);
+    private async Task RequireOriginBranchAccessAsync(Guid operatorUserId, Guid originBranchId)
+    {
+        if (!await authorization.CanAccessBranchAsync(operatorUserId, originBranchId))
+        {
+            throw new PermissionDeniedException("运输批次数据范围（始发网点）");
+        }
+    }
+
+    private async Task RequireVisibleTripBranchAsync(Guid operatorUserId, TransportTrip trip)
+    {
+        if (!await authorization.CanAccessBranchAsync(operatorUserId, trip.OriginBranchId)
+            && !await authorization.CanAccessBranchAsync(operatorUserId, trip.DestBranchId))
+        {
+            throw new PermissionDeniedException("运输批次数据范围（始发/目的网点）");
+        }
+    }
+
+    private async Task<TransportTrip> RequireTripAsync(Guid tenantId, Guid tripId) =>
+        await db.Trips.SingleOrDefaultAsync(t => t.Id == tripId && t.TenantId == tenantId)
+            ?? throw new EntityNotFoundException("运输批次", tripId);
 
     private async Task<bool> DbVehicleActiveAsync(Guid tenantId, Guid vehicleId) =>
         (await db.Database

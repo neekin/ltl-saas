@@ -117,10 +117,7 @@ export function CustomerListPage() {
     onError: (e: Error) => message.error(e.message),
   });
 
-  const detailMutationWrapper = async (
-    action: () => Promise<unknown>,
-    successText: string,
-  ) => {
+  const detailMutationWrapper = async (action: () => Promise<unknown>, successText: string) => {
     try {
       await action();
       message.success(successText);
@@ -157,7 +154,9 @@ export function CustomerListPage() {
           <span>
             ¥ {record.creditLimit.toFixed(2)}
             {record.paymentTermsDays !== null && (
-              <Typography.Text type="secondary">（账期 {record.paymentTermsDays} 天）</Typography.Text>
+              <Typography.Text type="secondary">
+                （账期 {record.paymentTermsDays} 天）
+              </Typography.Text>
             )}
           </span>
         ) : (
@@ -258,7 +257,7 @@ export function CustomerListPage() {
           setDetailId(null);
           navigate('/customers');
         }}
-        destroyOnClose
+        destroyOnHidden
       >
         {detailQuery.isLoading || !detail ? (
           <Typography.Text type="secondary">加载中…</Typography.Text>
@@ -268,10 +267,7 @@ export function CustomerListPage() {
             branchOptions={branchQuery.data ?? []}
             onUpdate={(values) => updateMutation.mutate({ id: detail.id, ...values })}
             onCreditPolicySave={(values) =>
-              detailMutationWrapper(
-                () => setCreditPolicy(detail.id, values),
-                '信用政策已更新',
-              )
+              detailMutationWrapper(() => setCreditPolicy(detail.id, values), '信用政策已更新')
             }
             onContactAdd={(values) =>
               detailMutationWrapper(() => addContact(detail.id, values), '联系人已添加')
@@ -317,7 +313,7 @@ function CreateCustomerDrawer({
       width={480}
       open={open}
       onClose={onClose}
-      destroyOnClose
+      destroyOnHidden
       extra={
         <Button type="primary" loading={submitting} onClick={() => form.submit()}>
           保存
@@ -440,7 +436,7 @@ function CustomerDetailBody({
           <InputNumber min={0} precision={2} placeholder="元" style={{ width: 160 }} />
         </Form.Item>
         <Form.Item name="paymentTermsDays" label="账期">
-          <InputNumber min={0} precision={0} addonAfter="天" style={{ width: 140 }} />
+          <InputNumber min={0} precision={0} suffix="天" style={{ width: 140 }} />
         </Form.Item>
         <Button htmlType="submit">保存信用政策</Button>
       </Form>

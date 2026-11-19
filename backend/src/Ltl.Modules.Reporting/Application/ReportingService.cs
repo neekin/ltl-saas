@@ -1,5 +1,5 @@
-using Ltl.Modules.Finance.Infrastructure;
 using Ltl.Modules.Organization.Application.Authorization;
+using Ltl.Modules.Reporting.Infrastructure;
 using Ltl.SharedKernel.Application;
 using Ltl.SharedKernel;
 using Microsoft.EntityFrameworkCore;
@@ -61,10 +61,10 @@ public interface IReportingService
 
 /// <summary>
 /// 经营看板聚合查询（REPORT-001）：原生 SQL 跨模块聚合（AGENTS §5.1）。
-/// 只读端点；权限：finance.read。使用 FinanceDbContext 连接（同一数据库）。
+/// 只读端点；权限：finance.read。使用本模块 ReportingDbContext 执行只读聚合查询（AGENTS §4.2）。
 /// </summary>
 public sealed class ReportingService(
-    FinanceDbContext db,
+    ReportingDbContext db,
     ITenantContext tenantContext,
     IAuthorizationService authorization) : IReportingService
 {

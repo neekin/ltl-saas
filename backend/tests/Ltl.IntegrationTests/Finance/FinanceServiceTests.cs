@@ -9,7 +9,6 @@ using Ltl.Modules.Finance.Infrastructure;
 using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Organization.Application.Authorization;
 using Ltl.Modules.Organization.Domain;
-using Ltl.Modules.Platform.Application;
 using Ltl.Modules.Pricing.Application;
 using Ltl.Modules.Pricing.Domain;
 using Ltl.Modules.Tenancy.Domain;
@@ -177,6 +176,21 @@ public class FinanceServiceTests : IClassFixture<PostgreSqlFixture>
         });
         Assert.Equal(HttpStatusCode.OK, pay.StatusCode);
 
+        // 1) 仅授权 GZ01 网点时，只返回 GZ01（不泄露未授权网点 WH02，AGENTS §5.2）
+        var scopedSummary = await client.GetAsync("/api/finance/branch-payment-summary");
+        Assert.Equal(HttpStatusCode.OK, scopedSummary.StatusCode);
+        var scopedBody = await JsonDocument.ParseAsync(await scopedSummary.Content.ReadAsStreamAsync());
+        var scopedRows = scopedBody.RootElement.EnumerateArray().ToList();
+        Assert.Single(scopedRows);
+        Assert.Equal("GZ01", scopedRows[0].GetProperty("branchCode").GetString());
+
+        // 2) 授予租户级范围后，返回 GZ01（有收款）与 WH02（无收款）两个网点汇总
+        await using (var org = _fixture.CreateOrganizationContext(seed.TenantId))
+        {
+            var admin = await org.Users.SingleAsync(u => u.Username == "admin");
+            await new AuthorizationService(org).GrantTenantWideScopeAsync(admin.Id);
+        }
+
         var summary = await client.GetAsync("/api/finance/branch-payment-summary");
         Assert.Equal(HttpStatusCode.OK, summary.StatusCode);
         var body = await JsonDocument.ParseAsync(await summary.Content.ReadAsStreamAsync());
@@ -263,7 +277,7 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
         _fixture = fixture;
     }
 
-    private async Task<(Guid TenantId, Guid CustomerId, Guid WaybillId, decimal TotalAmount)> SeedAsync()
+    private async Task<(Guid TenantId, Guid OperatorUserId, Guid CustomerId, Guid WaybillId, decimal TotalAmount)> SeedAsync()
     {
         var tenantCode = $"stmt-{Guid.NewGuid():N}";
         var tenant = Tenant.Create(tenantCode, "月结测试租户", DateTime.UtcNow);
@@ -276,8 +290,20 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
         await using var org = _fixture.CreateOrganizationContext(tenant.Id);
         var origin = Branch.Create(tenant.Id, "GZ01", "广州", DateTime.UtcNow);
         var dest = Branch.Create(tenant.Id, "WH02", "武汉", DateTime.UtcNow);
+        var admin = User.Create(tenant.Id, "admin", "财务管理员", PasswordHasher.Hash("secret-123"), DateTime.UtcNow);
+        var role = Role.Create(tenant.Id, "fin", "财务", DateTime.UtcNow);
         org.Branches.AddRange(origin, dest);
+        org.Users.Add(admin);
+        org.Roles.Add(role);
         await org.SaveChangesAsync();
+
+        var authorization = new AuthorizationService(org);
+        await authorization.GrantPermissionAsync(role.Id, FinancePermissionCodes.FinanceRead);
+        await authorization.GrantPermissionAsync(role.Id, FinancePermissionCodes.FinanceManage);
+        await authorization.GrantPermissionAsync(role.Id, "cod.read");
+        await authorization.GrantPermissionAsync(role.Id, "cod.manage");
+        await authorization.AssignRoleAsync(admin.Id, role.Id);
+        await authorization.GrantBranchScopeAsync(admin.Id, origin.Id);
 
         await using var customers = _fixture.CreateCustomersContext(tenant.Id);
         var customer = Customer.Create(tenant.Id, "KH001", "测试客户", DateTime.UtcNow);
@@ -319,7 +345,7 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
             ruleSet.Id, DateOnly.FromDateTime(DateTime.UtcNow)));
         await waybills.ConfirmWaybillAsync(waybill.WaybillId, origin.Id, null);
 
-        return (tenant.Id, customer.Id, waybill.WaybillId, waybill.TotalAmount);
+        return (tenant.Id, admin.Id, customer.Id, waybill.WaybillId, waybill.TotalAmount);
     }
 
     private FinanceService CreateFinanceService(Guid tenantId)
@@ -333,35 +359,35 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
     [Fact]
     public async Task MonthlyStatement_FullLifecycle_ShouldWork()
     {
-        var (tenantId, customerId, waybillId, totalAmount) = await SeedAsync();
+        var (tenantId, operatorUserId, customerId, waybillId, totalAmount) = await SeedAsync();
         var service = CreateFinanceService(tenantId);
 
         // 确保应收存在
         await service.EnsureReceivableAsync(waybillId);
 
         // 生成月结账单 → Draft
-        var statement = await service.GenerateStatementAsync(Guid.NewGuid(), customerId, "202611");
+        var statement = await service.GenerateStatementAsync(operatorUserId, customerId, "202611");
         Assert.Equal(CustomerStatementStatus.Draft, statement.Status);
 
         // 重复生成 → 409
         await Assert.ThrowsAsync<ConflictException>(
-            () => service.GenerateStatementAsync(Guid.NewGuid(), customerId, "202611"));
+            () => service.GenerateStatementAsync(operatorUserId, customerId, "202611"));
 
         // 确认 → Confirmed
-        await service.ConfirmStatementAsync(Guid.NewGuid(), statement.Id);
+        await service.ConfirmStatementAsync(operatorUserId, statement.Id);
 
         // 关闭 → Closed
-        await service.CloseStatementAsync(Guid.NewGuid(), statement.Id);
+        await service.CloseStatementAsync(operatorUserId, statement.Id);
 
         // 已关闭再确认 → 409
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => service.ConfirmStatementAsync(Guid.NewGuid(), statement.Id));
+            () => service.ConfirmStatementAsync(operatorUserId, statement.Id));
     }
 
     [Fact]
     public async Task CodRefund_ShouldReverseCollection()
     {
-        var (tenantId, customerId, waybillId, _) = await SeedAsync();
+        var (tenantId, operatorUserId, customerId, waybillId, _) = await SeedAsync();
         var service = CreateFinanceService(tenantId);
 
         // 创建 COD 订单（需运单有 COD 金额）——用非零 COD 运单
@@ -380,7 +406,7 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
 
         // COD 收款 300
         await codService.RecordCollectionAsync(
-            Guid.NewGuid(), new RecordCodCollectionRequest(waybillId, 300m, null));
+            operatorUserId, new RecordCodCollectionRequest(waybillId, 300m, null));
 
         // 验证收款状态
         await using var verify = _fixture.CreateFinanceContext(tenantId);
@@ -390,7 +416,7 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
         // 退款 200
         var collection = await verify.CodCollections.SingleAsync(c => c.CodOrderId == codOrder.Id);
         var refund = await codService.RefundCollectionAsync(
-            Guid.NewGuid(), collection.Id, 200m, "测试退款");
+            operatorUserId, collection.Id, 200m, "测试退款");
 
         // 验证回退
         await using var verify2 = _fixture.CreateFinanceContext(tenantId);
@@ -399,13 +425,17 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
 
         // 超额退款 → 409
         await Assert.ThrowsAsync<ConflictException>(
-            () => codService.RefundCollectionAsync(Guid.NewGuid(), collection.Id, 999m, "超额"));
+            () => codService.RefundCollectionAsync(operatorUserId, collection.Id, 999m, "超额"));
+
+        // 无权限用户调用 COD 收款 → 403 PermissionDeniedException
+        await Assert.ThrowsAsync<PermissionDeniedException>(
+            () => codService.RecordCollectionAsync(Guid.NewGuid(), new RecordCodCollectionRequest(waybillId, 10m, null)));
     }
 
     [Fact]
-    public async Task CreditLimit_WithSetLimit_ShouldCheckOutstanding()
+    public async Task CreditLimit_WithSetLimit_ShouldCheckOutstandingPerCustomer()
     {
-        var (tenantId, customerId, waybillId, totalAmount) = await SeedAsync();
+        var (tenantId, _, customerId, waybillId, totalAmount) = await SeedAsync();
         var service = CreateFinanceService(tenantId);
         await service.EnsureReceivableAsync(waybillId);
 
@@ -413,16 +443,21 @@ public class StatementAndCodTests : IClassFixture<PostgreSqlFixture>
         await using var customers = _fixture.CreateCustomersContext(tenantId);
         var customer = await customers.Customers.SingleAsync(c => c.Id == customerId);
         customer.SetCreditPolicy(totalAmount, 30, DateTime.UtcNow);
+
+        // 新增第二个无欠款客户 B，信用额度极小（1 元）；客户 A 的未结应收不得影响客户 B
+        var customerB = Customer.Create(tenantId, "KH002", "客户B", DateTime.UtcNow);
+        customerB.SetCreditPolicy(1m, 30, DateTime.UtcNow);
+        customers.Customers.Add(customerB);
         await customers.SaveChangesAsync();
 
-        var withinLimit = await service.IsWithinCreditLimitAsync(customerId);
-        Assert.True(withinLimit);
+        Assert.True(await service.IsWithinCreditLimitAsync(customerId));
+        Assert.True(await service.IsWithinCreditLimitAsync(customerB.Id));
 
-        // 设置信用额度 = 应收金额一半 → 超出
+        // 设置客户 A 信用额度 = 应收金额一半 → 客户 A 超出，客户 B 仍在额度内
         customer.SetCreditPolicy(totalAmount / 2, 30, DateTime.UtcNow);
         await customers.SaveChangesAsync();
 
-        var exceeded = await service.IsWithinCreditLimitAsync(customerId);
-        Assert.False(exceeded);
+        Assert.False(await service.IsWithinCreditLimitAsync(customerId));
+        Assert.True(await service.IsWithinCreditLimitAsync(customerB.Id));
     }
 }

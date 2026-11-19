@@ -3,9 +3,21 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag } from 'antd';
 import { useState } from 'react';
 import {
-  createUser, disableUser, enableUser, getUser, listBranches, listRoles, listUsers,
-  renameUser, resetPassword, setBranchScopes, setUserRoles,
-  type Branch, type Role, type User, type UserDetail,
+  createUser,
+  disableUser,
+  enableUser,
+  getUser,
+  listBranches,
+  listRoles,
+  listUsers,
+  renameUser,
+  resetPassword,
+  setBranchScopes,
+  setUserRoles,
+  type Branch,
+  type Role,
+  type User,
+  type UserDetail,
 } from '../api/organization';
 
 /** 用户管理页（P1 前端）：列表/创建/启停/重置密码/编辑（改名、分配角色、网点授权）。 */
@@ -24,11 +36,13 @@ export function UserListPage() {
 
   const listQuery = useQuery({ queryKey: ['users'], queryFn: () => listUsers(1, 100) });
   const rolesQuery = useQuery({
-    queryKey: ['roles'], queryFn: () => listRoles(1, 100),
+    queryKey: ['roles'],
+    queryFn: () => listRoles(1, 100),
     enabled: editingUser !== null || detailUser !== null,
   });
   const branchesQuery = useQuery({
-    queryKey: ['branches'], queryFn: () => listBranches(1, 100),
+    queryKey: ['branches'],
+    queryFn: () => listBranches(1, 100),
     enabled: editingUser !== null || detailUser !== null,
   });
 
@@ -37,20 +51,32 @@ export function UserListPage() {
   const createMutation = useMutation({
     mutationFn: (values: { username: string; displayName: string; password: string }) =>
       createUser(values),
-    onSuccess: () => { message.success('用户已创建'); setCreateOpen(false); createForm.resetFields(); invalidate(); },
+    onSuccess: () => {
+      message.success('用户已创建');
+      setCreateOpen(false);
+      createForm.resetFields();
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
   const toggleMutation = useMutation({
     mutationFn: async ({ user, disable }: { user: User; disable: boolean }) =>
       disable ? disableUser(user.id) : enableUser(user.id),
-    onSuccess: () => { message.success('状态已更新'); invalidate(); },
+    onSuccess: () => {
+      message.success('状态已更新');
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
   const resetMutation = useMutation({
-    mutationFn: (params: { id: string; password: string }) => resetPassword(params.id, params.password),
-    onSuccess: () => { message.success('密码已重置'); invalidate(); },
+    mutationFn: (params: { id: string; password: string }) =>
+      resetPassword(params.id, params.password),
+    onSuccess: () => {
+      message.success('密码已重置');
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
@@ -69,20 +95,32 @@ export function UserListPage() {
   };
 
   const renameMutation = useMutation({
-    mutationFn: (params: { id: string; displayName: string }) => renameUser(params.id, params.displayName),
-    onSuccess: () => { message.success('姓名已更新'); invalidate(); },
+    mutationFn: (params: { id: string; displayName: string }) =>
+      renameUser(params.id, params.displayName),
+    onSuccess: () => {
+      message.success('姓名已更新');
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
   const rolesMutation = useMutation({
-    mutationFn: (params: { id: string; roleIds: string[] }) => setUserRoles(params.id, params.roleIds),
-    onSuccess: () => { message.success('角色已更新（实时生效）'); invalidate(); },
+    mutationFn: (params: { id: string; roleIds: string[] }) =>
+      setUserRoles(params.id, params.roleIds),
+    onSuccess: () => {
+      message.success('角色已更新（实时生效）');
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
   const scopesMutation = useMutation({
-    mutationFn: (params: { id: string; branchIds: string[] }) => setBranchScopes(params.id, params.branchIds),
-    onSuccess: () => { message.success('网点范围已更新（实时生效）'); invalidate(); },
+    mutationFn: (params: { id: string; branchIds: string[] }) =>
+      setBranchScopes(params.id, params.branchIds),
+    onSuccess: () => {
+      message.success('网点范围已更新（实时生效）');
+      invalidate();
+    },
     onError: (e: Error) => message.error(e.message),
   });
 
@@ -98,7 +136,9 @@ export function UserListPage() {
   return (
     <div>
       <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>新建用户</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateOpen(true)}>
+          新建用户
+        </Button>
       </Space>
       <Table
         rowKey="id"
@@ -108,20 +148,33 @@ export function UserListPage() {
           { title: '登录名', dataIndex: 'username' },
           { title: '姓名', dataIndex: 'displayName' },
           {
-            title: '状态', dataIndex: 'status', width: 100,
-            render: (s: string) => <Tag color={s === 'Active' ? 'green' : 'default'}>{s === 'Active' ? '启用' : '停用'}</Tag>,
+            title: '状态',
+            dataIndex: 'status',
+            width: 100,
+            render: (s: string) => (
+              <Tag color={s === 'Active' ? 'green' : 'default'}>
+                {s === 'Active' ? '启用' : '停用'}
+              </Tag>
+            ),
           },
           {
-            title: '租户级范围', dataIndex: 'tenantWideScope', width: 120,
-            render: (v: boolean) => v ? <Tag color="blue">全部网点</Tag> : <Tag>按网点</Tag>,
+            title: '租户级范围',
+            dataIndex: 'tenantWideScope',
+            width: 120,
+            render: (v: boolean) => (v ? <Tag color="blue">全部网点</Tag> : <Tag>按网点</Tag>),
           },
           {
-            title: '操作', key: 'actions',
+            title: '操作',
+            key: 'actions',
             render: (_: unknown, record: User) => (
               <Space>
-                <Button type="link" size="small" onClick={async () => {
-                  setDetailUser(await getUser(record.id));
-                }}>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={async () => {
+                    setDetailUser(await getUser(record.id));
+                  }}
+                >
                   详情
                 </Button>
                 <Button type="link" size="small" onClick={() => void openEditor(record)}>
@@ -129,14 +182,17 @@ export function UserListPage() {
                 </Button>
                 <Popconfirm
                   title={record.status === 'Active' ? '确认停用？' : '确认启用？'}
-                  onConfirm={() => toggleMutation.mutate({ user: record, disable: record.status === 'Active' })}
+                  onConfirm={() =>
+                    toggleMutation.mutate({ user: record, disable: record.status === 'Active' })
+                  }
                 >
                   <Button type="link" size="small" danger={record.status === 'Active'}>
                     {record.status === 'Active' ? '停用' : '启用'}
                   </Button>
                 </Popconfirm>
                 <Button
-                  type="link" size="small"
+                  type="link"
+                  size="small"
                   onClick={() => {
                     const newPassword = `Reset@${Date.now()}`;
                     resetMutation.mutate({ id: record.id, password: newPassword });
@@ -151,18 +207,39 @@ export function UserListPage() {
         ]}
       />
 
-      <Modal title="新建用户" open={createOpen} onCancel={() => setCreateOpen(false)} onOk={() => createForm.submit()}>
-        <Form form={createForm} layout="vertical" onFinish={(values) => createMutation.mutate(values)}>
-          <Form.Item name="username" label="登录名" rules={[{ required: true, message: '登录名必填' }]}>
+      <Modal
+        title="新建用户"
+        open={createOpen}
+        onCancel={() => setCreateOpen(false)}
+        onOk={() => createForm.submit()}
+      >
+        <Form
+          form={createForm}
+          layout="vertical"
+          onFinish={(values) => createMutation.mutate(values)}
+        >
+          <Form.Item
+            name="username"
+            label="登录名"
+            rules={[{ required: true, message: '登录名必填' }]}
+          >
             <Input autoComplete="off" />
           </Form.Item>
-          <Form.Item name="displayName" label="姓名" rules={[{ required: true, message: '姓名必填' }]}>
+          <Form.Item
+            name="displayName"
+            label="姓名"
+            rules={[{ required: true, message: '姓名必填' }]}
+          >
             <Input />
           </Form.Item>
-          <Form.Item name="password" label="密码" rules={[
-            { required: true, message: '密码必填' },
-            { min: 8, message: '密码至少 8 位' },
-          ]}>
+          <Form.Item
+            name="password"
+            label="密码"
+            rules={[
+              { required: true, message: '密码必填' },
+              { min: 8, message: '密码至少 8 位' },
+            ]}
+          >
             <Input.Password autoComplete="new-password" />
           </Form.Item>
         </Form>
@@ -173,10 +250,14 @@ export function UserListPage() {
         open={editingUser !== null}
         onCancel={() => setEditingUser(null)}
         footer={null}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item name="displayName" label="姓名" rules={[{ required: true, message: '姓名必填' }]}>
+          <Form.Item
+            name="displayName"
+            label="姓名"
+            rules={[{ required: true, message: '姓名必填' }]}
+          >
             <Input />
           </Form.Item>
           <Button
@@ -197,7 +278,12 @@ export function UserListPage() {
             <Select mode="multiple" placeholder="选择角色" options={roleOptions} />
           </Form.Item>
           <Button
-            onClick={() => rolesMutation.mutate({ id: editingUser!.id, roleIds: editForm.getFieldValue('roleIds') ?? [] })}
+            onClick={() =>
+              rolesMutation.mutate({
+                id: editingUser!.id,
+                roleIds: editForm.getFieldValue('roleIds') ?? [],
+              })
+            }
             loading={rolesMutation.isPending}
           >
             保存角色
@@ -207,20 +293,32 @@ export function UserListPage() {
             <Select mode="multiple" placeholder="选择可访问网点" options={branchOptions} />
           </Form.Item>
           <Button
-            onClick={() => scopesMutation.mutate({ id: editingUser!.id, branchIds: editForm.getFieldValue('branchScopeIds') ?? [] })}
+            onClick={() =>
+              scopesMutation.mutate({
+                id: editingUser!.id,
+                branchIds: editForm.getFieldValue('branchScopeIds') ?? [],
+              })
+            }
             loading={scopesMutation.isPending}
             disabled={editingUser?.tenantWideScope ?? false}
           >
             保存网点范围
           </Button>
           {editingUser?.tenantWideScope && (
-            <p style={{ marginTop: 8, marginBottom: 0, color: '#8c96a5' }}>该用户为租户级范围（全部网点），无需逐网点授权。</p>
+            <p style={{ marginTop: 8, marginBottom: 0, color: '#8c96a5' }}>
+              该用户为租户级范围（全部网点），无需逐网点授权。
+            </p>
           )}
         </Form>
       </Modal>
 
       {detailUser && (
-        <Modal title={`用户详情：${detailUser.displayName}`} open={!!detailUser} footer={null} onCancel={() => setDetailUser(null)}>
+        <Modal
+          title={`用户详情：${detailUser.displayName}`}
+          open={!!detailUser}
+          footer={null}
+          onCancel={() => setDetailUser(null)}
+        >
           <Space direction="vertical" style={{ width: '100%' }}>
             <div>登录名：{detailUser.username}</div>
             <div>状态：{detailUser.status === 'Active' ? '启用' : '停用'}</div>

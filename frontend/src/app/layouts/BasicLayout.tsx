@@ -39,8 +39,8 @@ const menuSections: MenuSection[] = [
     icon: <DashboardOutlined />,
     items: [
       { key: '/', label: '工作台', permission: '' },
-      { key: '/reports/dimension', label: '运营报表', permission: 'finance.read' },
-      { key: '/reports/usage', label: '租户用量', permission: 'finance.read' },
+      { key: '/reports/dimension', label: '运营报表', permission: PERMISSIONS.financeRead },
+      { key: '/reports/usage', label: '租户用量', permission: PERMISSIONS.financeRead },
     ],
   },
   {
@@ -102,11 +102,11 @@ const menuSections: MenuSection[] = [
     label: '到货/交付',
     icon: <ShopOutlined />,
     items: [
-      { key: '/arrivals', label: '到货登记', permission: 'arrival.record' },
-      { key: '/arrivals/differences', label: '到货差异', permission: 'arrival.read' },
-      { key: '/arrivals/pickup', label: '待提货列表', permission: 'delivery.read' },
-      { key: '/arrivals/exceptions', label: '异常件', permission: 'arrival.read' },
-      { key: '/deliveries', label: '交付确认', permission: 'delivery.manage' },
+      { key: '/arrivals', label: '到货登记', permission: PERMISSIONS.arrivalRecord },
+      { key: '/arrivals/differences', label: '到货差异', permission: PERMISSIONS.arrivalRead },
+      { key: '/arrivals/pickup', label: '待提货列表', permission: PERMISSIONS.deliveryRead },
+      { key: '/arrivals/exceptions', label: '异常件', permission: PERMISSIONS.arrivalRead },
+      { key: '/deliveries', label: '交付确认', permission: PERMISSIONS.deliveryManage },
     ],
   },
   {
@@ -114,12 +114,16 @@ const menuSections: MenuSection[] = [
     label: '财务/COD',
     icon: <DollarOutlined />,
     items: [
-      { key: '/finance', label: '财务管理', permission: 'finance.read' },
-      { key: '/finance/allocations', label: '收款核销', permission: 'finance.read' },
-      { key: '/finance/statements', label: '月结账单', permission: 'finance.read' },
-      { key: '/finance/branch-summary', label: '网点收款汇总', permission: 'finance.read' },
-      { key: '/finance/cod', label: 'COD 工作台', permission: 'cod.read' },
-      { key: '/finance/cod/manage', label: 'COD 管理', permission: 'cod.manage' },
+      { key: '/finance', label: '财务管理', permission: PERMISSIONS.financeRead },
+      { key: '/finance/allocations', label: '收款核销', permission: PERMISSIONS.financeRead },
+      { key: '/finance/statements', label: '月结账单', permission: PERMISSIONS.financeRead },
+      {
+        key: '/finance/branch-summary',
+        label: '网点收款汇总',
+        permission: PERMISSIONS.financeRead,
+      },
+      { key: '/finance/cod', label: 'COD 工作台', permission: PERMISSIONS.codRead },
+      { key: '/finance/cod/manage', label: 'COD 管理', permission: PERMISSIONS.codManage },
     ],
   },
   {
@@ -128,7 +132,7 @@ const menuSections: MenuSection[] = [
     icon: <ToolOutlined />,
     items: [
       { key: '/system/status', label: '系统状态', permission: '' },
-      { key: '/system/notifications', label: '通知记录', permission: 'notification.read' },
+      { key: '/system/notifications', label: '通知记录', permission: PERMISSIONS.notificationRead },
     ],
   },
 ];

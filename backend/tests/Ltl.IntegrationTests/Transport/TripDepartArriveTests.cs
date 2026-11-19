@@ -40,6 +40,13 @@ public class TripDepartArriveTests : IClassFixture<PostgreSqlFixture>
         var loadTests = new TripLoadTests(_fixture);
         var seed = await loadTests.SeedAsyncPublic();
         await loadTests.ReceivePublicAsync(seed, seed.WaybillIds[0]);
+
+        // 多段运输测试中管理员需在始发与目的两个网点发车，显式授予目的网点范围
+        await using var org = _fixture.CreateOrganizationContext(seed.TenantId);
+        var admin = await org.Users.SingleAsync(u => u.Username == "admin");
+        var auth = new Ltl.Modules.Organization.Application.Authorization.AuthorizationService(org);
+        await auth.GrantBranchScopeAsync(admin.Id, seed.DestBranchId);
+
         return (seed.TenantId, seed.OriginBranchId, seed.DestBranchId, seed.VehicleId, seed.WaybillIds[0], seed.TenantCode);
     }
 

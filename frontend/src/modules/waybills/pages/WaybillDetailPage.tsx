@@ -357,7 +357,7 @@ export function WaybillDetailPage() {
         onOk={() => receiptMutation.mutate()}
         okText="登记收货"
         confirmLoading={receiptMutation.isPending}
-        destroyOnClose
+        destroyOnHidden
       >
         <Space direction="vertical" style={{ width: '100%' }} size={12}>
           <Space wrap>
@@ -366,21 +366,21 @@ export function WaybillDetailPage() {
               precision={0}
               value={receiptForm.pieces}
               onChange={(v: number | null) => setReceiptForm({ ...receiptForm, pieces: v ?? 1 })}
-              addonBefore="实收件数"
+              prefix="实收件数"
               style={{ width: 180 }}
             />
             <InputNumber
               min={0}
               value={receiptForm.weight}
               onChange={(v: number | null) => setReceiptForm({ ...receiptForm, weight: v ?? 0 })}
-              addonBefore="实收 kg"
+              prefix="实收 kg"
               style={{ width: 180 }}
             />
             <InputNumber
               min={0}
               value={receiptForm.volume}
               onChange={(v: number | null) => setReceiptForm({ ...receiptForm, volume: v ?? 0 })}
-              addonBefore="实收 m³"
+              prefix="实收 m³"
               style={{ width: 180 }}
             />
           </Space>
