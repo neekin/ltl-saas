@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   CarOutlined,
   DashboardOutlined,
@@ -14,11 +14,12 @@ import {
   ToolOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Avatar, Breadcrumb, Dropdown, Layout, Menu, Typography } from 'antd';
+import { Avatar, Breadcrumb, Dropdown, Layout, Menu, Select, Typography } from 'antd';
 import type { MenuProps } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { logout } from '../../modules/auth/api/auth';
 import { useAuthStore } from '../../modules/auth/store/authStore';
+import { getMyBranches, type AccessibleBranch } from '../../modules/organization/api/organization';
 import { PERMISSIONS } from '../../shared/permissions';
 
 const { Sider, Header, Content } = Layout;
@@ -202,6 +203,37 @@ export function BasicLayout() {
   const user = useAuthStore((s) => s.user);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const clear = useAuthStore((s) => s.clear);
+  const currentBranch = useAuthStore((s) => s.currentBranch);
+  const setCurrentBranch = useAuthStore((s) => s.setCurrentBranch);
+
+  const [myBranches, setMyBranches] = useState<AccessibleBranch[]>([]);
+  const [tenantWide, setTenantWide] = useState(false);
+
+  // 拉取当前用户可访问的网点（仅工作上下文，不替代服务端授权，AGENTS §5.2）。
+  // 校验持久化的当前网点是否仍在授权范围内，失效则回退到首个可用网点。
+  useEffect(() => {
+    let cancelled = false;
+    getMyBranches()
+      .then((result) => {
+        if (cancelled) return;
+        setMyBranches(result.branches);
+        setTenantWide(result.tenantWide);
+        const selected = useAuthStore.getState().currentBranch;
+        if (result.branches.length === 0) {
+          if (selected) setCurrentBranch(null);
+          return;
+        }
+        if (!selected || !result.branches.some((b) => b.id === selected.id)) {
+          setCurrentBranch(result.branches[0]);
+        }
+      })
+      .catch(() => {
+        // 加载失败不影响主流程：保持已有选择或空态
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [setCurrentBranch]);
 
   const [collapsed, setCollapsed] = useState(false);
   const nav = resolveNav(location.pathname);
@@ -319,6 +351,31 @@ export function BasicLayout() {
           }}
         >
           <Breadcrumb items={breadcrumbItems} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
+              当前网点
+            </Typography.Text>
+            <Select
+              value={currentBranch?.id ?? undefined}
+              placeholder="选择网点"
+              size="small"
+              style={{ minWidth: 160 }}
+              onChange={(value) => {
+                const branch = myBranches.find((b) => b.id === value);
+                if (branch) setCurrentBranch(branch);
+              }}
+              options={myBranches.map((b) => ({
+                value: b.id,
+                label: `${b.name}（${b.code}）`,
+              }))}
+              notFoundContent="无可访问网点"
+            />
+            {tenantWide && (
+              <Typography.Text type="secondary" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                租户级
+              </Typography.Text>
+            )}
+          </div>
           <Dropdown
             menu={{
               items: [

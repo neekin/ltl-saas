@@ -1,0 +1,7 @@
+# LTL 开发进程清单
+# 格式借鉴 Rails foreman 的 Procfile，但由 bin/dev 用纯 bash 解析，不依赖 Ruby / Gemfile。
+# 每行一个进程，格式为「进程名: 命令」，命令从项目根目录执行。
+# 新增进程只需在此加一行，bin/dev 会自动纳管（日志前缀、启停、信号）。
+
+api: cd backend && dotnet run --project src/Ltl.Api
+web: cd frontend && npm run dev -- --port "$WEB_PORT" --strictPort

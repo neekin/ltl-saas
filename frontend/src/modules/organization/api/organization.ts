@@ -152,3 +152,20 @@ export async function listPermissions(): Promise<Permission[]> {
   const response = await http.get<Permission[]>('/organization/roles/permissions');
   return response.data;
 }
+
+/** 当前用户可访问的网点（工作网点切换器数据源；仅数据范围事实，不授予权限）。 */
+export interface AccessibleBranch {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface MyBranches {
+  tenantWide: boolean;
+  branches: AccessibleBranch[];
+}
+
+export async function getMyBranches(): Promise<MyBranches> {
+  const response = await http.get<MyBranches>('/organization/my-branches');
+  return response.data;
+}

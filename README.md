@@ -42,6 +42,19 @@ docker compose up -d
 
 PostgreSQL 默认映射到本机 `5433`，Redis 映射到 `6380`（避免与本机已有实例冲突），可在 `.env` 调整。
 
+### 一键启动应用进程（推荐）
+
+数据库就绪后，一条命令同时启动后端 API 与前端，聚合输出带进程名前缀，按 `Ctrl+C` 一次性停止全部进程（含 `dotnet run` / `npm` 拉起的子进程，不会留下孤儿进程）：
+
+```bash
+bin/dev
+```
+
+- 进程清单见 [`Procfile.dev`](Procfile.dev)：每行 `进程名: 命令`，新增进程只需加一行。
+- 默认前端固定 `5173`（`--strictPort`），后端 `5080`；端口被占用会明确报错，不会静默换端口。前端端口可临时覆盖：`WEB_PORT=5174 bin/dev`。
+- 只管理 `api` / `web` 两个应用进程，数据库与 Redis 仍需按第 1 步自行启动；若 5433 未连通会给出提示。
+- 借鉴 Rails foreman 的使用体验，但为纯 bash 实现，不依赖 Ruby / Gemfile / 任何第三方工具。
+
 ### 2. 启动后端 API
 
 ```bash

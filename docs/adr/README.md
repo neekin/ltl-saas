@@ -16,3 +16,5 @@
 | [ADR-0003](ADR-0003-transaction-and-outbox.md) | 事务、Outbox 与幂等策略 | 已接受 |
 | [ADR-0004](ADR-0004-declarative-pricing-rules.md) | 声明式计价规则格式 | 已接受 |
 | [ADR-0005](ADR-0005-authentication-and-tenant-resolution.md) | 认证机制（JWT）与租户上下文解析 | 已接受 |
+| [ADR-0006](ADR-0006-business-number-format.md) | 业务单号格式与序号分配机制 | 已接受 |
+| [ADR-0007](ADR-0007-pricing-rule-versioning.md) | 计价规则版本按规则集粒度，定义以 JSONB 快照存储 | 已接受 |

@@ -21,9 +21,11 @@ public interface INotificationService
     Task EnqueueAsync(NotificationEnvelope envelope);
 
     /// <summary>通知记录列表（分页，新→旧）。权限：notification.read。</summary>
-    Task<(IReadOnlyList<NotificationDto> Items, int Total)> ListAsync(
+    Task<NotificationPageResult> ListAsync(
         Guid operatorUserId, int page, int pageSize, string? eventType);
 }
+
+public sealed record NotificationPageResult(IReadOnlyList<NotificationDto> Items, int Total);
 
 /// <param name="EventType">业务事件类型（waybill.received / departed / arrived / delivered）。</param>
 /// <param name="WaybillId">关联运单（可空）。</param>
@@ -95,7 +97,7 @@ public sealed class NotificationService(
         await db.SaveChangesAsync();
     }
 
-    public async Task<(IReadOnlyList<NotificationDto> Items, int Total)> ListAsync(
+    public async Task<NotificationPageResult> ListAsync(
         Guid operatorUserId, int page, int pageSize, string? eventType)
     {
         if (!await authorizer.HasPermissionAsync(operatorUserId, "notification.read"))
@@ -118,7 +120,7 @@ public sealed class NotificationService(
             .Skip((page - 1) * pageSize).Take(pageSize)
             .ToListAsync();
 
-        return (items.Select(ToDto).ToList(), total);
+        return new NotificationPageResult(items.Select(ToDto).ToList(), total);
     }
 
     private static NotificationDto ToDto(NotificationRecord n) => new(

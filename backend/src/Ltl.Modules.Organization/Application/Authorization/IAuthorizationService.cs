@@ -1,5 +1,12 @@
 namespace Ltl.Modules.Organization.Application.Authorization;
 
+/// <summary>当前用户可访问的网点（供前端网点切换器展示，不改变服务端授权）。</summary>
+public sealed record AccessibleBranchDto(Guid Id, string Code, string Name);
+
+/// <param name="TenantWide">是否为租户级数据范围。</param>
+/// <param name="Branches">启用且在授权范围内的网点（租户级时为全部启用网点）。</param>
+public sealed record MyBranchesResult(bool TenantWide, IReadOnlyList<AccessibleBranchDto> Branches);
+
 /// <summary>
 /// 组合授权服务：角色权限（功能权限）× 网点范围（数据范围）。
 /// 所有校验实时读取当前数据库状态（无缓存），禁用用户/网点/角色后下一次校验即生效；
@@ -43,6 +50,10 @@ public interface IAuthorizationService
 
     /// <summary>用户的有效网点 Id 集合（禁用用户/停用网点被排除）。</summary>
     Task<IReadOnlyCollection<Guid>> GetAuthorizedBranchIdsAsync(Guid userId);
+
+    /// <summary>当前用户可访问的网点列表（含编码/名称）+ 是否租户级范围；供前端工作网点切换器展示。
+    /// 仅返回数据范围事实，不授予任何权限（AGENTS §5.2：切换只改变工作上下文）。</summary>
+    Task<MyBranchesResult> GetMyBranchesAsync(Guid userId);
 
     /// <summary>用户是否可以访问指定网点（本租户、启用、在有效范围内）。</summary>
     Task<bool> CanAccessBranchAsync(Guid userId, Guid branchId);

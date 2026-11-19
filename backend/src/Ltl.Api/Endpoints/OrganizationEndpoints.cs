@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Ltl.Modules.Organization.Application.Admin;
 using Ltl.Modules.Organization.Application.Auth;
+using Ltl.Modules.Organization.Application.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -15,6 +16,12 @@ public static class OrganizationEndpoints
 {
     public static void MapOrganizationEndpoints(this WebApplication app)
     {
+        // 当前用户可访问的网点（工作网点切换器数据源）。仅需认证：每个登录用户都需要知道自己
+        // 的数据范围，端点只返回事实、不授予权限（AGENTS §5.2）。
+        app.MapGet("/api/organization/my-branches", async (
+            ClaimsPrincipal user, IAuthorizationService authorization) =>
+            Results.Ok(await authorization.GetMyBranchesAsync(RequireUserId(user))));
+
         var branches = app.MapGroup("/api/organization/branches");
         branches.MapGet("/", async (int? page, int? pageSize, ClaimsPrincipal user, IBranchAdminService service) =>
             Results.Ok(await service.ListAsync(RequireUserId(user), page ?? 1, pageSize ?? 20)));

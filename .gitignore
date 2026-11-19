@@ -1,5 +1,9 @@
 # ===== .NET =====
 bin/
+# 根目录 bin/ 存放开发脚本（bin/dev），需纳入版本控制；
+# 前导 / 只锚定仓库根，不影响 backend 各模块的 bin/ 构建产物。
+!/bin/
+!/bin/dev
 obj/
 *.user
 *.suo

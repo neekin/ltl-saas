@@ -205,6 +205,32 @@ public sealed class AuthorizationService(OrganizationDbContext db) : IAuthorizat
             .ToListAsync();
     }
 
+    public async Task<MyBranchesResult> GetMyBranchesAsync(Guid userId)
+    {
+        var user = await db.Users.SingleOrDefaultAsync(u => u.Id == userId);
+        if (user is null || user.Status == UserStatus.Disabled)
+        {
+            return new MyBranchesResult(false, Array.Empty<AccessibleBranchDto>());
+        }
+
+        IQueryable<Branch> query = db.Branches.Where(b => b.Status == BranchStatus.Active);
+        if (!user.TenantWideScope)
+        {
+            var scopedBranchIds = await db.UserBranchScopes
+                .Where(s => s.UserId == userId)
+                .Select(s => s.BranchId)
+                .ToListAsync();
+            query = query.Where(b => scopedBranchIds.Contains(b.Id));
+        }
+
+        var branches = await query
+            .OrderBy(b => b.Code)
+            .Select(b => new AccessibleBranchDto(b.Id, b.Code, b.Name))
+            .ToListAsync();
+
+        return new MyBranchesResult(user.TenantWideScope, branches);
+    }
+
     public async Task<bool> CanAccessBranchAsync(Guid userId, Guid branchId)
     {
         var authorizedIds = await GetAuthorizedBranchIdsAsync(userId);
